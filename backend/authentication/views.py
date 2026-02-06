@@ -1,4 +1,4 @@
-from rest_framework import status
+from rest_framework import status, viewsets
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -170,3 +170,39 @@ def logout(request):
     )
     
     return Response({'message': 'Logged out successfully'})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_users(request):
+    """List users for member assignment (MasterAdmin and Superadmin only)"""
+    user = request.user
+    
+    if user.user_type not in [UserType.SUPERADMIN, UserType.MASTERADMIN]:
+        return Response(
+            {'error': 'Permission denied'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    # Superadmin sees all, MasterAdmin sees only their company
+    if user.user_type == UserType.SUPERADMIN:
+        users = User.objects.filter(is_active=True)
+    else:
+        users = User.objects.filter(company_id=user.company_id, is_active=True)
+    
+    # Filter by company if requested
+    company_filter = request.query_params.get('company')
+    if company_filter == 'me' and user.company_id:
+        users = users.filter(company_id=user.company_id)
+    
+    data = [
+        {
+            'id': u.id,
+            'email': u.email,
+            'user_type': u.user_type,
+            'is_active': u.is_active,
+        }
+        for u in users
+    ]
+    
+    return Response(data)

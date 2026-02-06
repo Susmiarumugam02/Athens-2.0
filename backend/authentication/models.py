@@ -88,6 +88,12 @@ class SecurityLog(models.Model):
         SUBSCRIPTION_CHANGED = "subscription_changed", "Subscription Changed"
         MASTER_CREATED = "master_created", "Master Created"
         MASTER_DISABLED = "master_disabled", "Master Disabled"
+        PROJECT_CREATED = "project_created", "Project Created"
+        PROJECT_UPDATED = "project_updated", "Project Updated"
+        PROJECT_STATUS_CHANGED = "project_status_changed", "Project Status Changed"
+        PROJECT_MEMBER_ADDED = "project_member_added", "Project Member Added"
+        PROJECT_MEMBER_UPDATED = "project_member_updated", "Project Member Updated"
+        PROJECT_MEMBER_REMOVED = "project_member_removed", "Project Member Removed"
     
     class Severity(models.TextChoices):
         INFO = "info", "Info"

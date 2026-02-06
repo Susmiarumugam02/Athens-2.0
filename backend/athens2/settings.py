@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'authentication',
     'control_plane',
     'system',
+    'projects',
 ]
 
 MIDDLEWARE = [

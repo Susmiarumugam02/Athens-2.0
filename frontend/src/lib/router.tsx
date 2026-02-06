@@ -19,6 +19,7 @@ const SuperadminSettingsPage = React.lazy(() => import('../pages/superadmin/Sett
 
 // Master Admin
 const MasterAdminDashboard = React.lazy(() => import('../pages/master-admin/MasterAdminDashboard'))
+const ProjectsPage = React.lazy(() => import('../pages/master-admin/ProjectsPage'))
 const UltraSecureMasterAdminSettings = React.lazy(() => import('../pages/master-admin/UltraSecureSettings'))
 
 // Company
@@ -311,6 +312,16 @@ export const AppRouter: React.FC = () => {
           <ProtectedRoute requireMasterAdmin>
             <SuspenseWrapper>
               <MasterAdminDashboard />
+            </SuspenseWrapper>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/master-admin/projects"
+        element={
+          <ProtectedRoute requireMasterAdmin>
+            <SuspenseWrapper>
+              <ProjectsPage />
             </SuspenseWrapper>
           </ProtectedRoute>
         }
