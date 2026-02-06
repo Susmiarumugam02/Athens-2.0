@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { LayoutDashboard, Settings, LogOut, Menu, X, FolderKanban } from 'lucide-react'
+import { ThemeToggle } from '../components/theme/ThemeToggle'
 
 interface MasterAdminLayoutProps {
   children: React.ReactNode
@@ -25,13 +26,13 @@ const MasterAdminLayout: React.FC<MasterAdminLayoutProps> = ({ children }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-app-canvas text-foreground">
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border transform transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700">
-            <h1 className="text-xl font-bold text-blue-600">Athens 2.0</h1>
+          <div className="flex items-center justify-between h-16 px-6 border-b border-border">
+            <h1 className="text-xl font-bold text-primary">Athens 2.0</h1>
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden">
               <X className="w-5 h-5" />
             </button>
@@ -46,13 +47,17 @@ const MasterAdminLayout: React.FC<MasterAdminLayoutProps> = ({ children }) => {
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-colors ${
                     isActive
-                      ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
-                      : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700'
+                      ? 'bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow'
+                      : 'text-foreground hover:bg-muted/60'
                   }`}
                 >
-                  <Icon className="w-5 h-5 mr-3" />
+                  <span className={`mr-3 flex h-9 w-9 items-center justify-center rounded-lg ${
+                    isActive ? 'bg-white/20' : 'bg-primary/10'
+                  }`}>
+                    <Icon className="w-5 h-5" />
+                  </span>
                   {item.name}
                 </Link>
               )
@@ -60,18 +65,18 @@ const MasterAdminLayout: React.FC<MasterAdminLayoutProps> = ({ children }) => {
           </nav>
 
           {/* User section */}
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="p-4 border-t border-border">
             <div className="flex items-center mb-3">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                <p className="text-sm font-medium text-foreground truncate">
                   {user?.email}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Master Admin</p>
+                <p className="text-xs text-muted-foreground">Master Admin</p>
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center w-full px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+              className="flex items-center w-full px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
             >
               <LogOut className="w-4 h-4 mr-2" />
               Logout
@@ -83,22 +88,25 @@ const MasterAdminLayout: React.FC<MasterAdminLayoutProps> = ({ children }) => {
       {/* Main content */}
       <div className={`transition-all duration-200 ${sidebarOpen ? 'lg:pl-64' : ''}`}>
         {/* Header */}
-        <header className="sticky top-0 z-40 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <header className="sticky top-0 z-40 bg-background/70 backdrop-blur border-b border-border">
           <div className="flex items-center justify-between h-16 px-6">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 rounded-lg"
+              className="p-2 text-muted-foreground hover:bg-accent rounded-lg"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Master Admin Portal
+            <div className="flex items-center gap-4">
+              <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-700">
+                System Online
+              </span>
+              <ThemeToggle />
             </div>
           </div>
         </header>
 
         {/* Page content */}
-        <main className="p-6">
+        <main className="mx-auto max-w-7xl px-6 py-6">
           {children}
         </main>
       </div>

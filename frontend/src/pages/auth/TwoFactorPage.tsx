@@ -77,7 +77,7 @@ const TwoFactorPage: React.FC = () => {
       recovery_code: data.recovery_code || ''
     }
 
-    const success = await login(loginData, storedData.userType)
+    const success = await login(loginData)
     if (success === true) {
       reset()
       // Clear stored credentials

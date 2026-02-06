@@ -146,8 +146,9 @@ pytest -v
 - React 18
 - TypeScript
 - Vite
-- TailwindCSS
+- TailwindCSS (SAP-Python Design System)
 - Zustand (state management)
+- Inter & JetBrains Mono fonts
 
 ---
 

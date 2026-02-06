@@ -23,7 +23,7 @@ const AthensServiceLogin: React.FC = () => {
     }
 
     try {
-      const result = await login(formData, 'athens')
+      const result = await login({ email: formData.username, password: formData.password })
       
       if (result === true) {
         toast.success('Login successful!')

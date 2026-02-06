@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Search, Filter, Plus, Edit, Eye, Trash2, Briefcase, Users, Calendar, MapPin } from 'lucide-react'
 import { Button } from '../../../../../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../components/ui/Card'
-import { JobPosting, type JobPostingFilters } from '../../types/hrTypes'
+import { type JobPosting, type JobPostingFilters } from '../../types/hrTypes'
 import { useServiceUserStore } from '../../../../../store/serviceUserStore'
 
 interface JobPostingListProps {

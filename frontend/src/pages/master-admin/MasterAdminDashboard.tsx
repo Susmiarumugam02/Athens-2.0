@@ -8,20 +8,20 @@ const MasterAdminDashboardPage: React.FC = () => {
     <MasterAdminLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Master Admin Dashboard</h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage your projects and settings</p>
+          <h1 className="text-2xl font-bold text-foreground">Master Admin Dashboard</h1>
+          <p className="text-muted-foreground">Manage your projects and settings</p>
         </div>
 
-        <Card className="p-12">
+        <Card className="rounded-2xl p-12">
           <div className="text-center">
-            <FolderKanban className="w-16 h-16 mx-auto text-blue-400 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <FolderKanban className="w-16 h-16 mx-auto text-primary mb-4" />
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               Projects Dashboard
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-muted-foreground mb-4">
               Project management and quick actions will be available here
             </p>
-            <p className="text-sm text-gray-500 dark:text-gray-500">
+            <p className="text-sm text-muted-foreground">
               This will be implemented before PTW module development
             </p>
           </div>

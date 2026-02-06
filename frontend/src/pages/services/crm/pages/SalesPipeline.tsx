@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../components
 import { Button } from '../../../../components/ui/Button'
 import { Plus, TrendingUp, Target, DollarSign, Calendar, Search, Filter, ChevronLeft, ChevronRight, Edit } from 'lucide-react'
 import { crmApi } from '../utils/api'
-import { type PipelineOverview, type Deal, type VelocityMetrics, SalesQuota } from '../types'
+import { type PipelineOverview, type Deal, type VelocityMetrics, type SalesQuota } from '../types'
 import { formatCurrency, formatDate } from '../../../../lib/utils'
 import { DealModal } from '../components/DealModal'
 import { QuotaModal } from '../components/QuotaModal'

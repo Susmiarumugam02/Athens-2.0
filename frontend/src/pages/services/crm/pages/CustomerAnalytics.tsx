@@ -14,7 +14,7 @@ import {
   Eye
 } from 'lucide-react'
 import { crmApi } from '../utils/api'
-import { 
+import type { 
   CustomerHealthScore, 
   CustomerSegment, 
   CustomerInteraction,
