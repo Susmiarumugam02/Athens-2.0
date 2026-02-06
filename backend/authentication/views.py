@@ -20,8 +20,8 @@ class LoginThrottle(AnonRateThrottle):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @throttle_classes([LoginThrottle])
-def master_admin_login(request):
-    """Master admin login endpoint"""
+def unified_login(request):
+    """Unified login endpoint for all user types"""
     email = request.data.get('email')
     password = request.data.get('password')
     totp_code = request.data.get('totp_code')
@@ -33,7 +33,7 @@ def master_admin_login(request):
         )
     
     try:
-        user = User.objects.get(email=email, user_type=UserType.MASTERADMIN)
+        user = User.objects.get(email=email)
     except User.DoesNotExist:
         log_security_event(
             request, None, SecurityLog.EventType.LOGIN_FAILED,
@@ -102,86 +102,13 @@ def master_admin_login(request):
         {}
     )
     
-    return Response({
-        'access': str(refresh.access_token),
-        'refresh': str(refresh),
-        'user': {
-            'id': user.id,
-            'email': user.email,
-            'user_type': user.user_type,
-            'is_master_admin': True,
-            'company_id': user.company_id,
-        },
-        'password_expired': user.password_expired,
-    })
-
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-@throttle_classes([LoginThrottle])
-def company_user_login(request):
-    """Company user login endpoint"""
-    email = request.data.get('email')
-    password = request.data.get('password')
-    
-    if not email or not password:
-        return Response(
-            {'error': 'Email and password required'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    try:
-        user = User.objects.get(email=email, user_type=UserType.COMPANYUSER)
-    except User.DoesNotExist:
-        log_security_event(
-            request, None, SecurityLog.EventType.LOGIN_FAILED,
-            SecurityLog.Severity.WARNING,
-            {'email': email, 'reason': 'user_not_found'}
-        )
-        return Response(
-            {'error': 'Invalid credentials'},
-            status=status.HTTP_401_UNAUTHORIZED
-        )
-    
-    # Check if account is locked
-    if user.is_locked:
-        return Response(
-            {'error': 'Account is locked', 'locked_until': user.locked_until},
-            status=status.HTTP_403_FORBIDDEN
-        )
-    
-    # Verify password
-    if not user.check_password(password):
-        user.failed_login_count += 1
-        if user.failed_login_count >= 5:
-            user.locked_until = timezone.now() + timedelta(minutes=30)
-        user.save()
-        
-        log_security_event(
-            request, user, SecurityLog.EventType.LOGIN_FAILED,
-            SecurityLog.Severity.WARNING,
-            {'reason': 'invalid_password'}
-        )
-        return Response(
-            {'error': 'Invalid credentials'},
-            status=status.HTTP_401_UNAUTHORIZED
-        )
-    
-    # Reset failed login count
-    user.failed_login_count = 0
-    user.locked_until = None
-    user.save()
-    
-    # Generate tokens
-    refresh = RefreshToken.for_user(user)
-    refresh['user_type'] = user.user_type
-    refresh['company_id'] = user.company_id
-    
-    log_security_event(
-        request, user, SecurityLog.EventType.LOGIN_SUCCESS,
-        SecurityLog.Severity.INFO,
-        {}
-    )
+    # Determine next route based on user type
+    next_route_map = {
+        UserType.SUPERADMIN: '/superadmin/dashboard',
+        UserType.MASTERADMIN: '/master-admin',
+        UserType.COMPANYUSER: '/app',
+        UserType.SERVICEUSER: '/service',
+    }
     
     return Response({
         'access': str(refresh.access_token),
@@ -190,10 +117,11 @@ def company_user_login(request):
             'id': user.id,
             'email': user.email,
             'user_type': user.user_type,
-            'is_company_user': True,
             'company_id': user.company_id,
         },
         'password_expired': user.password_expired,
+        'requires_2fa': False,
+        'next_route': next_route_map.get(user.user_type, '/app'),
     })
 
 

@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react'
+import React, { Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useServiceUserStore } from '../store/serviceUserStore'
@@ -8,11 +8,20 @@ import AthensAccessGuard from '../components/auth/AthensAccessGuard'
 // Lazy load components
 const LoginPage = React.lazy(() => import('../pages/auth/LoginPage'))
 const TwoFactorPage = React.lazy(() => import('../pages/auth/TwoFactorPage'))
-const ServiceUserLogin = React.lazy(() => import('../pages/auth/ServiceUserLogin'))
-const AthensServiceLogin = React.lazy(() => import('../pages/auth/AthensServiceLogin'))
-const AthensPasswordReset = React.lazy(() => import('../pages/auth/AthensPasswordReset'))
-const MasterAdminDashboard = React.lazy(() => import('../pages/master-admin/EnhancedDashboard'))
+
+// Superadmin
+const SuperadminDashboard = React.lazy(() => import('../pages/superadmin/Dashboard'))
+const TenantsPage = React.lazy(() => import('../pages/superadmin/Tenants'))
+const MastersPage = React.lazy(() => import('../pages/superadmin/Masters'))
+const SubscriptionsPage = React.lazy(() => import('../pages/superadmin/Subscriptions'))
+const AuditLogsPage = React.lazy(() => import('../pages/superadmin/AuditLogs'))
+const SuperadminSettingsPage = React.lazy(() => import('../pages/superadmin/Settings'))
+
+// Master Admin
+const MasterAdminDashboard = React.lazy(() => import('../pages/master-admin/MasterAdminDashboard'))
 const UltraSecureMasterAdminSettings = React.lazy(() => import('../pages/master-admin/UltraSecureSettings'))
+
+// Company
 const CompanyDashboard = React.lazy(() => import('../pages/company/Dashboard'))
 const DetailedInfoForm = React.lazy(() => import('../pages/company/DetailedInfoForm'))
 const AthensFirstLoginPasswordReset = React.lazy(() => import('../pages/company/AthensFirstLoginPasswordReset'))
@@ -27,16 +36,16 @@ const InventoryDashboard = React.lazy(() => import('../pages/services/inventory/
 const CRMRoutes = React.lazy(() => import('../pages/services/crm/index'))
 const WaitingApproval = React.lazy(() => import('../pages/company/WaitingApproval'))
 const NotFoundPage = React.lazy(() => import('../pages/NotFoundPage'))
+const PermissionDenied = React.lazy(() => import('../pages/PermissionDenied'))
 const EmployeeApp = React.lazy(() => import('../pages/EmployeeApp'))
 const JobPortal = React.lazy(() => import('../pages/public/JobPortal'))
 const JobApplication = React.lazy(() => import('../pages/public/JobApplication'))
 const PublicJobDetail = React.lazy(() => import('../pages/public/PublicJobDetail'))
-const AthensAdminDashboard = React.lazy(() => import('../pages/athens-admin/AthensAdminDashboard'))
-
 
 // Protected Route Component
 interface ProtectedRouteProps {
   children: React.ReactNode
+  requireSuperAdmin?: boolean
   requireMasterAdmin?: boolean
   requireCompanyUser?: boolean
   requireApproved?: boolean
@@ -45,6 +54,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
+  requireSuperAdmin = false,
   requireMasterAdmin = false,
   requireCompanyUser = false,
   requireApproved = false,
@@ -53,7 +63,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { isAuthenticated, user, firstLoginRequired, approvalPending, isLoading } = useAuthStore()
   const { isAuthenticated: isServiceUserAuthenticated, serviceUser } = useServiceUserStore()
   
-  // Show loading while authentication is being processed
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -62,12 +71,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     )
   }
 
-  // Enhanced authentication check with session validation
   React.useEffect(() => {
     if (requireServiceUser) {
       const sessionKey = sessionStorage.getItem('service_session_key')
       if (!sessionKey) {
-        // Try to restore from store before redirecting
         try {
           const storeData = localStorage.getItem('service-user-storage')
           if (storeData) {
@@ -75,21 +82,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
             const storeSessionKey = parsed?.state?.sessionKey
             if (storeSessionKey) {
               sessionStorage.setItem('service_session_key', storeSessionKey)
-              return // Don't redirect if we restored the session
+              return
             }
           }
         } catch (error) {
           console.warn('Failed to restore session in ProtectedRoute:', error)
         }
-        window.location.replace('/service-login')
+        window.location.replace('/login')
       }
     }
   }, [requireServiceUser])
 
-  // For service user routes, check service user authentication
   if (requireServiceUser) {
     if (!isServiceUserAuthenticated || !serviceUser) {
-      // Try to restore session before redirecting
       const sessionKey = sessionStorage.getItem('service_session_key')
       if (!sessionKey) {
         try {
@@ -99,7 +104,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
             const storeSessionKey = parsed?.state?.sessionKey
             if (storeSessionKey && parsed?.state?.serviceUser) {
               sessionStorage.setItem('service_session_key', storeSessionKey)
-              // Allow component to render while store rehydrates
               return <>{children}</>
             }
           }
@@ -107,37 +111,38 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           console.warn('Failed to restore session in ProtectedRoute render:', error)
         }
       }
-      return <Navigate to="/service-login" replace />
+      return <Navigate to="/login" replace />
     }
     return <>{children}</>
   }
 
-  // For regular routes, check main authentication
   if (!isAuthenticated || !user) {
-    // Don't redirect if we're still loading or if user just completed 2FA
     const has2FACredentials = sessionStorage.getItem('2fa_credentials')
     if (has2FACredentials) {
-      return <Navigate to="/2fa" replace />
+      return <Navigate to="/auth/2fa" replace />
     }
     return <Navigate to="/login" replace />
   }
 
-  // Master admin route protection
+  // Check user type from user object
+  const userType = (user as any).user_type
+
+  if (requireSuperAdmin && userType !== 'superadmin') {
+    return <Navigate to="/permission-denied" replace />
+  }
+
   if (requireMasterAdmin && !user.is_master_admin) {
-    return <Navigate to="/unauthorized" replace />
+    return <Navigate to="/permission-denied" replace />
   }
 
-  // Company user route protection
   if (requireCompanyUser && !user.is_company_user) {
-    return <Navigate to="/unauthorized" replace />
+    return <Navigate to="/permission-denied" replace />
   }
 
-  // First login check for company users - only redirect if NOT on the detailed-info page
   if (user.is_company_user && firstLoginRequired && window.location.pathname !== '/company/detailed-info') {
     return <Navigate to="/company/detailed-info" replace />
   }
 
-  // Approval check for company users - only redirect if NOT on the waiting-approval page
   if (user.is_company_user && approvalPending && requireApproved && window.location.pathname !== '/company/waiting-approval') {
     return <Navigate to="/company/waiting-approval" replace />
   }
@@ -145,7 +150,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   return <>{children}</>
 }
 
-// Public Route Component (redirect if authenticated)
+// Public Route Component
 interface PublicRouteProps {
   children: React.ReactNode
 }
@@ -153,25 +158,34 @@ interface PublicRouteProps {
 const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
   const { isAuthenticated, user } = useAuthStore()
 
-  // Only handle 2FA page specifically
-  if (window.location.pathname === '/2fa') {
+  // Auto-redirect based on user type
+  useEffect(() => {
+    if (isAuthenticated && user && window.location.pathname === '/') {
+      const userType = (user as any).user_type
+      const nextRoute = sessionStorage.getItem('next_route')
+      
+      if (nextRoute) {
+        return <Navigate to={nextRoute} replace />
+      }
+      
+      if (userType === 'superadmin') {
+        return <Navigate to="/superadmin/dashboard" replace />
+      } else if (userType === 'masteradmin') {
+        return <Navigate to="/master-admin" replace />
+      } else if (userType === 'companyuser') {
+        return <Navigate to="/app" replace />
+      } else if (userType === 'serviceuser') {
+        return <Navigate to="/service" replace />
+      }
+    }
+  }, [isAuthenticated, user])
+
+  if (window.location.pathname === '/auth/2fa' || window.location.pathname === '/2fa') {
     return <>{children}</>
   }
 
-  // For login page, don't interfere
   if (window.location.pathname === '/login') {
     return <>{children}</>
-  }
-
-  // Only redirect if user is authenticated and on root path
-  if (isAuthenticated && user && window.location.pathname === '/') {
-    if (user.is_master_admin) {
-      return <Navigate to="/master-admin" replace />
-    }
-    
-    if (user.is_company_user) {
-      return <Navigate to="/company" replace />
-    }
   }
 
   return <>{children}</>
@@ -214,6 +228,84 @@ export const AppRouter: React.FC = () => {
         }
       />
 
+      <Route
+        path="/auth/2fa"
+        element={
+          <PublicRoute>
+            <SuspenseWrapper>
+              <TwoFactorPage />
+            </SuspenseWrapper>
+          </PublicRoute>
+        }
+      />
+
+      {/* Superadmin Routes */}
+      <Route
+        path="/superadmin/dashboard"
+        element={
+          <ProtectedRoute requireSuperAdmin>
+            <SuspenseWrapper>
+              <SuperadminDashboard />
+            </SuspenseWrapper>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/superadmin/tenants"
+        element={
+          <ProtectedRoute requireSuperAdmin>
+            <SuspenseWrapper>
+              <TenantsPage />
+            </SuspenseWrapper>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/superadmin/masters"
+        element={
+          <ProtectedRoute requireSuperAdmin>
+            <SuspenseWrapper>
+              <MastersPage />
+            </SuspenseWrapper>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/superadmin/subscriptions"
+        element={
+          <ProtectedRoute requireSuperAdmin>
+            <SuspenseWrapper>
+              <SubscriptionsPage />
+            </SuspenseWrapper>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/superadmin/audit-logs"
+        element={
+          <ProtectedRoute requireSuperAdmin>
+            <SuspenseWrapper>
+              <AuditLogsPage />
+            </SuspenseWrapper>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/superadmin/settings"
+        element={
+          <ProtectedRoute requireSuperAdmin>
+            <SuspenseWrapper>
+              <SuperadminSettingsPage />
+            </SuspenseWrapper>
+          </ProtectedRoute>
+        }
+      />
+
       {/* Master Admin Routes */}
       <Route
         path="/master-admin"
@@ -237,6 +329,19 @@ export const AppRouter: React.FC = () => {
       />
 
       {/* Company User Routes */}
+      <Route
+        path="/app"
+        element={
+          <ProtectedRoute requireCompanyUser requireApproved>
+            <AthensAccessGuard>
+              <SuspenseWrapper>
+                <CompanyDashboard />
+              </SuspenseWrapper>
+            </AthensAccessGuard>
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/company/detailed-info"
         element={
@@ -335,46 +440,22 @@ export const AppRouter: React.FC = () => {
         }
       />
 
-      {/* Service User Login */}
+      {/* Service Routes */}
       <Route
-        path="/service-login"
+        path="/service"
         element={
-          <SuspenseWrapper>
-            <ServiceUserLogin />
-          </SuspenseWrapper>
+          <ProtectedRoute requireServiceUser>
+            <SuspenseWrapper>
+              <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+                <div className="text-center">
+                  <h1 className="text-2xl font-bold text-blue-600 mb-4">Service Dashboard</h1>
+                  <p className="text-gray-600">Service dashboard coming soon!</p>
+                </div>
+              </div>
+            </SuspenseWrapper>
+          </ProtectedRoute>
         }
       />
-
-      {/* Athens Service Login */}
-      <Route
-        path="/athens-login"
-        element={
-          <SuspenseWrapper>
-            <AthensServiceLogin />
-          </SuspenseWrapper>
-        }
-      />
-
-      {/* Athens Password Reset */}
-      <Route
-        path="/athens-password-reset"
-        element={
-          <SuspenseWrapper>
-            <AthensPasswordReset />
-          </SuspenseWrapper>
-        }
-      />
-
-      {/* Athens Admin Dashboard - Special Route */}
-      <Route
-        path="/athens-admin"
-        element={
-          <SuspenseWrapper>
-            <AthensAdminDashboard />
-          </SuspenseWrapper>
-        }
-      />
-
 
       {/* Employee Mobile App */}
       <Route
@@ -422,10 +503,6 @@ export const AppRouter: React.FC = () => {
           </SuspenseWrapper>
         }
       />
-
-
-
-
 
       {/* Service Dashboards - Protected */}
       <Route
@@ -565,12 +642,16 @@ export const AppRouter: React.FC = () => {
         path="/unauthorized"
         element={
           <SuspenseWrapper>
-            <div className="min-h-screen flex items-center justify-center">
-              <div className="text-center">
-                <h1 className="text-2xl font-bold text-red-600 mb-4">Unauthorized</h1>
-                <p className="text-gray-600">You don't have permission to access this page.</p>
-              </div>
-            </div>
+            <PermissionDenied />
+          </SuspenseWrapper>
+        }
+      />
+
+      <Route
+        path="/permission-denied"
+        element={
+          <SuspenseWrapper>
+            <PermissionDenied />
           </SuspenseWrapper>
         }
       />

@@ -306,16 +306,9 @@ export const apiClient = {
     return api.delete(url, config)
   },
 
-  // Authentication
-  masterAdminLogin: (credentials: { email: string; password: string; totp_code?: string; recovery_code?: string }) =>
-    api.post('/api/auth/master-admin/login/', credentials),
-
-  companyUserLogin: (credentials: { email: string; password: string }) =>
-    api.post('/api/auth/company/login/', credentials),
-
-  // Athens Sustainability Login
-  athensLogin: (credentials: { username: string; password: string }) =>
-    api.post('/api/athens-sust/auth/login/', credentials),
+  // Authentication - Unified Login
+  login: (credentials: { email: string; password: string; totp_code?: string }) =>
+    api.post('/api/auth/login/', credentials),
 
   changeCompanyUserPassword: (data: { current_password: string; new_password: string; confirm_password: string; force_logout_all?: boolean }) =>
     api.post('/api/company-dashboard/security/password-change/', data),
@@ -331,7 +324,7 @@ export const apiClient = {
     api.put('/api/auth/company/details/', data),
 
   refreshToken: (refreshToken: string) =>
-    api.post('/api/token/refresh/', { refresh: refreshToken }),
+    api.post('/api/auth/token/refresh/', { refresh: refreshToken }),
 
   // Master Admin Profile
   getMasterAdminProfile: () =>
