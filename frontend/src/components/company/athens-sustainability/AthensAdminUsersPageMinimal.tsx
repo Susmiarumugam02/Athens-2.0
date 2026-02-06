@@ -7,7 +7,7 @@ import { Input } from '../../ui/Input'
 import { Select } from '../../ui/Select'
 import { Modal } from '../../ui/Modal'
 import { LoadingSpinner } from '../../ui/LoadingSpinner'
-import { athensSustCompanyApi, AthensEmployeeUser } from '../../../services/athensSustCompanyApi'
+import { athensSustCompanyApi, type AthensEmployeeUser } from '../../../services/athensSustCompanyApi'
 import toast from 'react-hot-toast'
 
 const AthensAdminUsersPage: React.FC = () => {

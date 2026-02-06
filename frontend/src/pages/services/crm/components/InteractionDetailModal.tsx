@@ -1,6 +1,6 @@
 import React from 'react'
 import { Button } from '../../../../components/ui/Button'
-import { CustomerInteraction } from '../types'
+import type { CustomerInteraction } from '../types'
 import { formatDate } from '../../../../lib/utils'
 import { Modal } from '../../../../components/ui/Modal'
 

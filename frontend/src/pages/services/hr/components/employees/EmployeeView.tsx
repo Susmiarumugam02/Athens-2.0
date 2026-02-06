@@ -1,7 +1,7 @@
 import React from 'react'
 import { X, User, Mail, Phone, Calendar, MapPin, Building, Briefcase, Star, Shield, Smartphone } from 'lucide-react'
 import { Button } from '../../../../../components/ui/Button'
-import { Employee } from '../../types/hrTypes'
+import type { Employee } from '../../types/hrTypes'
 
 interface EmployeeViewProps {
   employee: Employee

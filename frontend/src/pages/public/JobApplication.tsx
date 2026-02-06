@@ -5,7 +5,7 @@ import { Button } from '../../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card'
 import api from '../../lib/api'
 import toast from 'react-hot-toast'
-import { JobPosting } from '../services/hr/types/hrTypes'
+import type { JobPosting } from '../services/hr/types/hrTypes'
 
 const JobApplication: React.FC = () => {
   const { jobId } = useParams<{ jobId: string }>()

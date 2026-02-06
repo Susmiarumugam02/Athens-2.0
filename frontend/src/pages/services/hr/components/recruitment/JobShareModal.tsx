@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { X, MessageCircle, Linkedin, Mail, Link, AtSign, Facebook, Twitter, Instagram, Send, BarChart3, Users, FileText, Share2, Plus, Trash2 } from 'lucide-react'
 import { Button } from '../../../../../components/ui/Button'
-import { JobPosting } from '../../types/hrTypes'
+import type { JobPosting } from '../../types/hrTypes'
 import { useServiceUserStore } from '../../../../../store/serviceUserStore'
 import api from '../../../../../lib/api'
 import toast from 'react-hot-toast'

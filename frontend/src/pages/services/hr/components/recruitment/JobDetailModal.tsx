@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { X, Briefcase, MapPin, DollarSign, Users, FileText, Clock, Share2 } from 'lucide-react'
 import { Button } from '../../../../../components/ui/Button'
-import { JobPosting } from '../../types/hrTypes'
+import type { JobPosting } from '../../types/hrTypes'
 import JobShareModal from './JobShareModal'
 
 interface JobDetailModalProps {

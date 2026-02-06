@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Button } from '../../../../components/ui/Button'
 import { Input } from '../../../../components/ui/Input'
 import { crmApi } from '../utils/api'
-import { Account, Contact, Deal } from '../types'
+import { type Account, type Contact, type Deal } from '../types'
 import { Modal } from '../../../../components/ui/Modal'
 
 interface InteractionModalProps {

@@ -1,7 +1,7 @@
 import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/Card'
 import { AlertTriangle, TrendingUp, Heart } from 'lucide-react'
-import { CustomerHealthScore } from '../types'
+import type { CustomerHealthScore } from '../types'
 import { formatDate } from '../../../../lib/utils'
 
 interface HealthScoreCardProps {

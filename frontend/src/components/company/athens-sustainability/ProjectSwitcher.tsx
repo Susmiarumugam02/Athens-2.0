@@ -1,6 +1,6 @@
 import React from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { athensSustCompanyApi, AthensSustProject } from '../../../services/athensSustCompanyApi'
+import { athensSustCompanyApi, type AthensSustProject } from '../../../services/athensSustCompanyApi'
 import { Select } from '../../ui/Select'
 import { LoadingSpinner } from '../../ui/LoadingSpinner'
 

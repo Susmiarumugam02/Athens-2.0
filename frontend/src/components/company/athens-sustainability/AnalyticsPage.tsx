@@ -1,7 +1,7 @@
 import React from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { BarChart3, Download } from 'lucide-react'
-import { athensSustCompanyApi, AnalyticsSeriesResponse } from '../../../services/athensSustCompanyApi'
+import { athensSustCompanyApi, type AnalyticsSeriesResponse } from '../../../services/athensSustCompanyApi'
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'

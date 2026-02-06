@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { integrationApi, MobileAppConfig } from '../../../../services/integrationApi';
+import { integrationApi, type MobileAppConfig } from '../../../../services/integrationApi';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../components/ui/Tabs';
 import { Card } from '../../../../components/ui/Card';

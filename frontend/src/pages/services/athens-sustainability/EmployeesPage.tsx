@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import EmployeeList from './components/EmployeeList'
 import EmployeeForm from './components/EmployeeForm'
 import EmployeeView from './components/EmployeeView'
-import { Employee } from './types/employeeTypes'
+import type { Employee } from './types/employeeTypes'
 import { useServiceUserStore } from '../../../store/serviceUserStore'
 import api from '../../../lib/api'
 

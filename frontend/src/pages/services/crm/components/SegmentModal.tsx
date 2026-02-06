@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Button } from '../../../../components/ui/Button'
 import { Input } from '../../../../components/ui/Input'
 import { crmApi } from '../utils/api'
-import { CustomerSegment } from '../types'
+import type { CustomerSegment } from '../types'
 import { Modal } from '../../../../components/ui/Modal'
 
 interface SegmentModalProps {

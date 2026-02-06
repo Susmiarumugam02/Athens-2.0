@@ -9,7 +9,7 @@ import { Input } from '../ui/Input'
 import { Label } from '../ui/Label'
 import { Select } from '../ui/Select'
 import { useAthensSustainabilityEnabled } from '../../hooks/useAthensSustainabilityEnabled'
-import { athensSustainabilityApi, AthensSustProject, ProjectCreateData } from '../../services/athensSustainabilityApi'
+import { athensSustainabilityApi, type AthensSustProject, type ProjectCreateData } from '../../services/athensSustainabilityApi'
 import toast from 'react-hot-toast'
 
 interface AthensProjectsProps {

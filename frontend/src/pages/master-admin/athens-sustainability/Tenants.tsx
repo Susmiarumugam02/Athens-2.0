@@ -8,7 +8,7 @@ import {
 import { Card, CardContent } from '../../../components/ui/Card'
 import { Button } from '../../../components/ui/Button'
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner'
-import { athensSustAdminApi, AthensTenant } from '../../../services/athensSustAdminApi'
+import { athensSustAdminApi, type AthensTenant } from '../../../services/athensSustAdminApi'
 
 const AthensTenantsPage: React.FC = () => {
   const queryClient = useQueryClient()

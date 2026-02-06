@@ -171,9 +171,9 @@ const MastersPage: React.FC = () => {
             placeholder="Enter password"
           />
           <Select
-            label="Tenant"
+            
             value={formData.tenant}
-            onChange={(e) => setFormData({ ...formData, tenant: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, tenant: e })}
           >
             <option value="">Select tenant</option>
             {tenants.map((tenant) => (

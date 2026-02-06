@@ -270,7 +270,7 @@ const CompanyEditModal: React.FC<CompanyEditModalProps> = ({
         {/* Services Management */}
         <div className="space-y-6">
           {/* Debug Info */}
-          {process.env.NODE_ENV === 'development' && (
+          {import.meta.env.MODE === 'development' && (
             <div className="bg-yellow-50 border border-yellow-200 rounded p-2 text-xs">
               <strong>Debug:</strong> Selected services: [{formData.selected_services.join(', ')}]
             </div>

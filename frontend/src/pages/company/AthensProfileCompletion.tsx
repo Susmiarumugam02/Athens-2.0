@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { athensSustCompanyApi, AthensUserProfile } from '../../services/athensSustCompanyApi'
+import { athensSustCompanyApi, type AthensUserProfile } from '../../services/athensSustCompanyApi'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'

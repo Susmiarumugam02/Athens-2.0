@@ -6,7 +6,7 @@ import EmployeeList from '../components/employees/EmployeeList'
 import EmployeeForm from '../components/employees/EmployeeForm'
 import EmployeeView from '../components/employees/EmployeeView'
 import MobileAccessManager from '../components/employees/MobileAccessManager'
-import { Employee } from '../types/hrTypes'
+import type { Employee } from '../types/hrTypes'
 import { useServiceUserStore } from '../../../../store/serviceUserStore'
 import api from '../../../../lib/api'
 

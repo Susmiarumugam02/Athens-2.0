@@ -8,7 +8,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
 import { Button } from '../../../components/ui/Button'
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner'
-import { athensSustAdminApi, AthensModule, ModuleAccess } from '../../../services/athensSustAdminApi'
+import { athensSustAdminApi, type AthensModule, type ModuleAccess } from '../../../services/athensSustAdminApi'
 
 const ModuleManagement: React.FC = () => {
   const queryClient = useQueryClient()

@@ -1,6 +1,6 @@
 import React from 'react'
 import { Button } from '../../../../components/ui/Button'
-import { CustomerSegment } from '../types'
+import type { CustomerSegment } from '../types'
 import { Modal } from '../../../../components/ui/Modal'
 
 interface SegmentDetailModalProps {

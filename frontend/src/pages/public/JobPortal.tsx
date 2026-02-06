@@ -3,7 +3,7 @@ import { Search, MapPin, DollarSign, Briefcase, Building, Calendar, ArrowRight }
 import { Button } from '../../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card'
 import api from '../../lib/api'
-import { JobPosting } from '../services/hr/types/hrTypes'
+import type { JobPosting } from '../services/hr/types/hrTypes'
 
 const JobPortal: React.FC = () => {
   const [jobs, setJobs] = useState<JobPosting[]>([])

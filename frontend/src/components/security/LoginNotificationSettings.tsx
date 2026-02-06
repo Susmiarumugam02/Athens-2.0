@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Mail, Bell, MapPin, Clock, Save, AlertCircle } from 'lucide-react'
-import { LoginNotification } from '../../types'
+import type { LoginNotification } from '../../types'
 import { apiClient } from '../../lib/api'
 import toast from 'react-hot-toast'
 

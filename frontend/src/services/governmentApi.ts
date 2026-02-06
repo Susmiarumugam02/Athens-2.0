@@ -223,7 +223,7 @@ class GovernmentApiService {
   /**
    * Real-time GSTIN validation with debouncing
    */
-  private gstinValidationTimeout: NodeJS.Timeout | null = null
+  private gstinValidationTimeout: ReturnType<typeof setTimeout> | null = null
 
   async validateGSTINRealTime(
     gstin: string,
@@ -245,7 +245,7 @@ class GovernmentApiService {
   /**
    * Real-time PAN validation with debouncing
    */
-  private panValidationTimeout: NodeJS.Timeout | null = null
+  private panValidationTimeout: ReturnType<typeof setTimeout> | null = null
 
   async validatePANRealTime(
     pan: string,

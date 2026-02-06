@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import SuperadminLayout from '../../layouts/SuperadminLayout'
-import { controlPlaneService, type Tenant, type Subscription, type AuditLog } from '../../services/controlPlaneService'
+import { controlPlaneService, type AuditLog } from '../../services/controlPlaneService'
 import { Card } from '../../components/ui/Card'
 import { Building2, CreditCard, Activity } from 'lucide-react'
 import toast from 'react-hot-toast'

@@ -2,7 +2,7 @@ import React from 'react'
 import { X, User, Building, Mail, Phone, MapPin, Calendar, DollarSign, Award, Shield, BarChart3 } from 'lucide-react'
 import { Button } from '../../../../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/Card'
-import { Employee } from '../types/employeeTypes'
+import type { Employee } from '../types/employeeTypes'
 
 interface EmployeeViewProps {
   employee: Employee

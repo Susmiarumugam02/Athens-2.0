@@ -1,7 +1,7 @@
 import React from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, Search, Settings, Users, Trash2, Pencil } from 'lucide-react'
-import { athensSustCompanyApi, AthensSustProject } from '../../../services/athensSustCompanyApi'
+import { athensSustCompanyApi, type AthensSustProject } from '../../../services/athensSustCompanyApi'
 import { Button } from '../../ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card'
 import { Input } from '../../ui/Input'

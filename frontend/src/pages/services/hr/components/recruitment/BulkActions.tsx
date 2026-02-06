@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { CheckSquare, X, Download } from 'lucide-react'
 import { Button } from '../../../../../components/ui/Button'
-import { JobApplication } from '../../types/hrTypes'
+import type { JobApplication } from '../../types/hrTypes'
 import { useServiceUserStore } from '../../../../../store/serviceUserStore'
 import api from '../../../../../lib/api'
 import toast from 'react-hot-toast'

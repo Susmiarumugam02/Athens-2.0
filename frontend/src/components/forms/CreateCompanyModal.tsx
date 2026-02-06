@@ -201,7 +201,7 @@ IMPORTANT: Please keep these credentials secure and share them only with authori
   }
 
   // Debug services data in development
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.MODE === 'development') {
     console.log('🔍 DEBUG: CreateCompanyModal services length:', services?.length)
     if (selectedServices.length > 0) {
       console.log('🔍 DEBUG: Selected services:', selectedServices)
@@ -552,7 +552,7 @@ IMPORTANT: Please keep these credentials secure and share them only with authori
                         <p className="text-gray-500 dark:text-gray-400 mb-4">
                           Please try refreshing the page or contact support.
                         </p>
-                        {process.env.NODE_ENV === 'development' && (
+                        {import.meta.env.MODE === 'development' && (
                           <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded-full text-xs font-medium">
                             <Zap className="h-3 w-3" />
                             Debug: Services = {services ? `Array(${services.length})` : 'null/undefined'}

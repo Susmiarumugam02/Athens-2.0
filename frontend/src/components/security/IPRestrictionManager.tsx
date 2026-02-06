@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus, Trash2, Globe, Shield, Clock, CheckCircle, XCircle } from 'lucide-react'
-import { IPRestriction } from '../../types'
+import type { IPRestriction } from '../../types'
 
 const ipSchema = z.object({
   ip_address: z.string().regex(

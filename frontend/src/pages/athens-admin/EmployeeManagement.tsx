@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Badge } from '../../components/ui/Badge'
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
-import employeeAPI, { Employee, EmployeeStats } from '../../services/employeeAPI'
+import employeeAPI, { type Employee, type EmployeeStats } from '../../services/employeeAPI'
 
 const EmployeeManagement: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([])

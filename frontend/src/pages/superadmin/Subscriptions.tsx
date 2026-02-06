@@ -142,9 +142,9 @@ const SubscriptionsPage: React.FC = () => {
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Create Subscription">
         <div className="space-y-4">
           <Select
-            label="Tenant"
+            
             value={formData.tenant}
-            onChange={(e) => setFormData({ ...formData, tenant: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, tenant: e })}
           >
             <option value="">Select tenant</option>
             {tenants.map((tenant) => (
@@ -160,9 +160,9 @@ const SubscriptionsPage: React.FC = () => {
             placeholder="Enterprise, Pro, etc."
           />
           <Select
-            label="Status"
+            
             value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, status: e })}
           >
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>

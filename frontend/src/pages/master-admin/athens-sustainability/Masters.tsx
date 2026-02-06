@@ -8,7 +8,7 @@ import {
 import { Card, CardContent } from '../../../components/ui/Card'
 import { Button } from '../../../components/ui/Button'
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner'
-import { athensSustAdminApi, AthensMasterUser } from '../../../services/athensSustAdminApi'
+import { athensSustAdminApi, type AthensMasterUser } from '../../../services/athensSustAdminApi'
 
 const AthensMastersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
