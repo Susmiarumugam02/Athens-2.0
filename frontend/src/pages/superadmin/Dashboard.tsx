@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import SuperadminLayout from '../../../layouts/SuperadminLayout'
-import { controlPlaneService, Tenant, Subscription, AuditLog } from '../../../services/controlPlaneService'
-import { Card } from '../../../components/ui/Card'
-import { Building2, CreditCard, Users, Activity } from 'lucide-react'
+import SuperadminLayout from '../../layouts/SuperadminLayout'
+import { controlPlaneService, type Tenant, type Subscription, type AuditLog } from '../../services/controlPlaneService'
+import { Card } from '../../components/ui/Card'
+import { Building2, CreditCard, Activity } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const SuperadminDashboard: React.FC = () => {

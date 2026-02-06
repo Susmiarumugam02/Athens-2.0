@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../../store/authStore'
+import { useAuthStore } from '../store/authStore'
 import { LayoutDashboard, Settings, LogOut, Menu, X, FolderKanban } from 'lucide-react'
 
 interface MasterAdminLayoutProps {

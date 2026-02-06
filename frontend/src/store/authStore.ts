@@ -184,10 +184,17 @@ export const useAuthStore = create<AuthState>()(
       },
 
       initializeAuth: async () => {
-        set({ isLoading: true })
-        
-        const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token')
+        const token = sessionStorage.getItem('_at') || localStorage.getItem('_at')
         const userStr = sessionStorage.getItem('user')
+        
+        if (!token) {
+          set({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+          })
+          return
+        }
         
         let persistedState = null
         try {

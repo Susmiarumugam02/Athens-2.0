@@ -1,6 +1,6 @@
 import React from 'react'
-import SuperadminLayout from '../../../layouts/SuperadminLayout'
-import { Card } from '../../../components/ui/Card'
+import SuperadminLayout from '../../layouts/SuperadminLayout'
+import { Card } from '../../components/ui/Card'
 import { Settings as SettingsIcon } from 'lucide-react'
 
 const SettingsPage: React.FC = () => {

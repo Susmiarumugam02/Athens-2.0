@@ -131,19 +131,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/permission-denied" replace />
   }
 
-  if (requireMasterAdmin && !user.is_master_admin) {
+  if (requireMasterAdmin && userType !== 'masteradmin') {
     return <Navigate to="/permission-denied" replace />
   }
 
-  if (requireCompanyUser && !user.is_company_user) {
+  if (requireCompanyUser && userType !== 'companyuser') {
     return <Navigate to="/permission-denied" replace />
   }
 
-  if (user.is_company_user && firstLoginRequired && window.location.pathname !== '/company/detailed-info') {
+  if (userType === 'companyuser' && firstLoginRequired && window.location.pathname !== '/company/detailed-info') {
     return <Navigate to="/company/detailed-info" replace />
   }
 
-  if (user.is_company_user && approvalPending && requireApproved && window.location.pathname !== '/company/waiting-approval') {
+  if (userType === 'companyuser' && approvalPending && requireApproved && window.location.pathname !== '/company/waiting-approval') {
     return <Navigate to="/company/waiting-approval" replace />
   }
 
@@ -165,17 +165,15 @@ const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
       const nextRoute = sessionStorage.getItem('next_route')
       
       if (nextRoute) {
-        return <Navigate to={nextRoute} replace />
-      }
-      
-      if (userType === 'superadmin') {
-        return <Navigate to="/superadmin/dashboard" replace />
+        window.location.href = nextRoute
+      } else if (userType === 'superadmin') {
+        window.location.href = '/superadmin/dashboard'
       } else if (userType === 'masteradmin') {
-        return <Navigate to="/master-admin" replace />
+        window.location.href = '/master-admin'
       } else if (userType === 'companyuser') {
-        return <Navigate to="/app" replace />
+        window.location.href = '/app'
       } else if (userType === 'serviceuser') {
-        return <Navigate to="/service" replace />
+        window.location.href = '/service'
       }
     }
   }, [isAuthenticated, user])

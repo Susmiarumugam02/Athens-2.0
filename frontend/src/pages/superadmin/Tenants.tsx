@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react'
-import SuperadminLayout from '../../../layouts/SuperadminLayout'
-import { controlPlaneService, Tenant } from '../../../services/controlPlaneService'
-import { Card } from '../../../components/ui/Card'
-import { Button } from '../../../components/ui/Button'
-import { Modal } from '../../../components/ui/Modal'
-import { Input } from '../../../components/ui/Input'
-import { Badge } from '../../../components/ui/Badge'
+import SuperadminLayout from '../../layouts/SuperadminLayout'
+import { controlPlaneService, type Tenant } from '../../services/controlPlaneService'
+import { Card } from '../../components/ui/Card'
+import { Button } from '../../components/ui/Button'
+import { Modal } from '../../components/ui/Modal'
+import { Input } from '../../components/ui/Input'
+import { Badge } from '../../components/ui/Badge'
 import { Plus, Power, PowerOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -110,7 +110,7 @@ const TenantsPage: React.FC = () => {
                       <td className="py-3 px-4 text-right">
                         <Button
                           size="sm"
-                          variant={tenant.is_active ? 'outline' : 'default'}
+                          variant={tenant.is_active ? 'outline' : 'secondary'}
                           onClick={() => handleToggleStatus(tenant)}
                         >
                           {tenant.is_active ? (
