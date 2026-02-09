@@ -1,17 +1,3 @@
-import React from 'react'
-
-interface LabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {
-  children: React.ReactNode
-  className?: string
-}
-
-export const Label: React.FC<LabelProps> = ({ children, className = '', ...props }) => {
-  return (
-    <label
-      className={`text-sm font-medium text-gray-700 ${className}`}
-      {...props}
-    >
-      {children}
-    </label>
-  )
-}
+// SAP UI Component Shim - Label
+// This file re-exports the SAP Label component for backward compatibility
+export * from '@/ui/sap/components/Label';

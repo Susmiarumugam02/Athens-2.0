@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useAuthStore } from './store/authStore'
-import './App.css'
+// Legacy Athens CSS removed - SAP design system active
+// import './App.css'
 
 function App() {
   const { initializeAuth } = useAuthStore()

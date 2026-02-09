@@ -3,6 +3,58 @@ from django.db import models
 from django.utils import timezone
 
 
+class Project(models.Model):
+    """Business Project Model for Athens modules"""
+    GOVERNMENTS = 'governments'
+    MANUFACTURING = 'manufacturing'
+    CONSTRUCTION = 'construction'
+    CHEMICAL = 'chemical'
+    PORT_AND_MARITIME = 'port_and_maritime'
+    POWER_AND_ENERGY = 'power_and_energy'
+    LOGISTICS = 'logistics'
+    SCHOOLS = 'schools'
+    MINING = 'mining'
+    OIL_AND_GAS = 'oil_and_gas'
+    SHOPPING_MALL = 'shopping_mall'
+    AVIATION = 'aviation'
+
+    CATEGORY_CHOICES = [
+        (GOVERNMENTS, 'Governments'),
+        (MANUFACTURING, 'Manufacturing'),
+        (CONSTRUCTION, 'Construction'),
+        (CHEMICAL, 'Chemical'),
+        (PORT_AND_MARITIME, 'Port and Maritime'),
+        (POWER_AND_ENERGY, 'Power and Energy'),
+        (LOGISTICS, 'Logistics'),
+        (SCHOOLS, 'Schools'),
+        (MINING, 'Mining'),
+        (OIL_AND_GAS, 'Oil & Gas'),
+        (SHOPPING_MALL, 'Shopping Mall'),
+        (AVIATION, 'Aviation'),
+    ]
+
+    athens_tenant_id = models.UUIDField(null=True, blank=True)
+    client_company_id = models.UUIDField(null=True, blank=True)
+    epc_company_id = models.UUIDField(null=True, blank=True)
+    contractor_company_ids = models.JSONField(default=list)
+    
+    projectName = models.CharField(max_length=255)
+    projectCategory = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    capacity = models.CharField(max_length=255)
+    location = models.CharField(max_length=255)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    nearestPoliceStation = models.CharField(max_length=255)
+    nearestPoliceStationContact = models.CharField(max_length=255)
+    nearestHospital = models.CharField(max_length=255)
+    nearestHospitalContact = models.CharField(max_length=255)
+    commencementDate = models.DateField()
+    deadlineDate = models.DateField()
+
+    def __str__(self):
+        return self.projectName
+
+
 class UserType(models.TextChoices):
     SUPERADMIN = "superadmin", "Super Admin"
     MASTERADMIN = "masteradmin", "Master Admin"
@@ -29,14 +81,41 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True, db_index=True)
+    username = models.CharField(max_length=150, unique=True, null=True, blank=True)
     user_type = models.CharField(max_length=20, choices=UserType.choices, default=UserType.COMPANYUSER)
     company_id = models.IntegerField(null=True, blank=True, db_index=True)
+    
+    # Athens compatibility fields
+    name = models.CharField(max_length=150, null=True, blank=True)
+    surname = models.CharField(max_length=150, null=True, blank=True)
+    department = models.CharField(max_length=150, null=True, blank=True)
+    designation = models.CharField(max_length=150, null=True, blank=True)
+    phone_number = models.CharField(max_length=20, null=True, blank=True)
+    grade = models.CharField(max_length=1, null=True, blank=True)
+    created_by = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='created_users')
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True, blank=True, related_name='users')
+    
+    # Admin type for Athens module access compatibility
+    admin_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('master', 'Master Admin'),
+            ('masteradmin', 'Master Admin'),
+            ('client', 'Client Admin'),
+            ('epc', 'EPC Admin'),
+            ('contractor', 'Contractor Admin'),
+        ],
+        null=True,
+        blank=True,
+        help_text="Admin type for Athens module access"
+    )
     
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     
     requires_2fa = models.BooleanField(default=False)
     totp_secret = models.CharField(max_length=32, null=True, blank=True)
+    api_key = models.CharField(max_length=100, null=True, blank=True, unique=True)
     
     password_changed_at = models.DateTimeField(null=True, blank=True)
     failed_login_count = models.IntegerField(default=0)
@@ -74,6 +153,10 @@ class User(AbstractBaseUser, PermissionsMixin):
         # 90 days password expiry
         expiry_days = 90
         return (timezone.now() - self.password_changed_at).days > expiry_days
+
+
+# Alias for Athens module compatibility
+CustomUser = User
 
 
 class SecurityLog(models.Model):

@@ -1,43 +1,121 @@
 # Athens 2.0 - Login Credentials
 
-## Test User Accounts
+## 🔐 All User Types
 
-### Superadmin
-- **Email:** `super@test.com`
-- **Password:** `password123`
-- **Access:** Control plane management (tenants, subscriptions, master admins)
+### 1. Superadmin (Platform Administrator)
+```
+Email:    superadmin@athens.com
+Password: Admin@123
+Access:   Full control plane (tenants, subscriptions, master admins, audit logs)
+```
 
-### Master Admin
-- **Email:** `master@test.com`
-- **Password:** `password123`
-- **Access:** Company management, projects, settings
+### 2. Master Admin (Tenant Administrator)
+```
+Email:    admin@acme.com
+Password: Master@123
+Access:   Tenant-level administration
+```
 
-### Company User
-- **Email:** `company@test.com`
-- **Password:** `password123`
-- **Access:** Company dashboard, services
+### 3. Company User (Regular User)
+```
+Email:    (Created by master admin)
+Password: (Set during creation)
+Access:   Company-level features
+```
 
-### Service User
-- **Email:** `service@test.com`
-- **Password:** `password123`
-- **Access:** Service-specific features
-
-### Admin (Superadmin)
-- **Email:** `admin@athens.com`
-- **Password:** `admin123`
-- **Access:** Full system access
+**Note:** All users login through the same endpoint `/api/auth/login/` - the backend automatically detects user type.
 
 ---
 
-## Login URL
-- **Frontend:** `http://localhost:5173/login`
-- **Backend API:** `http://localhost:8004/api/auth/login/`
+## 🚀 Quick Start
+
+### Create Superadmin (First Time Setup)
+```bash
+cd /var/www/athens-2.0/backend
+source .venv/bin/activate
+python manage.py shell
+```
+
+```python
+from authentication.models import User, UserType
+
+superadmin = User.objects.create_user(
+    email='superadmin@athens.com',
+    password='Admin@123',
+    user_type=UserType.SUPERADMIN
+)
+print(f"✅ Superadmin created: {superadmin.email}")
+```
+
+### Start Backend
+```bash
+cd /var/www/athens-2.0/backend
+source .venv/bin/activate
+python manage.py runserver 0.0.0.0:8004
+```
+
+### Start Frontend
+```bash
+cd /var/www/athens-2.0/frontend
+npm run dev
+```
+
+Visit: `http://localhost:5173` or your production URL
 
 ---
 
-## Issue Fixed
-The "Invalid credentials" error was caused by passwords not being properly hashed in the database. All passwords have been reset and are now working correctly.
+## ✅ **READY TO LOGIN**
+
+**Status:** Account unlocked ✓  
+**Endpoint:** `/api/auth/login/` ✓  
+**Build:** Latest ✓
+
+### 🔐 **Login Now**
+```
+Email:    superadmin@athens.com
+Password: Admin@123
+```
+
+**URL:** https://ai-athens.cloud
 
 ---
 
-**Last Updated:** $(date)
+## 🔓 **If Account Gets Locked Again**
+
+Run this command:
+```bash
+/var/www/athens-2.0/unlock-user.sh superadmin@athens.com
+```
+
+Or unlock any user:
+```bash
+/var/www/athens-2.0/unlock-user.sh user@example.com
+```
+
+---
+
+## 📋 Test Flow
+
+1. **Login as Superadmin** → Create tenant → Create master admin
+2. **Logout** → Login as Master Admin → Access tenant dashboard
+3. **Create company users** (when feature is ready)
+
+---
+
+## 🔍 Troubleshooting
+
+### Issue: Still getting 401 errors
+**Solution:** 
+- Ensure backend is running on port 8004
+- Check browser console for actual endpoint being called
+- Verify VITE_API_URL in frontend/.env
+
+### Issue: User doesn't exist
+**Solution:** Create users via Django shell (see Quick Start above)
+
+### Issue: Wrong endpoint
+**Solution:** The frontend now auto-detects. If issues persist, check `/var/www/athens-2.0/frontend/src/lib/api.ts` line ~300
+
+---
+
+**Last Updated:** 2025-02-06

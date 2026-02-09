@@ -132,21 +132,29 @@ export const useAuthStore = create<AuthState>()(
         } catch (error: any) {
           const errorData = error.response?.data || {}
           const errorMessage = errorData.error || errorData.message || 'Login failed. Please try again.'
+          const isLocked = Boolean(
+            errorData.account_locked ||
+            errorData.locked ||
+            errorData.locked_until ||
+            errorMessage.toLowerCase().includes('locked')
+          )
+          const attemptsRemaining = errorData.attempts_remaining ?? errorData.remaining_attempts ?? null
+          const lockoutExpiresAt = errorData.locked_until || errorData.lockout_expires_at || null
           
           set({ 
             isLoading: false, 
             error: errorMessage,
             isAuthenticated: false,
             user: null,
-            accountLocked: errorData.locked || false,
-            remainingAttempts: errorData.attempts_remaining || null,
-            lockoutExpiresAt: errorData.locked_until || null
+            accountLocked: isLocked,
+            remainingAttempts: attemptsRemaining,
+            lockoutExpiresAt
           })
 
-          if (errorData.locked) {
+          if (isLocked) {
             toast.error('Account locked due to too many failed attempts')
-          } else if (errorData.attempts_remaining !== undefined) {
-            toast.error(`Login failed. ${errorData.attempts_remaining} attempts remaining.`)
+          } else if (attemptsRemaining !== null && attemptsRemaining !== undefined) {
+            toast.error(`Login failed. ${attemptsRemaining} attempts remaining.`)
           } else {
             toast.error(errorMessage)
           }

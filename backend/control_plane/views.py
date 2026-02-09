@@ -3,11 +3,12 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
+from django.db import transaction
 
 from authentication.permissions import IsSuperAdmin
 from authentication.models import User, UserType, SecurityLog
 from authentication.utils import log_security_event
-from .models import Tenant, Subscription, MasterAdmin
+from .models import Tenant, Subscription, MasterAdmin, AthensTenantLink, AthensModuleSubscription, AthensAuditLog, DEFAULT_ATHENS_MODULES
 from .serializers import (
     TenantSerializer, SubscriptionSerializer, MasterAdminSerializer,
     SecurityLogSerializer
@@ -60,6 +61,89 @@ class TenantViewSet(viewsets.ModelViewSet):
         )
         
         return Response({'message': 'Tenant enabled'})
+
+    @action(detail=True, methods=['post'])
+    def sync_athens(self, request, pk=None):
+        """Sync tenant with Athens - create AthensTenantLink if missing"""
+        tenant = self.get_object()
+        
+        athens_link, created = AthensTenantLink.objects.get_or_create(
+            tenant=tenant,
+            defaults={
+                'created_by': request.user,
+                'enabled_modules': DEFAULT_ATHENS_MODULES.copy(),
+                'is_active': True
+            }
+        )
+        
+        if not created:
+            athens_link.synced_at = timezone.now()
+            athens_link.save()
+        
+        AthensAuditLog.objects.create(
+            actor=request.user,
+            action='tenant_synced',
+            entity_type='tenant',
+            entity_id=str(tenant.id),
+            after_data={'enabled_modules': athens_link.enabled_modules}
+        )
+        
+        return Response({
+            'status': 'synced',
+            'created': created,
+            'enabled_modules': athens_link.enabled_modules
+        })
+
+    @action(detail=True, methods=['get', 'patch'])
+    def athens_modules(self, request, pk=None):
+        """Get or update Athens modules for tenant"""
+        tenant = self.get_object()
+        
+        try:
+            athens_link = tenant.athens_link
+        except AthensTenantLink.DoesNotExist:
+            return Response({'error': 'Athens tenant link not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if request.method == 'GET':
+            return Response({
+                'enabled_modules': athens_link.enabled_modules,
+                'available_modules': DEFAULT_ATHENS_MODULES
+            })
+        
+        elif request.method == 'PATCH':
+            enabled_modules = request.data.get('enabled_modules', [])
+            
+            # Validate modules
+            invalid = [m for m in enabled_modules if m not in DEFAULT_ATHENS_MODULES]
+            if invalid:
+                return Response(
+                    {'error': f'Invalid modules: {invalid}'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            before_data = {'enabled_modules': athens_link.enabled_modules}
+            athens_link.enabled_modules = enabled_modules
+            athens_link.save()
+            
+            # Update module subscriptions
+            AthensModuleSubscription.objects.filter(tenant=tenant).delete()
+            for module_code in enabled_modules:
+                AthensModuleSubscription.objects.create(
+                    tenant=tenant,
+                    module_code=module_code,
+                    enabled=True
+                )
+            
+            AthensAuditLog.objects.create(
+                actor=request.user,
+                action='modules_updated',
+                entity_type='tenant',
+                entity_id=str(tenant.id),
+                before_data=before_data,
+                after_data={'enabled_modules': enabled_modules}
+            )
+            
+            return Response({'enabled_modules': enabled_modules, 'status': 'updated'})
 
 
 class SubscriptionViewSet(viewsets.ModelViewSet):
@@ -174,3 +258,46 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(event_type=event_type)
         
         return queryset
+
+
+class AthensAuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+    """Athens audit log viewing for superadmin"""
+    queryset = AthensAuditLog.objects.all()
+    permission_classes = [IsAuthenticated, IsSuperAdmin]
+    
+    def list(self, request):
+        queryset = self.get_queryset()
+        
+        # Filter by query parameters
+        tenant_id = request.query_params.get('tenant_id')
+        actor_id = request.query_params.get('actor_id')
+        action = request.query_params.get('action')
+        from_date = request.query_params.get('from')
+        to_date = request.query_params.get('to')
+        
+        if tenant_id:
+            queryset = queryset.filter(entity_id=tenant_id, entity_type='tenant')
+        if actor_id:
+            queryset = queryset.filter(actor_id=actor_id)
+        if action:
+            queryset = queryset.filter(action=action)
+        if from_date:
+            queryset = queryset.filter(created_at__gte=from_date)
+        if to_date:
+            queryset = queryset.filter(created_at__lte=to_date)
+        
+        data = []
+        for log in queryset:
+            data.append({
+                'id': log.id,
+                'actor': log.actor.email if log.actor else None,
+                'action': log.action,
+                'entity_type': log.entity_type,
+                'entity_id': log.entity_id,
+                'before_data': log.before_data,
+                'after_data': log.after_data,
+                'ip_address': log.ip_address,
+                'created_at': log.created_at
+            })
+        
+        return Response(data)

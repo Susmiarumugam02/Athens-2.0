@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
+import { PageContainer } from '../../components/layout/PageContainer'
 import {
   Shield, Lock, Key, Eye, EyeOff, RefreshCw, Copy, Download, 
   AlertTriangle, CheckCircle2, Activity, Clock, Fingerprint,
@@ -1541,7 +1542,7 @@ const UltraSecureMasterAdminSettings: React.FC = () => {
 
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50">
-        <div className="container mx-auto px-6 py-4">
+        <PageContainer size="full" className="py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
               <Link
@@ -1584,11 +1585,11 @@ const UltraSecureMasterAdminSettings: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
+        </PageContainer>
       </div>
 
       <div className="relative z-10 pt-24 pb-8">
-        <div className="container mx-auto px-6">
+        <PageContainer>
           {/* Tab Navigation */}
           <div className="mb-8">
             <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-xl p-3">
@@ -1636,7 +1637,7 @@ const UltraSecureMasterAdminSettings: React.FC = () => {
             {activeTab === 'email' && renderEmailSettingsTab()}
             {activeTab === 'activity' && renderSecurityLogTab()}
           </div>
-        </div>
+        </PageContainer>
       </div>
     </div>
   )

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
 import { Button } from '../../../components/ui/Button'
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner'
+import { PageContainer } from '../../../components/layout/PageContainer'
 import { athensSustainabilityApi } from '../../../services/athensSustainabilityApi'
 import { useAthensSustainabilityEnabled } from '../../../hooks/useAthensSustainabilityEnabled'
 import toast from 'react-hot-toast'
@@ -74,7 +75,7 @@ const ProjectSelection: React.FC = () => {
   const projectsList = projects?.results || []
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <PageContainer>
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
@@ -210,7 +211,7 @@ const ProjectSelection: React.FC = () => {
           </div>
         )}
       </div>
-    </div>
+    </PageContainer>
   )
 }
 

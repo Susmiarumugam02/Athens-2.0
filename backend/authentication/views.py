@@ -53,7 +53,12 @@ def unified_login(request):
             {'reason': 'account_locked'}
         )
         return Response(
-            {'error': 'Account is locked', 'locked_until': user.locked_until},
+            {
+                'error': 'Account is locked',
+                'locked_until': user.locked_until,
+                'account_locked': True,
+                'lockout_expires_at': user.locked_until,
+            },
             status=status.HTTP_403_FORBIDDEN
         )
     
@@ -74,8 +79,24 @@ def unified_login(request):
             SecurityLog.Severity.WARNING,
             {'reason': 'invalid_password', 'attempts': user.failed_login_count}
         )
+        if user.failed_login_count >= 5:
+            return Response(
+                {
+                    'error': 'Account is locked',
+                    'locked_until': user.locked_until,
+                    'account_locked': True,
+                    'lockout_expires_at': user.locked_until,
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        attempts_remaining = max(0, 5 - user.failed_login_count)
         return Response(
-            {'error': 'Invalid credentials'},
+            {
+                'error': 'Invalid credentials',
+                'attempts_remaining': attempts_remaining,
+                'remaining_attempts': attempts_remaining,
+            },
             status=status.HTTP_401_UNAUTHORIZED
         )
     

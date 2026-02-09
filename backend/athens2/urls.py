@@ -22,5 +22,6 @@ urlpatterns = [
     path('api/control-plane/', include('control_plane.urls')),
     path('api/system/', include('system.urls')),
     path('api/projects/', include('projects.urls')),
+    path('api/superadmin/', include('superadmin.urls')),
     path('admin/', admin.site.urls),
 ]

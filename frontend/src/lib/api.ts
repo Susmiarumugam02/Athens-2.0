@@ -306,7 +306,7 @@ export const apiClient = {
     return api.delete(url, config)
   },
 
-  // Authentication - Unified Login
+  // Authentication - Unified Login (v3 - 1770374883)
   login: (credentials: { email: string; password: string; totp_code?: string }) =>
     api.post('/api/auth/login/', credentials),
 
@@ -338,34 +338,28 @@ export const apiClient = {
 
   // Ultra-Secure Master Admin Settings
   getMasterAdminUltraSettings: () =>
-    api.get('/api/auth/master-admin/settings/'),
+    api.get('/api/superadmin/settings/ultra-secure/'),
 
   changeMasterAdminUltraPassword: (data: { current_password: string; new_password: string; confirm_password: string }) =>
-    api.post('/api/auth/master-admin/settings/password/', data),
-
-  getMasterAdminApiKey: () =>
-    api.get('/api/auth/master-admin/settings/api-key/'),
+    api.post('/api/superadmin/settings/password/change/', data),
 
   regenerateMasterAdminApiKey: (data: { current_password: string }) =>
-    api.post('/api/auth/master-admin/settings/api-key/', data),
-
-  getMasterAdminRecoveryCodes: () =>
-    api.get('/api/auth/master-admin/settings/recovery-codes/'),
+    api.post('/api/superadmin/settings/api-key/regenerate/', data),
 
   regenerateMasterAdminRecoveryCodes: (data: { current_password: string }) =>
-    api.post('/api/auth/master-admin/settings/recovery-codes/', data),
+    api.post('/api/superadmin/settings/recovery-codes/regenerate/', data),
 
   getMasterAdminTwoFactor: () =>
-    api.get('/api/auth/master-admin/settings/two-factor/'),
+    api.get('/api/superadmin/settings/2fa/status/'),
 
   toggleMasterAdminTwoFactor: (data: { action: 'enable' | 'disable' | 'reset'; current_password: string; totp_code?: string }) =>
-    api.post('/api/auth/master-admin/settings/two-factor/', data),
-
-  getMasterAdminSecurityLog: (params?: { days?: number }) =>
-    api.get('/api/auth/master-admin/settings/security-log/', { params }),
+    api.post('/api/superadmin/settings/2fa/toggle/', data),
 
   getMasterAdminSecurityStatus: () =>
-    api.get('/api/auth/master-admin/settings/security-status/'),
+    api.get('/api/superadmin/security/status/'),
+
+  getMasterAdminSecurityLog: (params?: { days?: number }) =>
+    api.get('/api/superadmin/security/log/', { params }),
 
   // Services
   getServices: () =>
@@ -1434,43 +1428,40 @@ export const apiClient = {
 
   // Phase 3: Enhanced Security APIs
   getSecuritySettings: () =>
-    api.get('/api/auth/master-admin/security-settings/'),
+    api.get('/api/superadmin/security/settings/'),
 
   updateSecuritySettings: (data: any) =>
-    api.post('/api/auth/master-admin/security-settings/', data),
+    api.post('/api/superadmin/security/settings/', data),
 
   getIPRestrictions: () =>
-    api.get('/api/auth/master-admin/ip-restrictions/'),
+    api.get('/api/superadmin/security/ip-restrictions/'),
 
   addIPRestriction: (data: { ip_address: string; description: string }) =>
-    api.post('/api/auth/master-admin/ip-restrictions/', data),
+    api.post('/api/superadmin/security/ip-restrictions/', data),
 
   removeIPRestriction: (id: number) =>
-    api.delete(`/api/auth/master-admin/ip-restrictions/${id}/`),
+    api.delete(`/api/superadmin/security/ip-restrictions/${id}/`),
 
   toggleIPRestriction: (id: number, data: { is_active: boolean }) =>
-    api.patch(`/api/auth/master-admin/ip-restrictions/${id}/`, data),
+    api.patch(`/api/superadmin/security/ip-restrictions/${id}/`, data),
 
   getDeviceFingerprints: () =>
-    api.get('/api/auth/master-admin/device-fingerprints/'),
+    api.get('/api/superadmin/security/device-fingerprints/'),
 
   removeDeviceFingerprint: (deviceId: string) =>
-    api.delete(`/api/auth/master-admin/device-fingerprints/${deviceId}/`),
+    api.delete(`/api/superadmin/security/device-fingerprints/${deviceId}/`),
 
   toggleDeviceTrust: (deviceId: string, data: { is_trusted: boolean }) =>
-    api.patch(`/api/auth/master-admin/device-fingerprints/${deviceId}/`, data),
+    api.patch(`/api/superadmin/security/device-fingerprints/${deviceId}/`, data),
 
   getLoginNotifications: () =>
-    api.get('/api/auth/master-admin/login-notifications/'),
-
-  testLoginNotification: () =>
-    api.post('/api/auth/master-admin/login-notifications/test/'),
+    api.get('/api/superadmin/security/login-notifications/'),
 
   getNotificationEmail: () =>
-    api.get('/api/auth/master-admin/notification-email/'),
+    api.get('/api/superadmin/security/notification-email/'),
 
   setNotificationEmail: (data: { notification_email: string }) =>
-    api.post('/api/auth/master-admin/notification-email/', data),
+    api.post('/api/superadmin/security/notification-email/', data),
 
   // Master Admin Email Settings
   getMasterAdminEmailSettings: () =>

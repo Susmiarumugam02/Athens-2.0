@@ -189,8 +189,9 @@ const LeadScoringDashboard: React.FC = () => {
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Lead quality breakdown</p>
             <div className="space-y-4">
               {Object.entries(dashboardData.score_distribution).map(([grade, count]) => {
-                const total = Object.values(dashboardData.score_distribution).reduce((sum: number, val: any) => sum + val, 0)
-                const percentage = total > 0 ? ((count as number) / total * 100).toFixed(1) : 0
+                const countNum = Number(count)
+                const total = Object.values(dashboardData.score_distribution).reduce((sum: number, val: any) => sum + Number(val), 0) as number
+                const percentage = total > 0 ? (countNum / total * 100).toFixed(1) : 0
                 return (
                   <div key={grade} className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
@@ -212,7 +213,7 @@ const LeadScoringDashboard: React.FC = () => {
                           style={{ width: `${percentage}%` }}
                         ></div>
                       </div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400 w-12 text-right">{count as number}</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400 w-12 text-right">{countNum}</span>
                     </div>
                   </div>
                 )

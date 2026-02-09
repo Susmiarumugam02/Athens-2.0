@@ -1,23 +1,23 @@
 import React, { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import { LayoutDashboard, Settings, LogOut, Menu, X, FolderKanban } from 'lucide-react'
+import { LayoutDashboard, Settings, LogOut, Menu, FolderKanban, Bell } from 'lucide-react'
 import { ThemeToggle } from '../components/theme/ThemeToggle'
+import { SapSidebar } from '../components/layout/SapSidebar'
 
 interface MasterAdminLayoutProps {
   children: React.ReactNode
 }
 
 const MasterAdminLayout: React.FC<MasterAdminLayoutProps> = ({ children }) => {
-  const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const navigation = [
-    { name: 'Dashboard', href: '/master-admin', icon: LayoutDashboard },
-    { name: 'Projects', href: '/master-admin/projects', icon: FolderKanban },
-    { name: 'Settings', href: '/master-admin/settings', icon: Settings },
+  const sidebarItems = [
+    { label: 'Dashboard', description: 'Overview and insights', href: '/master-admin', icon: LayoutDashboard },
+    { label: 'Projects', description: 'Manage projects', href: '/master-admin/projects', icon: FolderKanban },
+    { label: 'Settings', description: 'Account settings', href: '/master-admin/settings', icon: Settings },
   ]
 
   const handleLogout = () => {
@@ -27,85 +27,85 @@ const MasterAdminLayout: React.FC<MasterAdminLayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-app-canvas text-foreground">
-      {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border transform transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="flex items-center justify-between h-16 px-6 border-b border-border">
-            <h1 className="text-xl font-bold text-primary">Athens 2.0</h1>
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden">
-              <X className="w-5 h-5" />
+      {/* Header - Premium SAP Style - Full Width */}
+      <header className="fixed top-0 left-0 right-0 z-40 bg-gradient-to-r from-background via-background to-primary/5 backdrop-blur-xl shadow-lg rounded-b-2xl">
+        <div className="flex items-center justify-between h-16 px-6">
+          {/* Left Section - Logo & Branding */}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 text-muted-foreground hover:bg-accent rounded-lg transition-colors lg:hidden"
+            >
+              <Menu className="w-5 h-5" />
             </button>
+            <div className="relative">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-600 to-primary shadow-md flex items-center justify-center">
+                <span className="text-xl text-amber-400">⚡</span>
+              </div>
+              <span className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full border-2 border-background" />
+            </div>
+            <div className="hidden md:block">
+              <div className="text-sm font-bold text-foreground">ATHENS 2.0</div>
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                <span>⚙</span>
+                <span>Master Control Center</span>
+              </div>
+            </div>
           </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-            {navigation.map((item) => {
-              const Icon = item.icon
-              const isActive = location.pathname === item.href
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-colors ${
-                    isActive
-                      ? 'bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow'
-                      : 'text-foreground hover:bg-muted/60'
-                  }`}
-                >
-                  <span className={`mr-3 flex h-9 w-9 items-center justify-center rounded-lg ${
-                    isActive ? 'bg-white/20' : 'bg-primary/10'
-                  }`}>
-                    <Icon className="w-5 h-5" />
-                  </span>
-                  {item.name}
-                </Link>
-              )
-            })}
-          </nav>
+          {/* Center Section - Status */}
+          <div className="hidden lg:flex items-center gap-2 px-4 py-1.5 bg-white/80 dark:bg-card/80 rounded-full shadow-sm">
+            <span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
+            <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">System Online</span>
+          </div>
 
-          {/* User section */}
-          <div className="p-4 border-t border-border">
-            <div className="flex items-center mb-3">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {user?.email}
-                </p>
-                <p className="text-xs text-muted-foreground">Master Admin</p>
+          {/* Right Section - Actions & User */}
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button className="p-2 text-muted-foreground hover:bg-accent/50 rounded-full transition-all relative">
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-1 right-1 h-2 w-2 bg-destructive rounded-full" />
+            </button>
+            <Link
+              to="/master-admin/settings"
+              className="p-2 text-muted-foreground hover:bg-accent/50 rounded-full transition-all relative"
+            >
+              <Settings className="w-4 h-4" />
+              <span className="absolute bottom-1 right-1 h-1.5 w-1.5 bg-emerald-500 rounded-full" />
+            </Link>
+            <div className="h-6 w-px bg-border/50 mx-1" />
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-accent/30 to-accent/10 rounded-full">
+              <div className="h-7 w-7 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-xs font-bold text-white shadow-sm">
+                {user?.email?.[0]?.toUpperCase() || 'M'}
+              </div>
+              <div className="hidden md:block">
+                <div className="text-xs font-medium text-foreground leading-tight">{user?.email?.split('@')[0] || 'master'}</div>
+                <div className="text-[10px] text-muted-foreground">Master Admin</div>
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center w-full px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+              className="ml-1 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 rounded-full transition-all"
             >
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
+              <LogOut className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
-      </aside>
+      </header>
 
-      {/* Main content */}
-      <div className={`transition-all duration-200 ${sidebarOpen ? 'lg:pl-64' : ''}`}>
-        {/* Header */}
-        <header className="sticky top-0 z-40 bg-background/70 backdrop-blur border-b border-border">
-          <div className="flex items-center justify-between h-16 px-6">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 text-muted-foreground hover:bg-accent rounded-lg"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-4">
-              <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-700">
-                System Online
-              </span>
-              <ThemeToggle />
-            </div>
-          </div>
-        </header>
+      {/* Sidebar - Below Header */}
+      <div className="pt-16">
+        <SapSidebar
+          title="Navigation"
+          subtitle="Control Center"
+          items={sidebarItems}
+          mobileOpen={sidebarOpen}
+          onMobileClose={() => setSidebarOpen(false)}
+        />
+      </div>
 
-        {/* Page content */}
+      {/* Main Content */}
+      <div className="pt-16 lg:pl-64">
         <main className="mx-auto max-w-7xl px-6 py-6">
           {children}
         </main>

@@ -9,18 +9,28 @@ import AthensAccessGuard from '../components/auth/AthensAccessGuard'
 const LoginPage = React.lazy(() => import('../pages/auth/LoginPage'))
 const TwoFactorPage = React.lazy(() => import('../pages/auth/TwoFactorPage'))
 
+// Layouts
+import SuperadminLayout from '../layouts/SuperadminLayout'
+
 // Superadmin
 const SuperadminDashboard = React.lazy(() => import('../pages/superadmin/Dashboard'))
+const SuperadminUsers = React.lazy(() => import('../pages/superadmin/Users/UsersList'))
+const SuperadminRoles = React.lazy(() => import('../pages/superadmin/Roles/RolesList'))
+const SuperadminSecurity = React.lazy(() => import('../pages/superadmin/Security/SecurityCenter'))
+const SuperadminAuditLogs = React.lazy(() => import('../pages/superadmin/AuditLogs/AuditLogsList'))
+const SuperadminSettings = React.lazy(() => import('../pages/superadmin/Settings'))
+const SuperadminConfiguration = React.lazy(() => import('../pages/superadmin/Configuration'))
+const SuperadminNotifications = React.lazy(() => import('../pages/superadmin/Notifications/NotificationsCenter'))
 const TenantsPage = React.lazy(() => import('../pages/superadmin/Tenants'))
 const MastersPage = React.lazy(() => import('../pages/superadmin/Masters'))
 const SubscriptionsPage = React.lazy(() => import('../pages/superadmin/Subscriptions'))
-const AuditLogsPage = React.lazy(() => import('../pages/superadmin/AuditLogs'))
-const SuperadminSettingsPage = React.lazy(() => import('../pages/superadmin/Settings'))
 
 // Master Admin
 const MasterAdminDashboard = React.lazy(() => import('../pages/master-admin/MasterAdminDashboard'))
 const ProjectsPage = React.lazy(() => import('../pages/master-admin/ProjectsPage'))
 const UltraSecureMasterAdminSettings = React.lazy(() => import('../pages/master-admin/UltraSecureSettings'))
+
+
 
 // Company
 const CompanyDashboard = React.lazy(() => import('../pages/company/Dashboard'))
@@ -42,6 +52,9 @@ const EmployeeApp = React.lazy(() => import('../pages/EmployeeApp'))
 const JobPortal = React.lazy(() => import('../pages/public/JobPortal'))
 const JobApplication = React.lazy(() => import('../pages/public/JobApplication'))
 const PublicJobDetail = React.lazy(() => import('../pages/public/PublicJobDetail'))
+
+// DEV-ONLY Routes
+const SapUiPreview = import.meta.env.DEV ? React.lazy(() => import('../pages/__dev__/SapUiPreview')) : null
 
 // Protected Route Component
 interface ProtectedRouteProps {
@@ -202,8 +215,24 @@ const SuspenseWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) 
 )
 
 export const AppRouter: React.FC = () => {
+  // DEV-ONLY routes
+  const devRoutes = import.meta.env.DEV && SapUiPreview ? [
+    <Route
+      key="sap-ui-preview"
+      path="/__dev__/sap-ui"
+      element={
+        <SuspenseWrapper>
+          <SapUiPreview />
+        </SuspenseWrapper>
+      }
+    />
+  ] : [];
+
   return (
     <Routes>
+      {/* DEV-ONLY Routes */}
+      {devRoutes}
+
       {/* Public Routes */}
       <Route
         path="/login"
@@ -239,71 +268,23 @@ export const AppRouter: React.FC = () => {
       />
 
       {/* Superadmin Routes */}
-      <Route
-        path="/superadmin/dashboard"
-        element={
-          <ProtectedRoute requireSuperAdmin>
-            <SuspenseWrapper>
-              <SuperadminDashboard />
-            </SuspenseWrapper>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/superadmin/tenants"
-        element={
-          <ProtectedRoute requireSuperAdmin>
-            <SuspenseWrapper>
-              <TenantsPage />
-            </SuspenseWrapper>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/superadmin/masters"
-        element={
-          <ProtectedRoute requireSuperAdmin>
-            <SuspenseWrapper>
-              <MastersPage />
-            </SuspenseWrapper>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/superadmin/subscriptions"
-        element={
-          <ProtectedRoute requireSuperAdmin>
-            <SuspenseWrapper>
-              <SubscriptionsPage />
-            </SuspenseWrapper>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/superadmin/audit-logs"
-        element={
-          <ProtectedRoute requireSuperAdmin>
-            <SuspenseWrapper>
-              <AuditLogsPage />
-            </SuspenseWrapper>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/superadmin/settings"
-        element={
-          <ProtectedRoute requireSuperAdmin>
-            <SuspenseWrapper>
-              <SuperadminSettingsPage />
-            </SuspenseWrapper>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/superadmin" element={
+        <ProtectedRoute requireSuperAdmin>
+          <SuperadminLayout />
+        </ProtectedRoute>
+      }>
+        <Route path="dashboard" element={<SuspenseWrapper><SuperadminDashboard /></SuspenseWrapper>} />
+        <Route path="users" element={<SuspenseWrapper><SuperadminUsers /></SuspenseWrapper>} />
+        <Route path="roles" element={<SuspenseWrapper><SuperadminRoles /></SuspenseWrapper>} />
+        <Route path="security" element={<SuspenseWrapper><SuperadminSecurity /></SuspenseWrapper>} />
+        <Route path="tenants" element={<SuspenseWrapper><TenantsPage /></SuspenseWrapper>} />
+        <Route path="masters" element={<SuspenseWrapper><MastersPage /></SuspenseWrapper>} />
+        <Route path="subscriptions" element={<SuspenseWrapper><SubscriptionsPage /></SuspenseWrapper>} />
+        <Route path="audit-logs" element={<SuspenseWrapper><SuperadminAuditLogs /></SuspenseWrapper>} />
+        <Route path="configuration" element={<SuspenseWrapper><SuperadminConfiguration /></SuspenseWrapper>} />
+        <Route path="notifications" element={<SuspenseWrapper><SuperadminNotifications /></SuspenseWrapper>} />
+        <Route path="settings" element={<SuspenseWrapper><SuperadminSettings /></SuspenseWrapper>} />
+      </Route>
 
       {/* Master Admin Routes */}
       <Route
@@ -336,6 +317,8 @@ export const AppRouter: React.FC = () => {
           </ProtectedRoute>
         }
       />
+
+
 
       {/* Company User Routes */}
       <Route

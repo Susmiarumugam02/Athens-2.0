@@ -3,7 +3,7 @@ import { Sun, Moon } from 'lucide-react'
 import { useThemeStore } from '../../store/themeStore'
 
 export const ThemeToggle: React.FC = () => {
-  const { theme, toggleTheme } = useThemeStore()
+  const { mode, toggleTheme } = useThemeStore()
 
   return (
     <button
@@ -11,7 +11,7 @@ export const ThemeToggle: React.FC = () => {
       className="p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors"
       aria-label="Toggle theme"
     >
-      {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+      {mode === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
     </button>
   )
 }

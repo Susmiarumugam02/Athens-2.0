@@ -5,10 +5,8 @@ type ThemeMode = 'light' | 'dark' | 'system'
 
 interface ThemeState {
   mode: ThemeMode
-  theme: ThemeMode // Alias for mode
   setMode: (mode: ThemeMode) => void
-  toggleMode: () => void
-  toggleTheme: () => void // Alias for toggleMode
+  toggleTheme: () => void
 }
 
 const applyTheme = (mode: ThemeMode) => {
@@ -26,36 +24,29 @@ const applyTheme = (mode: ThemeMode) => {
   }
 }
 
-export const useThemeStore = create<ThemeState>()(
+export const useThemeStore = create<ThemeState>()((
   persist(
-    (set, get) => ({
+    (set) => ({
       mode: 'light',
-      
-      get theme() {
-        return get().mode
-      },
       
       setMode: (mode: ThemeMode) => {
         set({ mode })
         applyTheme(mode)
       },
       
-      toggleMode: () => {
-        const current = get().mode
-        const next = current === 'light' ? 'dark' : 'light'
-        set({ mode: next })
-        applyTheme(next)
-      },
-      
       toggleTheme: () => {
-        get().toggleMode()
+        set((state) => {
+          const next = state.mode === 'light' ? 'dark' : 'light'
+          applyTheme(next)
+          return { mode: next }
+        })
       },
     }),
     {
       name: 'theme',
     }
   )
-)
+))
 
 // Initialize theme on load
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {

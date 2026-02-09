@@ -1,29 +1,30 @@
 import React, { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { 
-  LayoutDashboard, Users, Building2, CreditCard, 
-  FileText, Settings, LogOut, Menu, X 
+  LayoutDashboard, Users, 
+  FileText, Settings, LogOut, Menu, Bell, Shield, Lock
 } from 'lucide-react'
 import { ThemeToggle } from '../components/theme/ThemeToggle'
+import { SapSidebar } from '../components/layout/SapSidebar'
 
-interface SuperadminLayoutProps {
-  children: React.ReactNode
-}
-
-const SuperadminLayout: React.FC<SuperadminLayoutProps> = ({ children }) => {
-  const location = useLocation()
+const SuperadminLayout: React.FC = () => {
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const navigation = [
-    { name: 'Dashboard', href: '/superadmin/dashboard', icon: LayoutDashboard },
-    { name: 'Tenants', href: '/superadmin/tenants', icon: Building2 },
-    { name: 'Master Admins', href: '/superadmin/masters', icon: Users },
-    { name: 'Subscriptions', href: '/superadmin/subscriptions', icon: CreditCard },
-    { name: 'Audit Logs', href: '/superadmin/audit-logs', icon: FileText },
-    { name: 'Settings', href: '/superadmin/settings', icon: Settings },
+  const sidebarItems = [
+    { label: 'Dashboard', description: 'Overview and metrics', href: '/superadmin/dashboard', icon: LayoutDashboard },
+    { label: 'Users', description: 'Manage SuperAdmin users', href: '/superadmin/users', icon: Users },
+    { label: 'Roles', description: 'Roles and permissions', href: '/superadmin/roles', icon: Shield },
+    { label: 'Security', description: 'Security policies', href: '/superadmin/security', icon: Lock },
+    { label: 'Tenants', description: 'Manage tenant companies', href: '/superadmin/tenants', icon: FileText },
+    { label: 'Subscriptions', description: 'Billing and plans', href: '/superadmin/subscriptions', icon: FileText },
+    { label: 'Masters', description: 'Manage master accounts', href: '/superadmin/masters', icon: Users },
+    { label: 'Audit Logs', description: 'Platform activity trail', href: '/superadmin/audit-logs', icon: FileText },
+    { label: 'Configuration', description: 'System configuration', href: '/superadmin/configuration', icon: Settings },
+    { label: 'Notifications', description: 'Announcements & alerts', href: '/superadmin/notifications', icon: Bell },
+    { label: 'Settings', description: 'Ultra-secure settings', href: '/superadmin/settings', icon: Settings },
   ]
 
   const handleLogout = () => {
@@ -32,88 +33,88 @@ const SuperadminLayout: React.FC<SuperadminLayoutProps> = ({ children }) => {
   }
 
   return (
-    <div className="min-h-screen bg-app-canvas text-foreground">
-      {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border transform transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="flex items-center justify-between h-16 px-6 border-b border-border">
-            <h1 className="text-xl font-bold text-primary">Athens 2.0</h1>
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden">
-              <X className="w-5 h-5" />
+    <div className="flex h-screen flex-col overflow-hidden bg-app-canvas text-foreground">
+      {/* Fixed Header */}
+      <header className="z-40 shrink-0 bg-gradient-to-r from-background via-background to-primary/5 backdrop-blur-xl shadow-lg rounded-b-2xl">
+        <div className="flex items-center justify-between h-16 px-6">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 text-muted-foreground hover:bg-accent rounded-lg transition-colors lg:hidden"
+            >
+              <Menu className="w-5 h-5" />
             </button>
+            <div className="relative">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-600 to-primary shadow-md flex items-center justify-center">
+                <span className="text-xl text-amber-400">⚡</span>
+              </div>
+              <span className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full border-2 border-background" />
+            </div>
+            <div className="hidden md:block">
+              <div className="text-sm font-bold text-foreground">ATHENS 2.0</div>
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                <span>⚙</span>
+                <span>Master Control Center</span>
+              </div>
+            </div>
           </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-            {navigation.map((item) => {
-              const Icon = item.icon
-              const isActive = location.pathname === item.href
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-colors ${
-                    isActive
-                      ? 'bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow'
-                      : 'text-foreground hover:bg-muted/60'
-                  }`}
-                >
-                  <span className={`mr-3 flex h-9 w-9 items-center justify-center rounded-lg ${
-                    isActive ? 'bg-white/20' : 'bg-primary/10'
-                  }`}>
-                    <Icon className="w-5 h-5" />
-                  </span>
-                  {item.name}
-                </Link>
-              )
-            })}
-          </nav>
+          <div className="hidden lg:flex items-center gap-2 px-4 py-1.5 bg-white/80 dark:bg-card/80 rounded-full shadow-sm">
+            <span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
+            <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">System Online</span>
+          </div>
 
-          {/* User section */}
-          <div className="p-4 border-t border-border">
-            <div className="flex items-center mb-3">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {user?.email}
-                </p>
-                <p className="text-xs text-muted-foreground">Superadmin</p>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button className="p-2 text-muted-foreground hover:bg-accent/50 rounded-full transition-all relative">
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-1 right-1 h-2 w-2 bg-destructive rounded-full" />
+            </button>
+            <Link
+              to="/superadmin/settings"
+              className="p-2 text-muted-foreground hover:bg-accent/50 rounded-full transition-all relative"
+            >
+              <Settings className="w-4 h-4" />
+              <span className="absolute bottom-1 right-1 h-1.5 w-1.5 bg-emerald-500 rounded-full" />
+            </Link>
+            <div className="h-6 w-px bg-border/50 mx-1" />
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-accent/30 to-accent/10 rounded-full">
+              <div className="h-7 w-7 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-xs font-bold text-white shadow-sm">
+                {user?.email?.[0]?.toUpperCase() || 'M'}
+              </div>
+              <div className="hidden md:block">
+                <div className="text-xs font-medium text-foreground leading-tight">{user?.email?.split('@')[0] || 'master'}</div>
+                <div className="text-[10px] text-muted-foreground">Master Admin</div>
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center w-full px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+              className="ml-1 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 rounded-full transition-all"
             >
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
+              <LogOut className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
-      </aside>
+      </header>
 
-      {/* Main content */}
-      <div className={`transition-all duration-200 ${sidebarOpen ? 'lg:pl-64' : ''}`}>
-        {/* Header */}
-        <header className="sticky top-0 z-40 bg-background/70 backdrop-blur border-b border-border">
-          <div className="flex items-center justify-between h-16 px-6">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 text-muted-foreground hover:bg-accent rounded-lg"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-4">
-              <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-700">
-                System Online
-              </span>
-              <ThemeToggle />
+      {/* Main Layout Container */}
+      <div className="flex flex-1 min-h-0">
+        {/* Sidebar - Fixed scroll container */}
+        <SapSidebar
+          title="Navigation"
+          subtitle="Control Center"
+          items={sidebarItems}
+          mobileOpen={sidebarOpen}
+          onMobileClose={() => setSidebarOpen(false)}
+        />
+
+        {/* Main Content - Independent scroll container */}
+        <main className="flex-1 min-w-0 flex flex-col">
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="max-w-[1600px] mx-auto px-6 py-6">
+              <Outlet />
             </div>
           </div>
-        </header>
-
-        {/* Page content */}
-        <main className="mx-auto max-w-7xl px-6 py-6">
-          {children}
         </main>
       </div>
     </div>

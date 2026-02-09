@@ -1557,10 +1557,10 @@ const EnhancedMasterAdminDashboard: React.FC = () => {
       />
 
       <CompanyDeleteModal
-        isOpen={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false)
-          setSelectedCompany(null)
+        open={showDeleteModal}
+        onOpenChange={(open) => {
+          setShowDeleteModal(open)
+          if (!open) setSelectedCompany(null)
         }}
         company={selectedCompany}
         onDelete={handleDeleteConfirm}
