@@ -2,30 +2,18 @@ import React, { useState } from 'react'
 import { Link, useNavigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { 
-  LayoutDashboard, Users, 
-  FileText, Settings, LogOut, Menu, Bell, Shield, Lock
+  Settings, LogOut, Menu, Bell
 } from 'lucide-react'
 import { ThemeToggle } from '../components/theme/ThemeToggle'
 import { SapSidebar } from '../components/layout/SapSidebar'
+import { menuByRole } from '../components/layout/menuConfig'
 
 const SuperadminLayout: React.FC = () => {
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const sidebarItems = [
-    { label: 'Dashboard', description: 'Overview and metrics', href: '/superadmin/dashboard', icon: LayoutDashboard },
-    { label: 'Users', description: 'Manage SuperAdmin users', href: '/superadmin/users', icon: Users },
-    { label: 'Roles', description: 'Roles and permissions', href: '/superadmin/roles', icon: Shield },
-    { label: 'Security', description: 'Security policies', href: '/superadmin/security', icon: Lock },
-    { label: 'Tenants', description: 'Manage tenant companies', href: '/superadmin/tenants', icon: FileText },
-    { label: 'Subscriptions', description: 'Billing and plans', href: '/superadmin/subscriptions', icon: FileText },
-    { label: 'Masters', description: 'Manage master accounts', href: '/superadmin/masters', icon: Users },
-    { label: 'Audit Logs', description: 'Platform activity trail', href: '/superadmin/audit-logs', icon: FileText },
-    { label: 'Configuration', description: 'System configuration', href: '/superadmin/configuration', icon: Settings },
-    { label: 'Notifications', description: 'Announcements & alerts', href: '/superadmin/notifications', icon: Bell },
-    { label: 'Settings', description: 'Ultra-secure settings', href: '/superadmin/settings', icon: Settings },
-  ]
+  const sidebarItems = menuByRole.superadmin()
 
   const handleLogout = () => {
     logout()

@@ -81,6 +81,7 @@ export function SapSidebar({
                   <NavLink
                     key={it.href}
                     to={it.href}
+                    end
                     onClick={() => window.innerWidth < 1024 && onMobileClose?.()}
                     className={({ isActive }) =>
                       cn(

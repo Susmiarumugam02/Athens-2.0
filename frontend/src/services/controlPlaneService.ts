@@ -20,19 +20,6 @@ export interface Subscription {
   created_at: string
 }
 
-export interface MasterAdmin {
-  id: number
-  user: {
-    id: number
-    email: string
-    is_active: boolean
-  }
-  tenant: number
-  tenant_name?: string
-  is_active: boolean
-  created_at: string
-}
-
 export interface AuditLog {
   id: number
   user_id?: number
@@ -60,15 +47,6 @@ export const controlPlaneService = {
   getSubscriptions: () => apiClient.get<Subscription[]>('/api/control-plane/subscriptions/'),
   createSubscription: (data: { tenant: number; plan_name: string; status: string; start_date: string; end_date?: string }) =>
     apiClient.post<Subscription>('/api/control-plane/subscriptions/', data),
-
-  // Master Admins
-  getMasters: () => apiClient.get<MasterAdmin[]>('/api/control-plane/masters/'),
-  createMaster: (data: { email: string; password: string; tenant: number }) =>
-    apiClient.post<MasterAdmin>('/api/control-plane/masters/', data),
-  disableMaster: (id: number) =>
-    apiClient.post(`/api/control-plane/masters/${id}/disable/`),
-  resetMasterPassword: (id: number) =>
-    apiClient.post<{ message: string; new_password: string }>(`/api/control-plane/masters/${id}/reset_password/`),
 
   // Audit Logs
   getAuditLogs: (params?: { start_date?: string; end_date?: string; company_id?: number; user_id?: number; event_type?: string }) =>

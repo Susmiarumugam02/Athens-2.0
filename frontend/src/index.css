@@ -129,4 +129,27 @@
   .bg-app-hover {
     background-color: hsl(var(--app-hover));
   }
+  
+  /* Tooltip */
+  [data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 9999;
+    animation: tooltipFade 0.15s ease-in;
+  }
+  
+  @keyframes tooltipFade {
+    from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(-8px); }
+  }
 }

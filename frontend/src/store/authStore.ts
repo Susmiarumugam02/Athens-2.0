@@ -22,6 +22,7 @@ interface AuthState {
   securityAlerts: SecurityAlert[]
   trustedDevice: boolean
   deviceId: string | null
+  hydrated: boolean
 
   // Actions
   login: (credentials: { email: string; password: string; totp_code?: string }) => Promise<boolean | {requires_2fa: boolean, user_id: number}>
@@ -56,6 +57,7 @@ export const useAuthStore = create<AuthState>()(
       securityAlerts: [],
       trustedDevice: false,
       deviceId: null,
+      hydrated: false,
 
       login: async (credentials) => {
         set({ isLoading: true, error: null })
@@ -82,6 +84,12 @@ export const useAuthStore = create<AuthState>()(
             return false
           }
           
+          // Check if tenant is missing for MasterAdmin
+          if (data.code === 'TENANT_MISSING') {
+            set({ isLoading: false, error: 'Tenant not assigned. Contact Superadmin.' })
+            return false
+          }
+          
           // Check if 2FA is required
           if (data.requires_2fa === true) {
             set({ isLoading: false })
@@ -101,6 +109,12 @@ export const useAuthStore = create<AuthState>()(
           setTokens(data.access, data.refresh)
           
           const userData = data.user
+          
+          // Normalize user type and set projectId to null for MasterAdmin
+          if (userData.user_type === 'masteradmin' || userData.user_type === 'MASTER_ADMIN' || userData.user_type === 'master') {
+            userData.user_type = 'masteradmin'
+            userData.projectId = null
+          }
           
           // Update state
           const newState = {
@@ -153,6 +167,8 @@ export const useAuthStore = create<AuthState>()(
 
           if (isLocked) {
             toast.error('Account locked due to too many failed attempts')
+          } else if (errorMessage.includes('Tenant not assigned')) {
+            toast.error('Tenant not assigned. Contact Superadmin.')
           } else if (attemptsRemaining !== null && attemptsRemaining !== undefined) {
             toast.error(`Login failed. ${attemptsRemaining} attempts remaining.`)
           } else {
@@ -200,6 +216,7 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             isAuthenticated: false,
             isLoading: false,
+            hydrated: true,
           })
           return
         }
@@ -227,6 +244,7 @@ export const useAuthStore = create<AuthState>()(
               approvalStatus: persistedState?.approvalStatus || null,
               mustChangePassword: persistedState?.mustChangePassword || false,
               forcePasswordReset: persistedState?.forcePasswordReset || false,
+              hydrated: true,
             })
           } catch (error) {
             clearTokens()
@@ -235,6 +253,7 @@ export const useAuthStore = create<AuthState>()(
               user: null,
               isAuthenticated: false,
               isLoading: false,
+              hydrated: true,
             })
           }
         } else {
@@ -242,6 +261,7 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             isAuthenticated: false,
             isLoading: false,
+            hydrated: true,
           })
         }
       },

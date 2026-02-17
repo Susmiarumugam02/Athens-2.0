@@ -8,9 +8,9 @@ from django.db import transaction
 from authentication.permissions import IsSuperAdmin
 from authentication.models import User, UserType, SecurityLog
 from authentication.utils import log_security_event
-from .models import Tenant, Subscription, MasterAdmin, AthensTenantLink, AthensModuleSubscription, AthensAuditLog, DEFAULT_ATHENS_MODULES
+from .models import Tenant, Subscription, AthensTenantLink, AthensModuleSubscription, AthensAuditLog, DEFAULT_ATHENS_MODULES
 from .serializers import (
-    TenantSerializer, SubscriptionSerializer, MasterAdminSerializer,
+    TenantSerializer, SubscriptionSerializer,
     SecurityLogSerializer
 )
 
@@ -165,64 +165,6 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             }
         )
 
-
-class MasterAdminViewSet(viewsets.ModelViewSet):
-    """Master admin management for superadmin"""
-    queryset = MasterAdmin.objects.select_related('user', 'tenant').all()
-    serializer_class = MasterAdminSerializer
-    permission_classes = [IsAuthenticated, IsSuperAdmin]
-    
-    def perform_create(self, serializer):
-        master = serializer.save(created_by=self.request.user)
-        log_security_event(
-            self.request, self.request.user,
-            SecurityLog.EventType.MASTER_CREATED,
-            SecurityLog.Severity.INFO,
-            {
-                'master_id': master.id,
-                'user_email': master.user.email,
-                'tenant_id': master.tenant.id
-            }
-        )
-    
-    @action(detail=True, methods=['post'])
-    def disable(self, request, pk=None):
-        """Disable a master admin"""
-        master = self.get_object()
-        master.is_active = False
-        master.user.is_active = False
-        master.save()
-        master.user.save()
-        
-        log_security_event(
-            request, request.user,
-            SecurityLog.EventType.MASTER_DISABLED,
-            SecurityLog.Severity.WARNING,
-            {'master_id': master.id, 'user_email': master.user.email}
-        )
-        
-        return Response({'message': 'Master admin disabled'})
-    
-    @action(detail=True, methods=['post'])
-    def reset_password(self, request, pk=None):
-        """Reset master admin password"""
-        master = self.get_object()
-        new_password = User.objects.make_random_password()
-        master.user.set_password(new_password)
-        master.user.password_changed_at = timezone.now()
-        master.user.save()
-        
-        log_security_event(
-            request, request.user,
-            SecurityLog.EventType.PASSWORD_CHANGE,
-            SecurityLog.Severity.INFO,
-            {'master_id': master.id, 'user_email': master.user.email, 'action': 'admin_reset'}
-        )
-        
-        return Response({
-            'message': 'Password reset',
-            'new_password': new_password
-        })
 
 
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):

@@ -38,6 +38,70 @@ class Tenant(models.Model):
         super().save(*args, **kwargs)
 
 
+class Service(models.Model):
+    """External services that can be enabled for tenants"""
+    SERVICE_TYPE_CHOICES = [
+        ('hr_workforce', 'HR & Workforce Management'),
+        ('finance', 'Finance & Accounting'),
+        ('crm', 'Customer Relationship Management'),
+        ('inventory', 'Inventory Management'),
+        ('project', 'Project Management'),
+        ('sustainability', 'Sustainability & ESG'),
+        ('other', 'Other'),
+    ]
+    
+    name = models.CharField(max_length=100, unique=True)
+    code = models.SlugField(max_length=50, unique=True)
+    description = models.TextField(blank=True)
+    service_type = models.CharField(max_length=50, choices=SERVICE_TYPE_CHOICES)
+    base_url = models.CharField(max_length=255, help_text="Base URL path for the service")
+    icon = models.CharField(max_length=50, default='cube')
+    is_active = models.BooleanField(default=True)
+    features = models.JSONField(default=dict, help_text="Service features by tier")
+    pricing = models.JSONField(default=dict, help_text="Pricing by tier")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = "services"
+        ordering = ['name']
+    
+    def __str__(self):
+        return self.name
+    
+    def save(self, *args, **kwargs):
+        if not self.code:
+            self.code = slugify(self.name)
+        super().save(*args, **kwargs)
+
+
+class TenantService(models.Model):
+    """Links tenants to enabled services"""
+    TIER_CHOICES = [
+        ('basic', 'Basic'),
+        ('premium', 'Premium'),
+        ('enterprise', 'Enterprise'),
+    ]
+    
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='tenant_services')
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='service_tenants')
+    tier = models.CharField(max_length=20, choices=TIER_CHOICES, default='basic')
+    is_enabled = models.BooleanField(default=True)
+    credentials = models.JSONField(default=dict, help_text="Service-specific credentials")
+    config = models.JSONField(default=dict, help_text="Service-specific configuration")
+    enabled_at = models.DateTimeField(auto_now_add=True)
+    disabled_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey("authentication.User", on_delete=models.SET_NULL, null=True)
+    
+    class Meta:
+        db_table = "tenant_services"
+        unique_together = [['tenant', 'service']]
+        ordering = ['-enabled_at']
+    
+    def __str__(self):
+        return f"{self.tenant.name} - {self.service.name} ({self.tier})"
+
+
 class Subscription(models.Model):
     class Status(models.TextChoices):
         ACTIVE = "active", "Active"
@@ -65,53 +129,6 @@ class Subscription(models.Model):
     
     def __str__(self):
         return f"{self.tenant.name} - {self.plan_name} ({self.status})"
-
-
-class MasterAdmin(models.Model):
-    user = models.OneToOneField("authentication.User", on_delete=models.CASCADE, related_name="master_profile")
-    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="masters")
-    
-    # Personal Information
-    first_name = models.CharField(max_length=100, blank=True, null=True)
-    last_name = models.CharField(max_length=100, blank=True, null=True)
-    phone = models.CharField(max_length=50, blank=True, null=True)
-    
-    # Professional Information
-    designation = models.CharField(max_length=100, blank=True, null=True)
-    department = models.CharField(max_length=100, blank=True, null=True)
-    
-    # Access Control
-    role = models.CharField(max_length=50, default='admin', choices=[
-        ('admin', 'Administrator'),
-        ('manager', 'Manager'),
-        ('viewer', 'Viewer')
-    ])
-    
-    # Additional Settings
-    timezone = models.CharField(max_length=100, default='UTC')
-    language = models.CharField(max_length=10, default='en', choices=[
-        ('en', 'English'),
-        ('es', 'Spanish'),
-        ('fr', 'French'),
-        ('de', 'German'),
-        ('hi', 'Hindi')
-    ])
-    
-    # Metadata
-    notes = models.TextField(blank=True, null=True)
-    
-    is_active = models.BooleanField(default=True)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey("authentication.User", on_delete=models.SET_NULL, null=True, related_name="created_masters")
-    
-    class Meta:
-        db_table = "master_admins"
-        ordering = ["-created_at"]
-    
-    def __str__(self):
-        return f"{self.user.email} - {self.tenant.name}"
 
 
 class AthensTenantLink(models.Model):
@@ -173,9 +190,6 @@ class AthensAuditLog(models.Model):
         ('tenant_reactivated', 'Tenant Reactivated'),
         ('tenant_synced', 'Tenant Synced'),
         ('modules_updated', 'Modules Updated'),
-        ('master_created', 'Master Created'),
-        ('master_updated', 'Master Updated'),
-        ('master_deleted', 'Master Deleted'),
         ('subscription_updated', 'Subscription Updated'),
     ]
 

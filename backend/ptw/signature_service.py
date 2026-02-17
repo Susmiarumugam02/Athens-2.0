@@ -229,7 +229,7 @@ class SignatureService:
             if hasattr(settings, 'MEDIA_URL') and settings.MEDIA_URL:
                 template_url = f"{settings.MEDIA_URL}{saved_path}"
                 # Convert to absolute URL
-                base_url = os.getenv('SITE_URL', 'https://prozeal.athenas.co.in')
+                base_url = os.getenv('SITE_URL', 'https://ai-athens.cloud')
                 template_url = f"{base_url.rstrip('/')}{template_url}"
             else:
                 template_url = saved_path

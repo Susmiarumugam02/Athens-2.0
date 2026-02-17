@@ -64,7 +64,11 @@ import tokenManager from './tokenManager'
 
 // Token management
 const getToken = (): string | null => {
-  return tokenManager.getAccessToken()
+  const token = tokenManager.getAccessToken()
+  if (!token) {
+    console.warn('[API] No access token found')
+  }
+  return token
 }
 
 const getRefreshToken = (): string | null => {
@@ -120,6 +124,13 @@ api.interceptors.request.use(
         const token = getToken()
         if (token) {
           config.headers.Authorization = `Bearer ${token}`
+        } else {
+          // Only warn for non-public endpoints
+          const isPublicEndpoint = config.url?.includes('/health/') || 
+                                  config.url?.includes('/validate-token/')
+          if (!isPublicEndpoint) {
+            console.warn('[API] Making authenticated request without token:', config.url)
+          }
         }
       }
     }
@@ -171,7 +182,7 @@ api.interceptors.response.use(
       const refreshToken = getRefreshToken()
       if (refreshToken) {
         try {
-          const response = await axios.post(`${API_BASE_URL}/api/token/refresh/`, {
+          const response = await axios.post(`${API_BASE_URL}/api/auth/token/refresh/`, {
             refresh: refreshToken,
           })
 
@@ -182,61 +193,31 @@ api.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${access}`
           return api(originalRequest)
         } catch (refreshError: any) {
-          // Refresh failed, redirect to login
+          // Refresh failed, clear tokens but DON'T redirect immediately
           clearTokens()
-          
-          // Force logout from auth store to clear all state
           localStorage.removeItem('auth-storage')
           sessionStorage.clear()
-
-          // Don't show error toast for token refresh failures
-          // Only redirect if not already on login page and not during navigation
+          
+          // Only redirect if not already on login page
           if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/unauthorized')) {
-            // For Athens employee endpoints, show a more specific error
             if (isAthensEmployeeEndpoint) {
               toast.error('Authentication expired. Please login again to access employee management.')
             } else {
               toast.error('Session expired. Please login again.')
             }
-            // Force a complete page reload to reset all state
             window.location.href = '/login'
           }
           return Promise.reject(refreshError)
         }
-      } else {
-        // No refresh token, redirect to login (but not for service user endpoints)
-        const isServiceUserEndpoint = originalRequest.url?.includes('/api/hr/') ||
-                                     originalRequest.url?.includes('/api/finance/') ||
-                                     originalRequest.url?.includes('/api/inventory/') ||
-                                     originalRequest.url?.includes('/api/crm/')
-        
-        if (!isServiceUserEndpoint && !originalRequest.url?.includes('/validate-token/')) {
-          clearTokens()
-          sessionStorage.clear()
-          localStorage.removeItem('auth-storage')
-          
-          // Force complete page reload to reset all state
-          if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/unauthorized')) {
-            // For Athens employee endpoints, show a more specific error
-            if (isAthensEmployeeEndpoint) {
-              toast.error('Authentication required. Please login to access employee management.')
-            } else {
-              toast.error('Session expired. Please login again.')
-            }
-            window.location.href = '/login'
-          }
-        }
       }
     }
 
-    // Handle other errors (but not for token validation failures during app init)
-    if (!originalRequest.url?.includes('/validate-token/')) {
+    // Don't show error toasts or redirect for validation failures
+    if (!originalRequest?.url?.includes('/validate-token/')) {
       const errorData = error.response?.data as any
+      const isAthensEmployeeEndpoint = originalRequest?.url?.includes('/api/athens-sust/employees')
       
-      // Don't show generic error toasts for Athens employee endpoints - let the component handle it
-      const isAthensEmployeeEndpoint = originalRequest.url?.includes('/api/athens-sust/employees')
-      
-      if (!isAthensEmployeeEndpoint) {
+      if (!isAthensEmployeeEndpoint && error.response?.status !== 401) {
         if (errorData?.message) {
           toast.error(errorData.message)
         } else if (errorData?.error) {
@@ -325,41 +306,6 @@ export const apiClient = {
 
   refreshToken: (refreshToken: string) =>
     api.post('/api/auth/token/refresh/', { refresh: refreshToken }),
-
-  // Master Admin Profile
-  getMasterAdminProfile: () =>
-    api.get('/api/auth/master-admin/profile/'),
-
-  updateMasterAdminProfile: (data: any) =>
-    api.patch('/api/auth/master-admin/profile/', data),
-
-  changeMasterAdminPassword: (data: { current_password: string; new_password: string; confirm_password: string }) =>
-    api.post('/api/auth/master-admin/change-password/', data),
-
-  // Ultra-Secure Master Admin Settings
-  getMasterAdminUltraSettings: () =>
-    api.get('/api/superadmin/settings/ultra-secure/'),
-
-  changeMasterAdminUltraPassword: (data: { current_password: string; new_password: string; confirm_password: string }) =>
-    api.post('/api/superadmin/settings/password/change/', data),
-
-  regenerateMasterAdminApiKey: (data: { current_password: string }) =>
-    api.post('/api/superadmin/settings/api-key/regenerate/', data),
-
-  regenerateMasterAdminRecoveryCodes: (data: { current_password: string }) =>
-    api.post('/api/superadmin/settings/recovery-codes/regenerate/', data),
-
-  getMasterAdminTwoFactor: () =>
-    api.get('/api/superadmin/settings/2fa/status/'),
-
-  toggleMasterAdminTwoFactor: (data: { action: 'enable' | 'disable' | 'reset'; current_password: string; totp_code?: string }) =>
-    api.post('/api/superadmin/settings/2fa/toggle/', data),
-
-  getMasterAdminSecurityStatus: () =>
-    api.get('/api/superadmin/security/status/'),
-
-  getMasterAdminSecurityLog: (params?: { days?: number }) =>
-    api.get('/api/superadmin/security/log/', { params }),
 
   // Services
   getServices: () =>
@@ -1426,58 +1372,11 @@ export const apiClient = {
   updatePortalCredentials: (data: any) =>
     api.post('/api/hr/government/credentials/', data),
 
-  // Phase 3: Enhanced Security APIs
-  getSecuritySettings: () =>
-    api.get('/api/superadmin/security/settings/'),
-
-  updateSecuritySettings: (data: any) =>
-    api.post('/api/superadmin/security/settings/', data),
-
-  getIPRestrictions: () =>
-    api.get('/api/superadmin/security/ip-restrictions/'),
-
-  addIPRestriction: (data: { ip_address: string; description: string }) =>
-    api.post('/api/superadmin/security/ip-restrictions/', data),
-
-  removeIPRestriction: (id: number) =>
-    api.delete(`/api/superadmin/security/ip-restrictions/${id}/`),
-
-  toggleIPRestriction: (id: number, data: { is_active: boolean }) =>
-    api.patch(`/api/superadmin/security/ip-restrictions/${id}/`, data),
-
-  getDeviceFingerprints: () =>
-    api.get('/api/superadmin/security/device-fingerprints/'),
-
-  removeDeviceFingerprint: (deviceId: string) =>
-    api.delete(`/api/superadmin/security/device-fingerprints/${deviceId}/`),
-
-  toggleDeviceTrust: (deviceId: string, data: { is_trusted: boolean }) =>
-    api.patch(`/api/superadmin/security/device-fingerprints/${deviceId}/`, data),
-
-  getLoginNotifications: () =>
-    api.get('/api/superadmin/security/login-notifications/'),
-
   getNotificationEmail: () =>
     api.get('/api/superadmin/security/notification-email/'),
 
   setNotificationEmail: (data: { notification_email: string }) =>
     api.post('/api/superadmin/security/notification-email/', data),
-
-  // Master Admin Email Settings
-  getMasterAdminEmailSettings: () =>
-    api.get('/api/auth/master-admin/email-settings/'),
-
-  updateMasterAdminEmailSettings: (data: any) =>
-    api.post('/api/auth/master-admin/email-settings/', data),
-
-  testMasterAdminEmail: (data?: { test_email?: string }) =>
-    api.post('/api/auth/master-admin/email-settings/test/', data || {}),
-
-  getMasterAdminEmailProviders: () =>
-    api.get('/api/auth/master-admin/email-settings/providers/'),
-
-  getMasterAdminEmailUsage: () =>
-    api.get('/api/auth/master-admin/email-settings/usage/'),
 
   // Document Numbering APIs
   getCurrentFinancialYear: () =>

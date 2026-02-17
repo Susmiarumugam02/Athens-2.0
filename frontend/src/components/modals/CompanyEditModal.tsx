@@ -5,16 +5,16 @@ import { LoadingSpinner } from '../ui/LoadingSpinner'
 import { Modal } from '../ui/Modal'
 
 interface CompanyEditModalProps {
-  isOpen: boolean
-  onClose: () => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
   company: any
   onSave: (updatedCompany: any) => Promise<void>
   services: any[]
 }
 
 const CompanyEditModal: React.FC<CompanyEditModalProps> = ({
-  isOpen,
-  onClose,
+  open,
+  onOpenChange,
   company,
   onSave,
   services
@@ -99,7 +99,7 @@ const CompanyEditModal: React.FC<CompanyEditModalProps> = ({
       }
       console.log('🔍 DEBUG: Sending update data:', updateData)
       await onSave(updateData)
-      onClose()
+      onOpenChange(false)
     } catch (error) {
       console.error('Error updating company:', error)
       setErrors({ submit: 'Failed to update company. Please try again.' })
@@ -129,7 +129,7 @@ const CompanyEditModal: React.FC<CompanyEditModalProps> = ({
 
   const modalFooter = (
     <div className="flex justify-end space-x-3">
-      <Button variant="outline" onClick={onClose} disabled={loading}>
+      <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
         Cancel
       </Button>
       <Button 
@@ -154,8 +154,8 @@ const CompanyEditModal: React.FC<CompanyEditModalProps> = ({
 
   return (
     <Modal
-      open={isOpen}
-      onClose={onClose}
+      open={open}
+      onClose={onOpenChange}
       title="Edit Company"
       footer={modalFooter}
       size="2xl"

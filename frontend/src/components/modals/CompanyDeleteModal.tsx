@@ -5,15 +5,15 @@ import { LoadingSpinner } from '../ui/LoadingSpinner'
 import { Modal } from '../ui/Modal'
 
 interface CompanyDeleteModalProps {
-  isOpen: boolean
-  onClose: () => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
   company: any
   onDelete: (companyId: string) => Promise<void>
 }
 
 const CompanyDeleteModal: React.FC<CompanyDeleteModalProps> = ({
-  isOpen,
-  onClose,
+  open,
+  onOpenChange,
   company,
   onDelete
 }) => {
@@ -32,7 +32,7 @@ const CompanyDeleteModal: React.FC<CompanyDeleteModalProps> = ({
     
     try {
       await onDelete(company.id)
-      onClose()
+      onOpenChange(false)
     } catch (error) {
       console.error('Error deleting company:', error)
       setError('Failed to delete company. Please try again.')
@@ -44,7 +44,7 @@ const CompanyDeleteModal: React.FC<CompanyDeleteModalProps> = ({
   const handleClose = () => {
     setConfirmText('')
     setError('')
-    onClose()
+    onOpenChange(false)
   }
 
   const isConfirmValid = confirmText === company?.name
@@ -76,7 +76,7 @@ const CompanyDeleteModal: React.FC<CompanyDeleteModalProps> = ({
 
   return (
     <Modal
-      open={isOpen}
+      open={open}
       onClose={handleClose}
       title="Delete Company"
       footer={modalFooter}

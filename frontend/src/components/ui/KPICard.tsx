@@ -1,3 +1,1 @@
-// SAP UI Component Shim - KPICard
-// This file re-exports the SAP KPICard component for backward compatibility
-export * from '@/ui/sap/components/KPICard';
+/var/www/athens-2.0/frontend/src/ui/sap/components/KPICard.tsx

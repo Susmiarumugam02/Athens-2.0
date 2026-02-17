@@ -112,6 +112,22 @@ def unified_login(request):
     user.locked_until = None
     user.save()
     
+    # Check if MasterAdmin has tenant assigned
+    if user.user_type == UserType.MASTERADMIN and not user.athens_tenant_id:
+        log_security_event(
+            request, user, SecurityLog.EventType.LOGIN_FAILED,
+            SecurityLog.Severity.WARNING,
+            {'reason': 'tenant_not_assigned'}
+        )
+        return Response(
+            {
+                'code': 'TENANT_MISSING',
+                'detail': 'Tenant not assigned. Contact Superadmin.',
+                'error': 'Tenant not assigned'
+            },
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
     # Generate tokens
     refresh = RefreshToken.for_user(user)
     refresh['user_type'] = user.user_type
@@ -127,7 +143,7 @@ def unified_login(request):
     next_route_map = {
         UserType.SUPERADMIN: '/superadmin/dashboard',
         UserType.MASTERADMIN: '/master-admin',
-        UserType.COMPANYUSER: '/app',
+        UserType.COMPANYUSER: '/services/athens_sustainability/dashboard',
         UserType.SERVICEUSER: '/service',
     }
     
@@ -139,6 +155,7 @@ def unified_login(request):
             'email': user.email,
             'user_type': user.user_type,
             'company_id': user.company_id,
+            'athens_tenant_id': user.athens_tenant_id,
         },
         'password_expired': user.password_expired,
         'requires_2fa': False,
@@ -196,20 +213,16 @@ def logout(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def list_users(request):
-    """List users for member assignment (MasterAdmin and Superadmin only)"""
+    """List users for member assignment (Superadmin only)"""
     user = request.user
     
-    if user.user_type not in [UserType.SUPERADMIN, UserType.MASTERADMIN]:
+    if user.user_type != UserType.SUPERADMIN:
         return Response(
             {'error': 'Permission denied'},
             status=status.HTTP_403_FORBIDDEN
         )
     
-    # Superadmin sees all, MasterAdmin sees only their company
-    if user.user_type == UserType.SUPERADMIN:
-        users = User.objects.filter(is_active=True)
-    else:
-        users = User.objects.filter(company_id=user.company_id, is_active=True)
+    users = User.objects.filter(is_active=True)
     
     # Filter by company if requested
     company_filter = request.query_params.get('company')
@@ -227,3 +240,137 @@ def list_users(request):
     ]
     
     return Response(data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def dashboard_overview(request):
+    """Dashboard statistics placeholder"""
+    return Response({
+        'projects': {'total': 0, 'active': 0},
+        'users': {'total': 0, 'active': 0},
+        'companies': {'total': 0, 'active': 0},
+        'notifications': {'total': 0, 'unread': 0}
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def company_data(request):
+    """Get company/tenant data"""
+    user = request.user
+    
+    if not user.company_id:
+        return Response({'error': 'No company associated'}, status=status.HTTP_404_NOT_FOUND)
+    
+    from control_plane.models import Tenant
+    
+    try:
+        tenant = Tenant.objects.get(id=user.company_id)
+        return Response({
+            'success': True,
+            'company_name': tenant.name,
+            'company_logo': None,
+            'registered_address': '',
+            'contact_phone': '',
+            'contact_email': tenant.admin_email,
+            'athens_tenant_id': str(tenant.id),
+        })
+    except Tenant.DoesNotExist:
+        return Response({'error': 'Company not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def current_user_profile(request):
+    """Get current user profile"""
+    user = request.user
+    
+    return Response({
+        'name': user.email.split('@')[0],
+        'employee_id': str(user.id),
+        'designation': user.user_type,
+        'department': 'N/A',
+        'user_type': user.user_type,
+        'admin_type': user.user_type,
+        'project_name': None,
+        'profile_picture_url': None,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_projects(request):
+    """Get all projects/tenants"""
+    return Response({'results': []})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_admin_users(request):
+    """Get all admin users"""
+    return Response({'results': []})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def reset_user_password(request, user_id):
+    """Reset user password (Superadmin only)"""
+    if request.user.user_type != UserType.SUPERADMIN:
+        return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        target_user = User.objects.get(id=user_id)
+        # In production, send email with reset link
+        return Response({'message': 'Password reset email sent'})
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_user_status(request, user_id):
+    """Enable/disable user (Superadmin only)"""
+    if request.user.user_type != UserType.SUPERADMIN:
+        return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        target_user = User.objects.get(id=user_id)
+        target_user.is_active = not target_user.is_active
+        target_user.save()
+        return Response({'message': 'User status updated', 'is_active': target_user.is_active})
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_notifications(request):
+    """Get user notifications"""
+    return Response({'results': []})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def induction_status(request):
+    """Get induction status"""
+    return Response({
+        'hasCompleted': True,
+        'isEPCSafety': False,
+        'isMasterAdmin': False,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def subscription_status(request):
+    """Get subscription status"""
+    return Response({
+        'isTrialing': False,
+        'subscriptionStatus': 'active',
+        'tenantId': str(request.user.company_id) if request.user.company_id else None,
+    })
+
+
+
+

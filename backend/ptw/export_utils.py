@@ -185,7 +185,7 @@ def _generate_header_section(permit, title_style, styles):
     
     # QR Code
     try:
-        frontend_url = getattr(settings, 'FRONTEND_BASE_URL', 'https://prozeal.athenas.co.in')
+        frontend_url = getattr(settings, 'FRONTEND_BASE_URL', 'https://ai-athens.cloud')
         qr_url = f"{frontend_url}/dashboard/ptw/view/{permit.id}"
         qr = qrcode.QRCode(version=1, box_size=3, border=1)
         qr.add_data(qr_url)

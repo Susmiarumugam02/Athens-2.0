@@ -138,22 +138,18 @@ export const AppDialog: React.FC<AppDialogProps> = React.memo(({
         onClick={closeOnOutsideClick && !loading ? handleClose : undefined}
       />
 
-      {/* Dialog Container - Mobile: bottom sheet, Desktop: centered */}
+      {/* Dialog Container */}
       <div
         ref={dialogRef}
         className={`
           relative w-full ${sizeClasses[size]}
-          max-h-[90vh] md:max-h-[85vh]
-          flex flex-col
           bg-white dark:bg-gray-800
-          rounded-t-2xl md:rounded-2xl
+          rounded-2xl
           shadow-2xl
-          animate-in slide-in-from-bottom-4 md:slide-in-from-bottom-0 md:zoom-in-95
-          duration-200
-          overflow-hidden
-          ${size === 'fullscreen' ? 'h-[95vh]' : ''}
+          animate-in zoom-in-95 duration-200
           ${className}
         `}
+        style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
         onClick={(e) => e.stopPropagation()}
       >
         {children}
@@ -167,19 +163,19 @@ export const AppDialog: React.FC<AppDialogProps> = React.memo(({
 AppDialog.displayName = 'AppDialog'
 
 export const AppDialogHeader: React.FC<AppDialogHeaderProps> = ({ children, className = '' }) => (
-  <div className={`flex items-start justify-between p-6 border-b border-gray-200 dark:border-gray-700 shrink-0 ${className}`}>
+  <div className={`flex items-start justify-between p-6 border-b border-gray-200 dark:border-gray-700 ${className}`} style={{ flexShrink: 0 }}>
     {children}
   </div>
 )
 
 export const AppDialogBody: React.FC<AppDialogBodyProps> = ({ children, className = '' }) => (
-  <div className={`flex-1 overflow-y-auto overscroll-contain p-6 min-h-0 ${className}`}>
+  <div className={`overflow-y-auto p-6 ${className}`} style={{ flex: 1, minHeight: 0 }}>
     {children}
   </div>
 )
 
 export const AppDialogFooter: React.FC<AppDialogFooterProps> = ({ children, className = '' }) => (
-  <div className={`flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700 shrink-0 ${className}`}>
+  <div className={`flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700 ${className}`} style={{ flexShrink: 0 }}>
     {children}
   </div>
 )

@@ -16,9 +16,6 @@ import {
 } from 'lucide-react'
 import { apiClient } from '../../lib/api'
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
-import DatabaseBackup from '../master-admin/configuration/DatabaseBackup'
-import SystemSettings from '../master-admin/configuration/SystemSettings'
-import SecurityConfig from '../master-admin/configuration/SecurityConfig'
 
 const ConfigurationMain: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview')
@@ -210,9 +207,24 @@ const ConfigurationMain: React.FC = () => {
 
       <div className="min-h-[400px]">
         {activeTab === 'overview' && renderOverview()}
-        {activeTab === 'database' && <DatabaseBackup />}
-        {activeTab === 'system' && <SystemSettings />}
-        {activeTab === 'security' && <SecurityConfig />}
+        {activeTab === 'database' && (
+          <div className="bg-card rounded-lg p-6 border border-border text-center">
+            <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-sm text-muted-foreground">Database backup coming soon</p>
+          </div>
+        )}
+        {activeTab === 'system' && (
+          <div className="bg-card rounded-lg p-6 border border-border text-center">
+            <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-sm text-muted-foreground">System settings coming soon</p>
+          </div>
+        )}
+        {activeTab === 'security' && (
+          <div className="bg-card rounded-lg p-6 border border-border text-center">
+            <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-sm text-muted-foreground">Security config coming soon</p>
+          </div>
+        )}
         {activeTab === 'notifications' && (
           <div className="bg-card rounded-lg p-6 border border-border text-center">
             <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

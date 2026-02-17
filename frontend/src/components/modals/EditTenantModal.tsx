@@ -43,12 +43,12 @@ export const EditTenantModal: React.FC<EditTenantModalProps> = ({ open, onOpenCh
 
   return (
     <AppDialog open={open} onOpenChange={onOpenChange} size="md">
-      <AppDialogHeader>
-        <AppDialogTitle>Edit Tenant</AppDialogTitle>
-        <AppDialogCloseButton onClose={() => onOpenChange(false)} disabled={loading} />
-      </AppDialogHeader>
-      <form onSubmit={handleSubmit(onSubmit)}>
-      <AppDialogBody className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <AppDialogHeader>
+          <AppDialogTitle>Edit Tenant</AppDialogTitle>
+          <AppDialogCloseButton onClose={() => onOpenChange(false)} disabled={loading} />
+        </AppDialogHeader>
+        <AppDialogBody className="space-y-4">
         <Input label="Tenant Name" {...register('name', { required: 'Name is required' })} error={errors.name?.message} />
         <Input label="Tenant Code" {...register('code', { required: 'Code is required' })} error={errors.code?.message} />
         <Input label="Admin Email" type="email" {...register('admin_email')} />
@@ -67,11 +67,11 @@ export const EditTenantModal: React.FC<EditTenantModalProps> = ({ open, onOpenCh
             {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz}</option>)}
           </select>
         </div>
-      </AppDialogBody>
-      <AppDialogFooter>
-        <Button variant="outline" onClick={() => onOpenChange(false)} type="button">Cancel</Button>
-        <Button type="submit" disabled={loading}>{loading ? 'Updating...' : 'Update Tenant'}</Button>
-      </AppDialogFooter>
+        </AppDialogBody>
+        <AppDialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} type="button">Cancel</Button>
+          <Button type="submit" disabled={loading}>{loading ? 'Updating...' : 'Update Tenant'}</Button>
+        </AppDialogFooter>
       </form>
     </AppDialog>
   )

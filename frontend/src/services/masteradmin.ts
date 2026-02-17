@@ -1,0 +1,150 @@
+import { apiClient } from '../lib/api'
+
+export interface Project {
+  id: number
+  projectName: string
+  projectCategory: string
+  capacity: string
+  location: string
+  latitude?: number
+  longitude?: number
+  nearestPoliceStation: string
+  nearestPoliceStationContact: string
+  nearestHospital: string
+  nearestHospitalContact: string
+  commencementDate: string
+  deadlineDate: string
+  athens_tenant_id?: string
+  client_company_id?: string
+  epc_company_id?: string
+  contractor_company_ids?: string[]
+}
+
+export interface DashboardStats {
+  total_projects: number
+  active_projects: number
+  total_users: number
+  pending_approvals: number
+}
+
+export interface TenantUser {
+  id: number
+  email: string
+  name?: string
+  surname?: string
+  department?: string
+  designation?: string
+  is_active: boolean
+  created_at: string
+}
+
+export interface AdminUser {
+  id: number
+  username: string
+  name?: string
+  email: string
+  admin_type?: 'client' | 'epc' | 'contractor'
+  company_name?: string
+  registered_address?: string
+  project?: number
+  project_name?: string
+  is_active: boolean
+  created_at: string
+}
+
+export interface ProjectAdminCreateRequest {
+  project_id: number
+  admin_type: 'client' | 'epc' | 'contractor'
+  username: string
+  company_name: string
+  registered_address: string
+}
+
+export interface ProjectAdminCreateResponse {
+  username: string
+  password: string
+  admin_type: string
+  company_name: string
+  registered_address: string
+}
+
+export const masterAdminService = {
+  // Dashboard
+  async getDashboardStats(): Promise<DashboardStats> {
+    const response = await apiClient.get('/api/auth/masteradmin/dashboard/stats/')
+    return response.data
+  },
+
+  // Projects
+  async getProjects(): Promise<Project[]> {
+    const response = await apiClient.get('/api/auth/masteradmin/projects/')
+    return response.data
+  },
+
+  async createProject(projectData: Omit<Project, 'id'>): Promise<Project> {
+    const response = await apiClient.post('/api/auth/masteradmin/projects/', projectData)
+    return response.data
+  },
+
+  async getProject(projectId: number): Promise<Project> {
+    const response = await apiClient.get(`/api/auth/masteradmin/projects/${projectId}/`)
+    return response.data
+  },
+
+  async updateProject(projectId: number, projectData: Partial<Project>): Promise<Project> {
+    const response = await apiClient.put(`/api/auth/masteradmin/projects/${projectId}/`, projectData)
+    return response.data
+  },
+
+  async deleteProject(projectId: number): Promise<void> {
+    await apiClient.delete(`/api/auth/masteradmin/projects/${projectId}/`)
+  },
+
+  // Project Admins (Original Athens Parity)
+  async createProjectAdmin(data: ProjectAdminCreateRequest): Promise<ProjectAdminCreateResponse> {
+    const response = await apiClient.post('/api/auth/masteradmin/admin-users/create-project-admin/', data)
+    return response.data
+  },
+
+  async getProjectAdmins(projectId: number): Promise<{
+    client: AdminUser | null
+    epc: AdminUser | null
+    contractors: AdminUser[]
+  }> {
+    const response = await apiClient.get(`/api/auth/masteradmin/projects/${projectId}/admins/`)
+    return response.data
+  },
+
+  // Admin Users
+  async getAdminUsers(): Promise<AdminUser[]> {
+    const response = await apiClient.get('/api/auth/masteradmin/admin-users/')
+    return response.data
+  },
+
+  async deleteAdminUser(userId: number): Promise<void> {
+    await apiClient.delete(`/api/auth/masteradmin/admin-users/${userId}/`)
+  },
+
+  async createAdminUser(userData: { name: string; username: string }): Promise<{ id: number; name: string; username: string; password: string }> {
+    const response = await apiClient.post('/api/auth/masteradmin/admin-users/', userData)
+    return response.data
+  },
+
+  async resetAdminPassword(userId: number): Promise<void> {
+    await apiClient.post(`/api/auth/masteradmin/users/${userId}/reset-password/`)
+  },
+
+  async toggleAdminActive(userId: number, isActive: boolean): Promise<void> {
+    await apiClient.post(`/api/auth/masteradmin/users/${userId}/toggle-status/`)
+  },
+
+  // Users
+  async getTenantUsers(): Promise<TenantUser[]> {
+    const response = await apiClient.get('/api/auth/masteradmin/users/')
+    return response.data
+  },
+
+  async approveUser(userId: number): Promise<void> {
+    await apiClient.post(`/api/auth/masteradmin/users/${userId}/approve/`)
+  },
+}

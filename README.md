@@ -35,10 +35,21 @@ Real layouts and pages with full CRUD operations for control plane management.
 - ✅ Export functionality (CSV/JSON)
 - ✅ Form validation and error handling
 
+**Phase 3 Features (Original Athens Parity):**
+- ✅ Project-centric admin creation workflow
+- ✅ Admin types: Client / EPC / Contractor
+- ✅ Company details: name + registered address
+- ✅ 16-char secure password generation
+- ✅ Auto-download credentials as .txt file
+- ✅ Tenant inheritance from project
+- ✅ Password reset required on first login
+
 **Quick Access:**
 - [MasterAdmin Quick Start](./MASTERADMIN_QUICK_START.md)
 - [Phase 1 Implementation](./MASTERADMIN_MODULE_IMPORT_COMPLETE.md)
 - [Phase 2 Complete](./MASTERADMIN_PHASE2_COMPLETE.md)
+- [Phase 3: Create Admin Parity](./CREATE_ADMIN_IMPLEMENTATION_SUMMARY.md) ⭐ **NEW**
+- [Create Admin Quick Card](./CREATE_ADMIN_QUICK_CARD.md) ⭐ **NEW**
 - [Module README](./frontend/src/modules/masteradmin/README.md)
 
 ### Status Summary

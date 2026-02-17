@@ -10,11 +10,11 @@ def api_client():
 
 
 @pytest.fixture
-def master_admin_user(db):
+def superadmin_user(db):
     return User.objects.create_user(
-        email='master@test.com',
+        email='super@test.com',
         password='testpass123',
-        user_type=UserType.MASTERADMIN
+        user_type=UserType.SUPERADMIN
     )
 
 
@@ -31,23 +31,23 @@ def company_user(db):
 @pytest.mark.django_db
 class TestAuthentication:
     
-    def test_master_admin_login_success(self, api_client, master_admin_user):
-        """Test master admin can login and receive tokens"""
-        url = reverse('authentication:master-admin-login')
-        data = {'email': 'master@test.com', 'password': 'testpass123'}
+    def test_unified_login_success(self, api_client, superadmin_user):
+        """Test unified login works for superadmin"""
+        url = reverse('authentication:login')
+        data = {'email': 'super@test.com', 'password': 'testpass123'}
         
         response = api_client.post(url, data, format='json')
         
         assert response.status_code == 200
         assert 'access' in response.data
         assert 'refresh' in response.data
-        assert response.data['user']['email'] == 'master@test.com'
-        assert response.data['user']['is_master_admin'] is True
+        assert response.data['user']['email'] == 'super@test.com'
+        assert response.data['user']['user_type'] == 'superadmin'
     
-    def test_master_admin_login_invalid_credentials(self, api_client, master_admin_user):
+    def test_unified_login_invalid_credentials(self, api_client, superadmin_user):
         """Test login fails with invalid credentials"""
-        url = reverse('authentication:master-admin-login')
-        data = {'email': 'master@test.com', 'password': 'wrongpass'}
+        url = reverse('authentication:login')
+        data = {'email': 'super@test.com', 'password': 'wrongpass'}
         
         response = api_client.post(url, data, format='json')
         
@@ -56,7 +56,7 @@ class TestAuthentication:
     
     def test_company_user_login_success(self, api_client, company_user):
         """Test company user can login"""
-        url = reverse('authentication:company-user-login')
+        url = reverse('authentication:login')
         data = {'email': 'company@test.com', 'password': 'testpass123'}
         
         response = api_client.post(url, data, format='json')
@@ -66,11 +66,11 @@ class TestAuthentication:
         assert 'refresh' in response.data
         assert response.data['user']['company_id'] == 1
     
-    def test_token_refresh(self, api_client, master_admin_user):
+    def test_token_refresh(self, api_client, superadmin_user):
         """Test token refresh returns new access token"""
         # First login
-        login_url = reverse('authentication:master-admin-login')
-        login_data = {'email': 'master@test.com', 'password': 'testpass123'}
+        login_url = reverse('authentication:login')
+        login_data = {'email': 'super@test.com', 'password': 'testpass123'}
         login_response = api_client.post(login_url, login_data, format='json')
         
         refresh_token = login_response.data['refresh']
@@ -83,10 +83,10 @@ class TestAuthentication:
         assert refresh_response.status_code == 200
         assert 'access' in refresh_response.data
     
-    def test_account_lockout_after_failed_attempts(self, api_client, master_admin_user):
+    def test_account_lockout_after_failed_attempts(self, api_client, superadmin_user):
         """Test account locks after 5 failed login attempts"""
-        url = reverse('authentication:master-admin-login')
-        data = {'email': 'master@test.com', 'password': 'wrongpass'}
+        url = reverse('authentication:login')
+        data = {'email': 'super@test.com', 'password': 'wrongpass'}
         
         # Make 5 failed attempts
         for _ in range(5):

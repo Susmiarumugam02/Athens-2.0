@@ -5,12 +5,31 @@ import { useServiceUserStore } from '../store/serviceUserStore'
 import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import AthensAccessGuard from '../components/auth/AthensAccessGuard'
 
+// Export all route paths for CI validation
+export const ROUTE_PATHS = [
+  '/login', '/2fa', '/auth/2fa',
+  '/superadmin/dashboard', '/superadmin/users', '/superadmin/roles', '/superadmin/security',
+  '/superadmin/tenants', '/superadmin/masters', '/superadmin/subscriptions', '/superadmin/audit-logs',
+  '/superadmin/configuration', '/superadmin/notifications', '/superadmin/settings',
+  '/master-admin', '/master-admin/projects', '/master-admin/admin-users', 
+  '/master-admin/menu-management', '/master-admin/settings',
+  '/app', '/company/detailed-info', '/company/waiting-approval', '/company/services',
+  '/company', '/company/athens/password-reset', '/company/athens/profile',
+  '/company/athens/pending-approval', '/company/athens/induction',
+  '/service', '/employee', '/jobs', '/services/finance/dashboard',
+  '/services/finance/purchase-orders', '/services/hr/dashboard', '/services/inventory/dashboard',
+  '/services/crm', '/services/sustainability/dashboard', '/services/dashboard',
+  '/services/procurement/dashboard', '/services/analytics/dashboard',
+  '/unauthorized', '/permission-denied'
+] as const
+
 // Lazy load components
 const LoginPage = React.lazy(() => import('../pages/auth/LoginPage'))
 const TwoFactorPage = React.lazy(() => import('../pages/auth/TwoFactorPage'))
 
 // Layouts
 import SuperadminLayout from '../layouts/SuperadminLayout'
+import MasterAdminLayout from '../layouts/MasterAdminLayout'
 
 // Superadmin
 const SuperadminDashboard = React.lazy(() => import('../pages/superadmin/Dashboard'))
@@ -26,9 +45,11 @@ const MastersPage = React.lazy(() => import('../pages/superadmin/Masters'))
 const SubscriptionsPage = React.lazy(() => import('../pages/superadmin/Subscriptions'))
 
 // Master Admin
-const MasterAdminDashboard = React.lazy(() => import('../pages/master-admin/MasterAdminDashboard'))
-const ProjectsPage = React.lazy(() => import('../pages/master-admin/ProjectsPage'))
-const UltraSecureMasterAdminSettings = React.lazy(() => import('../pages/master-admin/UltraSecureSettings'))
+const MasterAdminDashboard = React.lazy(() => import('../pages/masteradmin/Dashboard'))
+const MasterAdminProjects = React.lazy(() => import('../pages/masteradmin/Projects'))
+const MasterAdminAdminUsers = React.lazy(() => import('../pages/masteradmin/AdminUsers'))
+const MasterAdminMenuManagement = React.lazy(() => import('../pages/masteradmin/MenuManagement'))
+const MasterAdminSettings = React.lazy(() => import('../pages/masteradmin/Settings'))
 
 
 
@@ -287,36 +308,19 @@ export const AppRouter: React.FC = () => {
       </Route>
 
       {/* Master Admin Routes */}
-      <Route
-        path="/master-admin"
-        element={
-          <ProtectedRoute requireMasterAdmin>
-            <SuspenseWrapper>
-              <MasterAdminDashboard />
-            </SuspenseWrapper>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/master-admin/projects"
-        element={
-          <ProtectedRoute requireMasterAdmin>
-            <SuspenseWrapper>
-              <ProjectsPage />
-            </SuspenseWrapper>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/master-admin/settings"
-        element={
-          <ProtectedRoute requireMasterAdmin>
-            <SuspenseWrapper>
-              <UltraSecureMasterAdminSettings />
-            </SuspenseWrapper>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/master-admin" element={
+        <ProtectedRoute requireMasterAdmin>
+          <MasterAdminLayout />
+        </ProtectedRoute>
+      }>
+        <Route index element={<SuspenseWrapper><MasterAdminDashboard /></SuspenseWrapper>} />
+        <Route path="dashboard" element={<SuspenseWrapper><MasterAdminDashboard /></SuspenseWrapper>} />
+        <Route path="analytics" element={<SuspenseWrapper><MasterAdminDashboard /></SuspenseWrapper>} />
+        <Route path="projects" element={<SuspenseWrapper><MasterAdminProjects /></SuspenseWrapper>} />
+        <Route path="admin-users" element={<SuspenseWrapper><MasterAdminAdminUsers /></SuspenseWrapper>} />
+        <Route path="menu-management" element={<SuspenseWrapper><MasterAdminMenuManagement /></SuspenseWrapper>} />
+        <Route path="settings" element={<SuspenseWrapper><MasterAdminSettings /></SuspenseWrapper>} />
+      </Route>
 
 
 
