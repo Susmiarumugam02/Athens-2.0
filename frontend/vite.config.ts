@@ -16,4 +16,16 @@ export default defineConfig({
       '@features': path.resolve(__dirname, './src/features'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
+    },
+  },
+  server: {
+    headers: {
+      'Cache-Control': 'no-cache',
+    },
+  },
 })

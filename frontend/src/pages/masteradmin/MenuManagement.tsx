@@ -12,6 +12,8 @@ import { masterAdminService } from '../../services/masteradmin'
 const ROLE_OPTIONS = ['CLIENT_ADMIN', 'EPC_ADMIN', 'CONTRACTOR_ADMIN']
 
 const DEFAULT_MODULES = [
+  'ERGON',
+  'WORKFORCE',
   'PTW',
   'OBSERVATIONS', 
   'INCIDENTS',
@@ -57,10 +59,15 @@ const MenuManagement: React.FC = () => {
     }
   }, [selectedProjectId])
 
-  const applyPreset = (preset: 'ehs' | 'full') => {
-    const enabledSet = preset === 'full'
-      ? new Set(DEFAULT_MODULES)
-      : new Set(['PTW', 'OBSERVATIONS', 'INCIDENTS', 'TRAINING', 'ESG'])
+  const applyPreset = (preset: 'ehs' | 'operations' | 'full') => {
+    let enabledSet: Set<string>
+    if (preset === 'full') {
+      enabledSet = new Set(DEFAULT_MODULES)
+    } else if (preset === 'operations') {
+      enabledSet = new Set(['ERGON', 'WORKFORCE', 'INVENTORY'])
+    } else {
+      enabledSet = new Set(['PTW', 'OBSERVATIONS', 'INCIDENTS', 'TRAINING', 'ESG'])
+    }
     setConfigs((prev) => prev.map((config) => ({
       ...config,
       enabled: enabledSet.has(config.module_key)
@@ -141,6 +148,7 @@ const MenuManagement: React.FC = () => {
           <Card className="p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Presets & Clone</h2>
             <div className="flex flex-wrap items-center gap-3">
+              <Button variant="outline" onClick={() => applyPreset('operations')}>Operations (ERGON + Workforce)</Button>
               <Button variant="outline" onClick={() => applyPreset('ehs')}>EHS Standard</Button>
               <Button variant="outline" onClick={() => applyPreset('full')}>Full Suite</Button>
               <div className="flex items-center gap-2">

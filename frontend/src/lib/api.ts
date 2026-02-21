@@ -366,9 +366,6 @@ export const apiClient = {
   getCompanyServices: () =>
     api.get('/api/auth/company/services/'),
 
-  getCompanyAssignedServices: () =>
-    api.get('/api/auth/company/assigned-services/'),
-
   requestServiceAccess: (serviceIds: number[]) =>
     api.post('/api/auth/company/request-services/', { service_ids: serviceIds }),
 

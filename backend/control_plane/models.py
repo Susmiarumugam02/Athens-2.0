@@ -78,14 +78,14 @@ class Service(models.Model):
 class TenantService(models.Model):
     """Links tenants to enabled services"""
     TIER_CHOICES = [
-        ('basic', 'Basic'),
-        ('premium', 'Premium'),
+        ('starter', 'Starter'),
+        ('professional', 'Professional'),
         ('enterprise', 'Enterprise'),
     ]
     
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='tenant_services')
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='service_tenants')
-    tier = models.CharField(max_length=20, choices=TIER_CHOICES, default='basic')
+    tier = models.CharField(max_length=20, choices=TIER_CHOICES, default='starter')
     is_enabled = models.BooleanField(default=True)
     credentials = models.JSONField(default=dict, help_text="Service-specific credentials")
     config = models.JSONField(default=dict, help_text="Service-specific configuration")
@@ -159,15 +159,15 @@ class AthensTenantLink(models.Model):
 class AthensModuleSubscription(models.Model):
     """Individual module subscriptions for tenants"""
     PLAN_TIER_CHOICES = [
-        ('basic', 'Basic'),
-        ('premium', 'Premium'),
+        ('starter', 'Starter'),
+        ('professional', 'Professional'),
         ('enterprise', 'Enterprise'),
     ]
 
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='athens_module_subscriptions')
     module_code = models.CharField(max_length=50)
     enabled = models.BooleanField(default=True)
-    plan_tier = models.CharField(max_length=20, choices=PLAN_TIER_CHOICES, default='basic')
+    plan_tier = models.CharField(max_length=20, choices=PLAN_TIER_CHOICES, default='starter')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -1,4 +1,5 @@
 from authentication.models import SecurityLog
+from authentication.tenant_utils import get_tenant_id_for_filtering
 
 
 def get_client_ip(request):
@@ -32,9 +33,7 @@ def log_security_event(request, user, event_type, severity, metadata=None):
         severity: SecurityLog.Severity choice
         metadata: dict of additional data
     """
-    company_id = None
-    if user and hasattr(user, 'company_id'):
-        company_id = user.company_id
+    company_id = get_tenant_id_for_filtering(user) if user else None
     
     SecurityLog.objects.create(
         event_type=event_type,
@@ -51,11 +50,12 @@ def log_security_event(request, user, event_type, severity, metadata=None):
 def extract_company_id(request):
     """Extract company_id from JWT claims or headers"""
     # From JWT token
-    if hasattr(request, 'user') and hasattr(request.user, 'company_id'):
-        return request.user.company_id
+    if hasattr(request, 'user'):
+        return get_tenant_id_for_filtering(request.user)
     
     # From header (for internal service calls)
-    return request.META.get('HTTP_X_COMPANY_ID')
+    company_id = request.META.get('HTTP_X_COMPANY_ID')
+    return int(company_id) if company_id else None
 
 
 def extract_project_id(request):

@@ -39,12 +39,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
   const form = useForm<UserFormData>({
     mode: 'onChange',
-    defaultValues: editData ? {
-      email: editData.email,
-      is_active: editData.is_active,
-      requires_2fa: editData.requires_2fa,
-      role_ids: editData.roles?.map(r => r.id) || []
-    } : {
+    defaultValues: {
       email: '',
       password: '',
       is_active: true,
@@ -53,7 +48,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     }
   })
 
-  const { register, formState: { errors }, watch, setValue } = form
+  const { register, formState: { errors }, watch, setValue, reset } = form
 
   // Load roles
   useEffect(() => {
@@ -61,8 +56,26 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       superadminApi.roles.list()
         .then((res: any) => setRoles(res.data))
         .catch(() => toast.error('Failed to load roles'))
+      
+      // Reset form with edit data or defaults
+      if (editData) {
+        reset({
+          email: editData.email,
+          is_active: editData.is_active,
+          requires_2fa: editData.requires_2fa,
+          role_ids: editData.roles?.map(r => r.id) || []
+        })
+      } else {
+        reset({
+          email: '',
+          password: '',
+          is_active: true,
+          requires_2fa: false,
+          role_ids: []
+        })
+      }
     }
-  }, [open])
+  }, [open, editData, reset])
 
   const onSubmit = async (data: UserFormData) => {
     try {

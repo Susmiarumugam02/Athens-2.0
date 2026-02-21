@@ -11,6 +11,7 @@ from datetime import timedelta
 
 from .models import User, UserType, SecurityLog
 from .utils import log_security_event
+from .tenant_utils import get_tenant_for_user, get_tenant_id_for_filtering
 
 
 class LoginThrottle(AnonRateThrottle):
@@ -110,34 +111,43 @@ def unified_login(request):
     # Reset failed login count
     user.failed_login_count = 0
     user.locked_until = None
+    user.last_login = timezone.now()
     user.save()
     
     # Check if MasterAdmin has tenant assigned
-    if user.user_type == UserType.MASTERADMIN and not user.athens_tenant_id:
-        log_security_event(
-            request, user, SecurityLog.EventType.LOGIN_FAILED,
-            SecurityLog.Severity.WARNING,
-            {'reason': 'tenant_not_assigned'}
-        )
-        return Response(
-            {
-                'code': 'TENANT_MISSING',
-                'detail': 'Tenant not assigned. Contact Superadmin.',
-                'error': 'Tenant not assigned'
-            },
-            status=status.HTTP_403_FORBIDDEN
-        )
+    if user.user_type == UserType.MASTERADMIN:
+        tenant, error = get_tenant_for_user(user)
+        if not tenant:
+            log_security_event(
+                request, user, SecurityLog.EventType.LOGIN_FAILED,
+                SecurityLog.Severity.WARNING,
+                {'reason': 'tenant_not_assigned'}
+            )
+            return Response(
+                {
+                    'code': 'TENANT_MISSING',
+                    'detail': 'Tenant not assigned. Contact Superadmin.',
+                    'error': 'Tenant not assigned'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
     
     # Generate tokens
     refresh = RefreshToken.for_user(user)
     refresh['user_type'] = user.user_type
-    refresh['company_id'] = user.company_id
+    tenant_id = get_tenant_id_for_filtering(user)
+    refresh['company_id'] = tenant_id
     
     log_security_event(
         request, user, SecurityLog.EventType.LOGIN_SUCCESS,
         SecurityLog.Severity.INFO,
         {}
     )
+    
+    # Get tenant name if available
+    tenant_name = None
+    if user.tenant:
+        tenant_name = user.tenant.name
     
     # Determine next route based on user type
     next_route_map = {
@@ -147,6 +157,7 @@ def unified_login(request):
         UserType.SERVICEUSER: '/service',
     }
     
+    tenant_id = get_tenant_id_for_filtering(user)
     return Response({
         'access': str(refresh.access_token),
         'refresh': str(refresh),
@@ -154,8 +165,10 @@ def unified_login(request):
             'id': user.id,
             'email': user.email,
             'user_type': user.user_type,
-            'company_id': user.company_id,
-            'athens_tenant_id': user.athens_tenant_id,
+            'company_id': tenant_id,
+            'athens_tenant_id': tenant_id,
+            'admin_type': user.admin_type,
+            'company_name': user.company_name or tenant_name,
         },
         'password_expired': user.password_expired,
         'requires_2fa': False,
@@ -226,8 +239,9 @@ def list_users(request):
     
     # Filter by company if requested
     company_filter = request.query_params.get('company')
-    if company_filter == 'me' and user.company_id:
-        users = users.filter(company_id=user.company_id)
+    tenant_id = get_tenant_id_for_filtering(user)
+    if company_filter == 'me' and tenant_id:
+        users = users.filter(company_id=tenant_id)
     
     data = [
         {
@@ -260,24 +274,19 @@ def company_data(request):
     """Get company/tenant data"""
     user = request.user
     
-    if not user.company_id:
+    tenant, error = get_tenant_for_user(user)
+    if not tenant:
         return Response({'error': 'No company associated'}, status=status.HTTP_404_NOT_FOUND)
     
-    from control_plane.models import Tenant
-    
-    try:
-        tenant = Tenant.objects.get(id=user.company_id)
-        return Response({
-            'success': True,
-            'company_name': tenant.name,
-            'company_logo': None,
-            'registered_address': '',
-            'contact_phone': '',
-            'contact_email': tenant.admin_email,
-            'athens_tenant_id': str(tenant.id),
-        })
-    except Tenant.DoesNotExist:
-        return Response({'error': 'Company not found'}, status=status.HTTP_404_NOT_FOUND)
+    return Response({
+        'success': True,
+        'company_name': tenant.name,
+        'company_logo': None,
+        'registered_address': '',
+        'contact_phone': '',
+        'contact_email': tenant.admin_email,
+        'athens_tenant_id': str(tenant.id),
+    })
 
 
 @api_view(['GET'])
@@ -292,7 +301,7 @@ def current_user_profile(request):
         'designation': user.user_type,
         'department': 'N/A',
         'user_type': user.user_type,
-        'admin_type': user.user_type,
+        'admin_type': user.admin_type,
         'project_name': None,
         'profile_picture_url': None,
     })
@@ -365,10 +374,29 @@ def induction_status(request):
 @permission_classes([IsAuthenticated])
 def subscription_status(request):
     """Get subscription status"""
+    tenant_id = get_tenant_id_for_filtering(request.user)
     return Response({
         'isTrialing': False,
         'subscriptionStatus': 'active',
-        'tenantId': str(request.user.company_id) if request.user.company_id else None,
+        'tenantId': str(tenant_id) if tenant_id else None,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def my_tenant(request):
+    """Get current user's tenant details"""
+    user = request.user
+    
+    tenant, error = get_tenant_for_user(user)
+    if not tenant:
+        return Response({'error': 'No tenant assigned'}, status=status.HTTP_404_NOT_FOUND)
+    
+    return Response({
+        'id': tenant.id,
+        'name': tenant.name,
+        'athens_tenant_id': tenant.id,
+        'admin_email': tenant.admin_email,
     })
 
 

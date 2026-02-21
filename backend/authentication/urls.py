@@ -4,6 +4,9 @@ from .views import (
     dashboard_overview, get_projects, get_admin_users,
     reset_user_password, toggle_user_status
 )
+from .company_settings import (
+    company_details, upload_logo, company_documents, delete_document
+)
 
 app_name = 'authentication'
 

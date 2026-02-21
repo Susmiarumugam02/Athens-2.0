@@ -44,7 +44,7 @@ export default function UsersList() {
         search,
         page_size: 100,
       });
-      setUsers(response.data.results || []);
+      setUsers(Array.isArray(response.data) ? response.data : response.data.results || []);
     } catch (err) {
       setError('Failed to load users');
       setUsers([]);

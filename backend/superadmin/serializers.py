@@ -59,8 +59,12 @@ class UserRoleSerializer(serializers.ModelSerializer):
 
 
 class SuperAdminUserSerializer(serializers.ModelSerializer):
-    roles = RoleSerializer(source='superadmin_roles.role', many=True, read_only=True)
+    roles = serializers.SerializerMethodField()
     role_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
+    
+    def get_roles(self, obj):
+        user_roles = UserRole.objects.filter(user=obj).select_related('role')
+        return [{'id': ur.role.id, 'name': ur.role.name} for ur in user_roles]
     
     class Meta:
         model = User
@@ -85,6 +89,21 @@ class SuperAdminUserSerializer(serializers.ModelSerializer):
             UserRole.objects.create(user=user, role_id=role_id, assigned_by=request_user)
         
         return user
+    
+    def update(self, instance, validated_data):
+        role_ids = validated_data.pop('role_ids', None)
+        
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        if role_ids is not None:
+            UserRole.objects.filter(user=instance).delete()
+            request_user = self.context.get('request').user
+            for role_id in role_ids:
+                UserRole.objects.create(user=instance, role_id=role_id, assigned_by=request_user)
+        
+        return instance
 
 
 class AuditLogSerializer(serializers.ModelSerializer):

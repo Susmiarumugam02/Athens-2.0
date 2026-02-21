@@ -276,8 +276,8 @@ const Projects: React.FC = () => {
                     <Button size="sm" variant="outline" onClick={() => handleEditProject(project)}>
                       Edit
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleDeleteProject(project.id)}>
-                      Delete
+                    <Button size="sm" variant="outline" onClick={() => window.location.href = `/master-admin/projects/${project.id}/modules`}>
+                      Modules
                     </Button>
                   </div>
                 </div>

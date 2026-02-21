@@ -26,11 +26,12 @@ const MasterAdminLayout: React.FC = () => {
   const fetchTenantName = async () => {
     try {
       const response = await apiClient.get('/api/auth/masteradmin/my-tenant/')
-      if (response.data) {
+      if (response.data && response.data.name) {
         setTenantName(response.data.name)
       }
     } catch (error) {
       console.error('Failed to fetch tenant name:', error)
+      setTenantName(user?.company_name || null)
     }
   }
 
@@ -69,14 +70,7 @@ const MasterAdminLayout: React.FC = () => {
           <div className="hidden lg:flex items-center gap-2 px-4 py-1.5 bg-white/80 dark:bg-card/80 rounded-full shadow-sm">
             <span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
             <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-              {!hydrated 
-                ? 'Tenant: Loading...'
-                : !user?.athens_tenant_id 
-                  ? 'Tenant: Unassigned'
-                  : tenantName
-                    ? `Tenant: ${tenantName}`
-                    : 'Tenant: Loading...'
-              }
+              {tenantName || user?.company_name || 'Loading...'}
             </span>
           </div>
 

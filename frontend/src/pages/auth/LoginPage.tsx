@@ -41,6 +41,20 @@ const LoginPage: React.FC = () => {
 
   // Initial page load
   useEffect(() => {
+    // Clear any stale redirects
+    sessionStorage.removeItem('next_route')
+    
+    // Handle redirect parameter from URL
+    const urlParams = new URLSearchParams(window.location.search)
+    const redirect = urlParams.get('redirect')
+    
+    if (redirect === 'athens') {
+      // Don't redirect to Athens Sustainability, redirect to main app
+      sessionStorage.setItem('next_route', '/app')
+    } else if (redirect && redirect !== '/services/athens_sustainability/dashboard') {
+      sessionStorage.setItem('next_route', redirect)
+    }
+    
     const timer = setTimeout(() => setIsPageLoading(false), 800)
     return () => clearTimeout(timer)
   }, [])
@@ -50,10 +64,11 @@ const LoginPage: React.FC = () => {
     if (isAuthenticated && user && !isLoading) {
       setIsTransitioning(true)
       const nextRoute = sessionStorage.getItem('next_route')
+      sessionStorage.removeItem('next_route') // Clear it immediately
       const userType = (user as any).user_type
       
       setTimeout(() => {
-        if (nextRoute) {
+        if (nextRoute && nextRoute !== '/services/athens_sustainability/dashboard') {
           window.location.href = nextRoute
         } else if (userType === 'superadmin') {
           window.location.href = '/superadmin/dashboard'

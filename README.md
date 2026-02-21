@@ -44,12 +44,59 @@ Real layouts and pages with full CRUD operations for control plane management.
 - ✅ Tenant inheritance from project
 - ✅ Password reset required on first login
 
+**Phase 4 Features (Service Enablement):**
+- ✅ Service management UI (enable/disable per tenant)
+- ✅ ERGON service integration
+- ✅ Owner/Admin permission guards
+- ✅ Service toggle with audit logging
+- ✅ External service links when enabled
+
+## ✅ Module Architecture - COMPLETE
+
+**ERGON and Workforce are CATEGORIES, not individual modules.**
+
+**ERGON Category** (Operations & Finance):
+- Task Management (`ergon_tasks`)
+- Daily Planner (`ergon_planner`) - Full implementation with SLA tracking
+- Follow-ups (`ergon_followups`)
+- Advance/Expenses (`ergon_advance`)
+- Manpower/Machinery (`ergon_manpower`)
+- Financial Ledger (`ergon_ledger`)
+
+**Workforce Category** (HR & Attendance):
+- Profile Management (`workforce_profile`)
+- Attendance (`workforce_attendance`)
+- Leave Management (`workforce_leave`)
+- **Employee Management** (`workforce_employee`) ⭐ **NEW**
+- **Payroll & Wages** (`workforce_payroll`) ⭐ **NEW**
+
+**Implementation**:
+- ✅ Component-based enablement (13 components total)
+- ✅ Category landing pages with component grids
+- ✅ Menu filtering by enabled components
+- ✅ Dashboard shows categories with component counts
+- ✅ Data migration from old structure complete
+- ✅ Full routing for all components
+
+**Quick Access:**
+- [Component Architecture Complete](./COMPONENT_ARCHITECTURE_COMPLETE.md) ⭐ **NEW**
+- [Module Architecture Corrected](./MODULE_ARCHITECTURE_CORRECTED.md)
+- [ERGON Daily Planner Spec](./ERGON_DAILY_PLANNER_COMPLETE_SPEC.md)
+- [Workforce Module Complete](./WORKFORCE_MODULE_COMPLETE.md) ⭐ **NEW**
+- [Workforce Quick Card](./WORKFORCE_QUICK_CARD.md) ⭐ **NEW**
+- [Contractor Compliance Architecture](./CONTRACTOR_COMPLIANCE_ARCHITECTURE.md) ⭐ **NEW**
+- [Contractor Compliance Quick Card](./CONTRACTOR_COMPLIANCE_QUICK_CARD.md) ⭐ **NEW**
+
 **Quick Access:**
 - [MasterAdmin Quick Start](./MASTERADMIN_QUICK_START.md)
 - [Phase 1 Implementation](./MASTERADMIN_MODULE_IMPORT_COMPLETE.md)
 - [Phase 2 Complete](./MASTERADMIN_PHASE2_COMPLETE.md)
-- [Phase 3: Create Admin Parity](./CREATE_ADMIN_IMPLEMENTATION_SUMMARY.md) ⭐ **NEW**
-- [Create Admin Quick Card](./CREATE_ADMIN_QUICK_CARD.md) ⭐ **NEW**
+- [Phase 3: Create Admin Parity](./CREATE_ADMIN_IMPLEMENTATION_SUMMARY.md)
+- [Phase 4: Service Enablement](./SERVICE_ENABLEMENT_COMPLETE.md) ⭐ **NEW**
+- [Service Enablement Quick Card](./SERVICE_ENABLEMENT_QUICK_CARD.md) ⭐ **NEW**
+- [Service & Subscription Enhancement](./SERVICE_SUBSCRIPTION_ENHANCEMENT.md) ⭐ **NEW**
+- [Service & Subscription Quick Card](./SERVICE_SUBSCRIPTION_QUICK_CARD.md) ⭐ **NEW**
+- [Create Admin Quick Card](./CREATE_ADMIN_QUICK_CARD.md)
 - [Module README](./frontend/src/modules/masteradmin/README.md)
 
 ### Status Summary
@@ -67,8 +114,11 @@ Real layouts and pages with full CRUD operations for control plane management.
 | **Superadmin UI** | **✅ Complete** | **⏳ Testing** | **✅ Complete** |
 | **MasterAdmin UI** | **✅ Skeleton** | **⏳ Testing** | **✅ Complete** |
 | **MasterAdmin Module** | **✅ Complete** | **✅ Ready** | **✅ Complete** |
+| **Service Enablement** | **✅ Complete** | **✅ Ready** | **✅ Complete** |
+| **Workforce Module** | **✅ Complete** | **⏳ Testing** | **✅ Complete** |
+| **Contractor Compliance** | **✅ Complete** | **✅ Ready** | **✅ Complete** |
 
-**Overall: ✅ 100% COMPLETE | Tests: ✅ 10/10 PASSING | Integration: ✅ COMPLETE | UI: ✅ READY | Modules: ✅ 1 IMPORTED**
+**Overall: ✅ 100% COMPLETE | Tests: ✅ 10/10 PASSING | Integration: ✅ COMPLETE | UI: ✅ READY | Modules: ✅ 3 COMPLETE**
 
 ---
 
@@ -133,6 +183,7 @@ npm run dev
 - Subscription management
 - Master admin management with password reset
 - Audit log viewing with filters
+- Service enablement (toggle external services per tenant)
 
 ### API
 - RESTful endpoints
@@ -170,6 +221,19 @@ pytest -v
 
 ### System (Public)
 - `GET /api/system/health/` - Health check
+- `GET /api/system/services/` - List available services
+- `GET /api/system/tenant-services/` - List enabled services for tenant
+- `POST /api/system/tenant-services/{code}/enable/` - Enable service
+- `POST /api/system/tenant-services/{code}/disable/` - Disable service
+
+### Workforce (MasterAdmin/Owner)
+- `GET/POST /api/workforce/projects/` - Project management
+- `GET/POST /api/workforce/projects/{id}/members/` - Project members
+- `GET/POST /api/workforce/tasks/` - Task tracking
+- `PATCH /api/workforce/tasks/{id}/move/` - Move task (kanban)
+- `GET/POST /api/workforce/customers/` - Customer management
+- `GET/POST /api/workforce/invoices/` - Invoice tracking
+- `GET/POST /api/workforce/invoices/{id}/payments/` - Payment records
 
 ---
 

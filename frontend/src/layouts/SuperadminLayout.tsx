@@ -71,8 +71,8 @@ const SuperadminLayout: React.FC = () => {
                 {user?.email?.[0]?.toUpperCase() || 'M'}
               </div>
               <div className="hidden md:block">
-                <div className="text-xs font-medium text-foreground leading-tight">{user?.email?.split('@')[0] || 'master'}</div>
-                <div className="text-[10px] text-muted-foreground">Master Admin</div>
+                <div className="text-xs font-medium text-foreground leading-tight">{user?.email?.split('@')[0] || 'superadmin'}</div>
+                <div className="text-[10px] text-muted-foreground">Super Admin</div>
               </div>
             </div>
             <button

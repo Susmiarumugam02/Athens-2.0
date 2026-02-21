@@ -30,6 +30,7 @@ const TwoFactorPage = React.lazy(() => import('../pages/auth/TwoFactorPage'))
 // Layouts
 import SuperadminLayout from '../layouts/SuperadminLayout'
 import MasterAdminLayout from '../layouts/MasterAdminLayout'
+import CompanyLayout from '../layouts/CompanyLayout'
 
 // Superadmin
 const SuperadminDashboard = React.lazy(() => import('../pages/superadmin/Dashboard'))
@@ -40,6 +41,7 @@ const SuperadminAuditLogs = React.lazy(() => import('../pages/superadmin/AuditLo
 const SuperadminSettings = React.lazy(() => import('../pages/superadmin/Settings'))
 const SuperadminConfiguration = React.lazy(() => import('../pages/superadmin/Configuration'))
 const SuperadminNotifications = React.lazy(() => import('../pages/superadmin/Notifications/NotificationsCenter'))
+const SuperadminServices = React.lazy(() => import('../pages/superadmin/Services'))
 const TenantsPage = React.lazy(() => import('../pages/superadmin/Tenants'))
 const MastersPage = React.lazy(() => import('../pages/superadmin/Masters'))
 const SubscriptionsPage = React.lazy(() => import('../pages/superadmin/Subscriptions'))
@@ -47,14 +49,27 @@ const SubscriptionsPage = React.lazy(() => import('../pages/superadmin/Subscript
 // Master Admin
 const MasterAdminDashboard = React.lazy(() => import('../pages/masteradmin/Dashboard'))
 const MasterAdminProjects = React.lazy(() => import('../pages/masteradmin/Projects'))
+const MasterAdminProjectModules = React.lazy(() => import('../pages/masteradmin/ProjectModules'))
 const MasterAdminAdminUsers = React.lazy(() => import('../pages/masteradmin/AdminUsers'))
 const MasterAdminMenuManagement = React.lazy(() => import('../pages/masteradmin/MenuManagement'))
 const MasterAdminSettings = React.lazy(() => import('../pages/masteradmin/Settings'))
+const MasterAdminServices = React.lazy(() => import('../pages/masteradmin/Services'))
+const MasterAdminErgon = React.lazy(() => import('../pages/masteradmin/Ergon'))
+// ERGON Components
+const ErgonLanding = React.lazy(() => import('../pages/ergon/ErgonLandingPage'))
+const TaskManagement = React.lazy(() => import('../pages/ergon/TaskManagementPage'))
+const DailyPlanner = React.lazy(() => import('../pages/ergon/DailyPlannerPage'))
+const { FollowupsPage, AdvanceExpensesPage, ManpowerMachineryPage, FinancialLedgerPage } = await import('../pages/ergon/ErgonComponents')
+
+// Workforce Components
+const WorkforceLanding = React.lazy(() => import('../pages/workforce/WorkforceLandingPage'))
+const { ProfileManagementPage, AttendancePage, LeaveManagementPage } = await import('../pages/workforce/WorkforceComponents')
 
 
 
 // Company
-const CompanyDashboard = React.lazy(() => import('../pages/company/Dashboard'))
+const CompanyDashboard = React.lazy(() => import('../pages/company/DashboardSimple'))
+const CompanySettings = React.lazy(() => import('../pages/company/CompanySettings'))
 const DetailedInfoForm = React.lazy(() => import('../pages/company/DetailedInfoForm'))
 const AthensFirstLoginPasswordReset = React.lazy(() => import('../pages/company/AthensFirstLoginPasswordReset'))
 const AthensProfileCompletion = React.lazy(() => import('../pages/company/AthensProfileCompletion'))
@@ -199,7 +214,10 @@ const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
       const userType = (user as any).user_type
       const nextRoute = sessionStorage.getItem('next_route')
       
-      if (nextRoute) {
+      // Clear the next_route to prevent loops
+      sessionStorage.removeItem('next_route')
+      
+      if (nextRoute && nextRoute !== '/services/athens_sustainability/dashboard') {
         window.location.href = nextRoute
       } else if (userType === 'superadmin') {
         window.location.href = '/superadmin/dashboard'
@@ -299,6 +317,7 @@ export const AppRouter: React.FC = () => {
         <Route path="roles" element={<SuspenseWrapper><SuperadminRoles /></SuspenseWrapper>} />
         <Route path="security" element={<SuspenseWrapper><SuperadminSecurity /></SuspenseWrapper>} />
         <Route path="tenants" element={<SuspenseWrapper><TenantsPage /></SuspenseWrapper>} />
+        <Route path="services" element={<SuspenseWrapper><SuperadminServices /></SuspenseWrapper>} />
         <Route path="masters" element={<SuspenseWrapper><MastersPage /></SuspenseWrapper>} />
         <Route path="subscriptions" element={<SuspenseWrapper><SubscriptionsPage /></SuspenseWrapper>} />
         <Route path="audit-logs" element={<SuspenseWrapper><SuperadminAuditLogs /></SuspenseWrapper>} />
@@ -317,6 +336,7 @@ export const AppRouter: React.FC = () => {
         <Route path="dashboard" element={<SuspenseWrapper><MasterAdminDashboard /></SuspenseWrapper>} />
         <Route path="analytics" element={<SuspenseWrapper><MasterAdminDashboard /></SuspenseWrapper>} />
         <Route path="projects" element={<SuspenseWrapper><MasterAdminProjects /></SuspenseWrapper>} />
+        <Route path="projects/:projectId/modules" element={<SuspenseWrapper><MasterAdminProjectModules /></SuspenseWrapper>} />
         <Route path="admin-users" element={<SuspenseWrapper><MasterAdminAdminUsers /></SuspenseWrapper>} />
         <Route path="menu-management" element={<SuspenseWrapper><MasterAdminMenuManagement /></SuspenseWrapper>} />
         <Route path="settings" element={<SuspenseWrapper><MasterAdminSettings /></SuspenseWrapper>} />
@@ -325,18 +345,32 @@ export const AppRouter: React.FC = () => {
 
 
       {/* Company User Routes */}
-      <Route
-        path="/app"
-        element={
-          <ProtectedRoute requireCompanyUser requireApproved>
-            <AthensAccessGuard>
-              <SuspenseWrapper>
-                <CompanyDashboard />
-              </SuspenseWrapper>
-            </AthensAccessGuard>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/app" element={
+        <ProtectedRoute requireCompanyUser requireApproved>
+          <CompanyLayout />
+        </ProtectedRoute>
+      }>
+        <Route index element={<SuspenseWrapper><CompanyDashboard /></SuspenseWrapper>} />
+        <Route path="dashboard" element={<SuspenseWrapper><CompanyDashboard /></SuspenseWrapper>} />
+        <Route path="settings" element={<SuspenseWrapper><CompanySettings /></SuspenseWrapper>} />
+        
+        {/* ERGON Category Routes */}
+        <Route path="ergon" element={<SuspenseWrapper><ErgonLanding /></SuspenseWrapper>} />
+        <Route path="ergon/tasks" element={<SuspenseWrapper><TaskManagement /></SuspenseWrapper>} />
+        <Route path="ergon/planner" element={<SuspenseWrapper><DailyPlanner /></SuspenseWrapper>} />
+        <Route path="ergon/followups" element={<SuspenseWrapper><FollowupsPage /></SuspenseWrapper>} />
+        <Route path="ergon/advance" element={<SuspenseWrapper><AdvanceExpensesPage /></SuspenseWrapper>} />
+        <Route path="ergon/manpower" element={<SuspenseWrapper><ManpowerMachineryPage /></SuspenseWrapper>} />
+        <Route path="ergon/ledger" element={<SuspenseWrapper><FinancialLedgerPage /></SuspenseWrapper>} />
+        
+        {/* Workforce Category Routes */}
+        <Route path="workforce" element={<SuspenseWrapper><WorkforceLanding /></SuspenseWrapper>} />
+        <Route path="workforce/profiles" element={<SuspenseWrapper><ProfileManagementPage /></SuspenseWrapper>} />
+        <Route path="workforce/attendance" element={<SuspenseWrapper><AttendancePage /></SuspenseWrapper>} />
+        <Route path="workforce/leave" element={<SuspenseWrapper><LeaveManagementPage /></SuspenseWrapper>} />
+        
+        <Route path="settings" element={<SuspenseWrapper><MasterAdminSettings /></SuspenseWrapper>} />
+      </Route>
 
       <Route
         path="/company/detailed-info"
@@ -375,11 +409,9 @@ export const AppRouter: React.FC = () => {
         path="/company"
         element={
           <ProtectedRoute requireCompanyUser requireApproved>
-            <AthensAccessGuard>
-              <SuspenseWrapper>
-                <CompanyDashboard />
-              </SuspenseWrapper>
-            </AthensAccessGuard>
+            <SuspenseWrapper>
+              <CompanyDashboard />
+            </SuspenseWrapper>
           </ProtectedRoute>
         }
       />
@@ -557,11 +589,20 @@ export const AppRouter: React.FC = () => {
         }
       />
 
-      {/* Athens Sustainability Routes - Company User Access */}
+      {/* Athens Sustainability Routes - Remove redirect loop */}
       <Route
         path="/services/athens_sustainability/*"
         element={
-          <Navigate to="/login?redirect=athens" replace />
+          <ProtectedRoute requireCompanyUser>
+            <SuspenseWrapper>
+              <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+                <div className="text-center">
+                  <h1 className="text-2xl font-bold text-green-600 mb-4">Athens Sustainability</h1>
+                  <p className="text-gray-600">Athens Sustainability module coming soon!</p>
+                </div>
+              </div>
+            </SuspenseWrapper>
+          </ProtectedRoute>
         }
       />
 

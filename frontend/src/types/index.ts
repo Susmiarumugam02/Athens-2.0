@@ -2,9 +2,12 @@
 export interface User {
   id: number
   email: string
+  user_type?: string
   company_id?: number
   company_name?: string
   company_logo?: string
+  admin_type?: 'client' | 'epc' | 'contractor'
+  athens_tenant_id?: string
   is_master_admin?: boolean
   is_company_user?: boolean
 }
