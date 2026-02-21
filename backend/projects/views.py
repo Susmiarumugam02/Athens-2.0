@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Q
 from authentication.models import User, UserType, SecurityLog
+from authentication.tenant_utils import get_tenant_id_for_filtering, require_tenant
 from .models import Project, ProjectMembership
 from .serializers import ProjectSerializer, ProjectMembershipSerializer, AddMemberSerializer
 from .permissions import IsMasterAdminOrSuperAdmin, IsProjectMemberOrAdmin
@@ -16,16 +17,18 @@ class ProjectViewSet(viewsets.ModelViewSet):
         user = self.request.user
         queryset = Project.objects.select_related("company", "created_by").prefetch_related("memberships")
         
-        # Superadmin sees all
-        if user.user_type == UserType.SUPERADMIN:
+        tenant_id = get_tenant_id_for_filtering(user)
+        
+        # Superadmin sees all (tenant_id is None)
+        if tenant_id is None:
             pass
         # MasterAdmin sees only their company
         elif user.user_type == UserType.MASTERADMIN:
-            queryset = queryset.filter(company_id=user.company_id)
+            queryset = queryset.filter(company_id=tenant_id)
         # CompanyUser sees only projects they are members of
         elif user.user_type == UserType.COMPANYUSER:
             queryset = queryset.filter(
-                company_id=user.company_id,
+                company_id=tenant_id,
                 memberships__user=user,
                 memberships__is_active=True
             ).distinct()
@@ -53,9 +56,15 @@ class ProjectViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Only MasterAdmin can create projects")
         
-        # Set company from user's company_id
+        # Get tenant (required for project creation)
+        tenant, err = require_tenant(user)
+        if err:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError(err)
+        
+        # Set company from canonical tenant
         project = serializer.save(
-            company_id=user.company_id,
+            company_id=tenant.id,
             created_by=user
         )
         
@@ -64,7 +73,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             event_type="project_created",
             severity="info",
             user=user,
-            company_id=user.company_id,
+            company_id=tenant.id,
             ip_address=self.request.META.get("REMOTE_ADDR"),
             user_agent=self.request.META.get("HTTP_USER_AGENT"),
             metadata={
@@ -173,9 +182,13 @@ class ProjectViewSet(viewsets.ModelViewSet):
             user_id = serializer.validated_data["user_id"]
             role = serializer.validated_data["role"]
             
-            # Verify user exists and belongs to same company
+            # Verify user exists and belongs to same tenant
+            tenant_id = get_tenant_id_for_filtering(request.user)
             try:
-                user = User.objects.get(id=user_id, company_id=project.company_id)
+                user = User.objects.get(id=user_id)
+                user_tenant_id = get_tenant_id_for_filtering(user)
+                if user_tenant_id != project.company_id:
+                    raise User.DoesNotExist
             except User.DoesNotExist:
                 return Response(
                     {"error": "User not found or not in same company"},
@@ -222,12 +235,14 @@ class ProjectMembershipViewSet(viewsets.ModelViewSet):
         user = self.request.user
         queryset = ProjectMembership.objects.select_related("project", "user")
         
-        # Superadmin sees all
-        if user.user_type == UserType.SUPERADMIN:
+        tenant_id = get_tenant_id_for_filtering(user)
+        
+        # Superadmin sees all (tenant_id is None)
+        if tenant_id is None:
             pass
         # MasterAdmin sees only their company's projects
         elif user.user_type == UserType.MASTERADMIN:
-            queryset = queryset.filter(project__company_id=user.company_id)
+            queryset = queryset.filter(project__company_id=tenant_id)
         else:
             queryset = queryset.none()
         
