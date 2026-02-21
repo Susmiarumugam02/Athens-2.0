@@ -74,6 +74,23 @@ class HasTenant(permissions.BasePermission):
         return True
 
 
+class IsServiceAdmin(permissions.BasePermission):
+    """Allow MasterAdmin or CompanyUser with admin_type (Owner/Admin)"""
+    
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        
+        if request.user.user_type == UserType.MASTERADMIN:
+            return True
+        
+        if request.user.user_type == UserType.COMPANYUSER and request.user.admin_type:
+            return True
+        
+        self.message = {"error": "Only Owner/Admin can manage services"}
+        return False
+
+
 # ============================================================================
 # TENANT-AWARE PERMISSION MIXIN
 # ============================================================================

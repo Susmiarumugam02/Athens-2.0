@@ -33,6 +33,8 @@ def get_current_tenant(user):
 
 def check_service_admin_permission(user):
     """
+    DEPRECATED: Use authentication.permissions.IsServiceAdmin instead.
+    
     Check if user has permission to manage services (Owner/Admin).
     
     Returns:

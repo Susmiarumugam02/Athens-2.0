@@ -4,8 +4,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.core.exceptions import ValidationError
 
+from authentication.permissions import IsServiceAdmin
 from .serializers import ServiceSerializer, TenantServiceSerializer
-from .utils import get_current_tenant, check_service_admin_permission
+from .utils import get_current_tenant
 from .service_manager import ServiceManager
 
 
@@ -69,10 +70,13 @@ def enable_service(request, service_code):
         except Tenant.DoesNotExist:
             return Response({"error": "Tenant not found"}, status=status.HTTP_404_NOT_FOUND)
     else:
-        # Regular users need permission check
-        has_permission, error = check_service_admin_permission(request.user)
-        if error:
-            return error
+        # Regular users need Owner/Admin permission
+        service_admin_perm = IsServiceAdmin()
+        if not service_admin_perm.has_permission(request, None):
+            return Response(
+                service_admin_perm.message if hasattr(service_admin_perm, 'message') else {"error": "Permission denied"},
+                status=status.HTTP_403_FORBIDDEN
+            )
         
         tenant, error = get_current_tenant(request.user)
         if error:
@@ -118,10 +122,13 @@ def disable_service(request, service_code):
         except Tenant.DoesNotExist:
             return Response({"error": "Tenant not found"}, status=status.HTTP_404_NOT_FOUND)
     else:
-        # Regular users need permission check
-        has_permission, error = check_service_admin_permission(request.user)
-        if error:
-            return error
+        # Regular users need Owner/Admin permission
+        service_admin_perm = IsServiceAdmin()
+        if not service_admin_perm.has_permission(request, None):
+            return Response(
+                service_admin_perm.message if hasattr(service_admin_perm, 'message') else {"error": "Permission denied"},
+                status=status.HTTP_403_FORBIDDEN
+            )
         
         tenant, error = get_current_tenant(request.user)
         if error:
@@ -160,13 +167,9 @@ def service_stats(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsServiceAdmin])
 def update_service_config(request, service_code):
     """Update service configuration (Owner/Admin only)"""
-    has_permission, error = check_service_admin_permission(request.user)
-    if error:
-        return error
-    
     tenant, error = get_current_tenant(request.user)
     if error:
         return error
@@ -196,13 +199,9 @@ def update_service_config(request, service_code):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsServiceAdmin])
 def change_service_tier(request, service_code):
     """Change service tier (Owner/Admin only)"""
-    has_permission, error = check_service_admin_permission(request.user)
-    if error:
-        return error
-    
     tenant, error = get_current_tenant(request.user)
     if error:
         return error
