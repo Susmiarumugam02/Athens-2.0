@@ -3,10 +3,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Q
 from authentication.models import User, UserType, SecurityLog
+from authentication.permissions import IsSuperAdminOrMasterAdmin
 from authentication.tenant_utils import get_tenant_id_for_filtering, require_tenant
 from .models import Project, ProjectMembership
 from .serializers import ProjectSerializer, ProjectMembershipSerializer, AddMemberSerializer
-from .permissions import IsMasterAdminOrSuperAdmin, IsProjectMemberOrAdmin
+from .permissions import IsProjectMemberOrAdmin
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
@@ -228,7 +229,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
 class ProjectMembershipViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectMembershipSerializer
-    permission_classes = [IsMasterAdminOrSuperAdmin]
+    permission_classes = [IsSuperAdminOrMasterAdmin]
     http_method_names = ["get", "patch", "delete"]
     
     def get_queryset(self):

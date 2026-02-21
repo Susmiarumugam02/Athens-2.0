@@ -10,6 +10,7 @@ from authentication.permissions import (
     IsMasterAdmin,
     IsCompanyUser,
     IsServiceUser,
+    IsServiceAdmin,
     IsSuperAdminOrMasterAdmin,
     HasTenant,
     TenantScopedPermissionMixin,
@@ -131,6 +132,33 @@ class TestIsServiceUser:
     def test_denies_companyuser(self, mock_companyuser, mock_request, mock_view):
         mock_request.user = mock_companyuser
         permission = IsServiceUser()
+        assert permission.has_permission(mock_request, mock_view) is False
+
+
+class TestIsServiceAdmin:
+    def test_allows_masteradmin(self, mock_masteradmin, mock_request, mock_view):
+        mock_request.user = mock_masteradmin
+        permission = IsServiceAdmin()
+        assert permission.has_permission(mock_request, mock_view) is True
+    
+    def test_allows_companyuser_with_admin_type(self, mock_request, mock_view):
+        user = Mock()
+        user.is_authenticated = True
+        user.user_type = UserType.COMPANYUSER
+        user.admin_type = 'owner'
+        mock_request.user = user
+        permission = IsServiceAdmin()
+        assert permission.has_permission(mock_request, mock_view) is True
+    
+    def test_denies_companyuser_without_admin_type(self, mock_companyuser, mock_request, mock_view):
+        mock_companyuser.admin_type = None
+        mock_request.user = mock_companyuser
+        permission = IsServiceAdmin()
+        assert permission.has_permission(mock_request, mock_view) is False
+    
+    def test_denies_superadmin(self, mock_superadmin, mock_request, mock_view):
+        mock_request.user = mock_superadmin
+        permission = IsServiceAdmin()
         assert permission.has_permission(mock_request, mock_view) is False
 
 
