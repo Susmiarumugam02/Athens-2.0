@@ -39,3 +39,42 @@ class SecurityLogSerializer(serializers.ModelSerializer):
             'ip_address', 'user_agent', 'device_fingerprint', 'metadata', 'created_at'
         ]
         read_only_fields = ['id', 'created_at']
+
+
+class MasterAdminSerializer(serializers.ModelSerializer):
+    tenant_name = serializers.CharField(source='tenant.name', read_only=True)
+    
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'name', 'surname', 'athens_tenant_id', 'tenant_name', 'is_active', 'created_at']
+        read_only_fields = ['id', 'created_at', 'email', 'tenant_name']
+
+
+class MasterAdminCreateSerializer(serializers.ModelSerializer):
+    tenant_id = serializers.IntegerField(write_only=True)
+    password = serializers.CharField(write_only=True)
+    
+    class Meta:
+        model = User
+        fields = ['email', 'name', 'surname', 'tenant_id', 'password']
+    
+    def create(self, validated_data):
+        tenant_id = validated_data.pop('tenant_id')
+        password = validated_data.pop('password')
+        
+        # Get tenant object
+        try:
+            tenant = Tenant.objects.get(id=tenant_id)
+        except Tenant.DoesNotExist:
+            raise serializers.ValidationError({'tenant_id': 'Tenant not found'})
+        
+        user = User.objects.create(
+            **validated_data,
+            user_type=UserType.MASTERADMIN,
+            tenant=tenant,
+            athens_tenant_id=tenant.id,
+            company_id=tenant.id
+        )
+        user.set_password(password)
+        user.save()
+        return user

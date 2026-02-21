@@ -8,10 +8,11 @@ from django.db import transaction
 from authentication.permissions import IsSuperAdmin
 from authentication.models import User, UserType, SecurityLog
 from authentication.utils import log_security_event
-from .models import Tenant, Subscription, AthensTenantLink, AthensModuleSubscription, AthensAuditLog, DEFAULT_ATHENS_MODULES
+from authentication.tenant_utils import get_tenant_for_user
+from .models import Tenant, Subscription, AthensTenantLink, AthensModuleSubscription, AthensAuditLog, DEFAULT_ATHENS_MODULES, Service, TenantService
 from .serializers import (
     TenantSerializer, SubscriptionSerializer,
-    SecurityLogSerializer
+    SecurityLogSerializer, MasterAdminSerializer, MasterAdminCreateSerializer
 )
 
 
@@ -29,6 +30,27 @@ class TenantViewSet(viewsets.ModelViewSet):
             SecurityLog.Severity.INFO,
             {'tenant_id': tenant.id, 'tenant_name': tenant.name}
         )
+    
+    def destroy(self, request, *args, **kwargs):
+        """Delete tenant - simple cascade delete"""
+        tenant = self.get_object()
+        tenant_id = tenant.id
+        tenant_name = tenant.name
+        
+        try:
+            tenant.delete()
+            log_security_event(
+                request, request.user,
+                'tenant_deleted',
+                SecurityLog.Severity.WARNING,
+                {'tenant_id': tenant_id, 'tenant_name': tenant_name}
+            )
+            return Response({'message': 'Tenant deleted successfully'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
     
     @action(detail=True, methods=['post'])
     def disable(self, request, pk=None):
@@ -243,3 +265,130 @@ class AthensAuditLogViewSet(viewsets.ReadOnlyModelViewSet):
             })
         
         return Response(data)
+
+
+class TenantServiceViewSet(viewsets.ReadOnlyModelViewSet):
+    """Tenant service management for superadmin"""
+    queryset = TenantService.objects.all()
+    permission_classes = [IsAuthenticated, IsSuperAdmin]
+    
+    def list(self, request):
+        tenant_services = TenantService.objects.select_related('tenant', 'service').all()
+        data = []
+        for ts in tenant_services:
+            data.append({
+                'id': ts.id,
+                'tenant': ts.tenant.id,
+                'service_code': ts.service.code,
+                'is_enabled': ts.is_enabled,
+                'enabled_at': ts.enabled_at,
+                'disabled_at': ts.disabled_at
+            })
+        return Response(data)
+    
+    @action(detail=False, methods=['post'], url_path='toggle')
+    def toggle(self, request):
+        """Toggle service for a tenant"""
+        tenant_id = request.data.get('tenant_id')
+        service_code = request.data.get('service_code')
+        enable = request.data.get('enable', True)
+        
+        try:
+            tenant = Tenant.objects.get(id=tenant_id)
+            service = Service.objects.get(code=service_code)
+        except (Tenant.DoesNotExist, Service.DoesNotExist):
+            return Response({'error': 'Tenant or Service not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        ts, created = TenantService.objects.get_or_create(
+            tenant=tenant,
+            service=service,
+            defaults={'created_by': request.user, 'is_enabled': enable}
+        )
+        
+        if not created:
+            ts.is_enabled = enable
+            if enable:
+                ts.enabled_at = timezone.now()
+                ts.disabled_at = None
+            else:
+                ts.disabled_at = timezone.now()
+            ts.save()
+        
+        log_security_event(
+            request, request.user,
+            'service_toggled',
+            SecurityLog.Severity.INFO,
+            {'tenant_id': tenant_id, 'service_code': service_code, 'enabled': enable}
+        )
+        
+        return Response({'message': 'Service toggled', 'is_enabled': ts.is_enabled})
+
+
+class MasterAdminViewSet(viewsets.ModelViewSet):
+    """Master Admin management for superadmin"""
+    queryset = User.objects.filter(user_type=UserType.MASTERADMIN)
+    serializer_class = MasterAdminSerializer
+    permission_classes = [IsAuthenticated, IsSuperAdmin]
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return MasterAdminCreateSerializer
+        return MasterAdminSerializer
+    
+    def perform_create(self, serializer):
+        master_admin = serializer.save()
+        log_security_event(
+            self.request, self.request.user,
+            SecurityLog.EventType.MASTER_CREATED,
+            SecurityLog.Severity.INFO,
+            {'master_admin_id': master_admin.id, 'email': master_admin.email}
+        )
+    
+    def update(self, request, *args, **kwargs):
+        """Update master admin"""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        
+        # Get data
+        data = request.data.copy()
+        
+        # Update fields
+        if 'name' in data:
+            instance.name = data['name']
+        if 'surname' in data:
+            instance.surname = data['surname']
+        if 'athens_tenant_id' in data:
+            tenant_id = data['athens_tenant_id']
+            try:
+                tenant = Tenant.objects.get(id=tenant_id)
+                instance.tenant = tenant
+                instance.athens_tenant_id = tenant.id
+                instance.company_id = tenant.id
+            except Tenant.DoesNotExist:
+                return Response(
+                    {'error': 'Tenant not found'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        instance.save()
+        
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Delete master admin"""
+        instance = self.get_object()
+        email = instance.email
+        user_id = instance.id
+        
+        # Just delete - all FKs are SET_NULL
+        instance.delete()
+        
+        log_security_event(
+            request, request.user,
+            SecurityLog.EventType.MASTER_DISABLED,
+            SecurityLog.Severity.WARNING,
+            {'deleted_user_id': user_id, 'email': email}
+        )
+        
+        return Response(status=status.HTTP_204_NO_CONTENT)
