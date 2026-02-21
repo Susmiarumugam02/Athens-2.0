@@ -12,6 +12,7 @@ from datetime import timedelta
 from .models import User, UserType, SecurityLog
 from .utils import log_security_event
 from .tenant_utils import get_tenant_for_user, get_tenant_id_for_filtering
+from .permissions import IsSuperAdmin
 
 
 class LoginThrottle(AnonRateThrottle):
@@ -224,16 +225,10 @@ def logout(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsSuperAdmin])
 def list_users(request):
     """List users for member assignment (Superadmin only)"""
     user = request.user
-    
-    if user.user_type != UserType.SUPERADMIN:
-        return Response(
-            {'error': 'Permission denied'},
-            status=status.HTTP_403_FORBIDDEN
-        )
     
     users = User.objects.filter(is_active=True)
     
@@ -322,12 +317,9 @@ def get_admin_users(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsSuperAdmin])
 def reset_user_password(request, user_id):
     """Reset user password (Superadmin only)"""
-    if request.user.user_type != UserType.SUPERADMIN:
-        return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
-    
     try:
         target_user = User.objects.get(id=user_id)
         # In production, send email with reset link
@@ -337,12 +329,9 @@ def reset_user_password(request, user_id):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsSuperAdmin])
 def toggle_user_status(request, user_id):
     """Enable/disable user (Superadmin only)"""
-    if request.user.user_type != UserType.SUPERADMIN:
-        return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
-    
     try:
         target_user = User.objects.get(id=user_id)
         target_user.is_active = not target_user.is_active
