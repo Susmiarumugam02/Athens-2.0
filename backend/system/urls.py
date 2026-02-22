@@ -7,7 +7,8 @@ from .views import (
     disable_service,
     service_stats,
     update_service_config,
-    change_service_tier
+    change_service_tier,
+    list_audit_logs
 )
 
 urlpatterns = [
@@ -19,4 +20,5 @@ urlpatterns = [
     path("tenant-services/<str:service_code>/disable/", disable_service),
     path("tenant-services/<str:service_code>/config/", update_service_config),
     path("tenant-services/<str:service_code>/tier/", change_service_tier),
+    path("audit-logs/", list_audit_logs),
 ]

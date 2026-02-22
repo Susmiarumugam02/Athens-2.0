@@ -3,8 +3,11 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 
 from authentication.permissions import IsServiceAdmin
+from authentication.rbac_permissions import RequireTenantPermission
+from authentication.tenant_resolver import TenantResolver
 from .serializers import ServiceSerializer, TenantServiceSerializer
 from .utils import get_current_tenant
 from .service_manager import ServiceManager
@@ -236,3 +239,66 @@ def change_service_tier(request, service_code):
         return fail('VALIDATION_ERROR', str(e), status=400, request=request)
     except Exception as e:
         return fail('INTERNAL_ERROR', 'Failed to change tier', details=str(e), status=500, request=request)
+
+
+@api_view(["GET"])
+@permission_classes([RequireTenantPermission])
+def list_audit_logs(request):
+    """
+    List audit logs for current tenant (tenant-scoped).
+    Requires audit.read permission.
+    """
+    from control_plane.models import AthensAuditLog
+    
+    # Get tenant from request (attached by RequireTenantPermission)
+    tenant = getattr(request, 'tenant', None)
+    
+    # SuperAdmin can see all logs or filter by tenant
+    if request.user.user_type == 'superadmin':
+        tenant_id = request.query_params.get('tenant_id')
+        if tenant_id:
+            logs = AthensAuditLog.objects.filter(after_data__tenant_id=tenant_id)
+        else:
+            logs = AthensAuditLog.objects.all()
+    else:
+        # Regular users see only their tenant's logs
+        if not tenant:
+            return fail('NO_TENANT', 'Tenant context required', status=403, request=request)
+        logs = AthensAuditLog.objects.filter(after_data__tenant_id=str(tenant.id))
+    
+    # Ordering
+    logs = logs.order_by('-created_at')
+    
+    # Pagination
+    page = int(request.query_params.get('page', 1))
+    page_size = int(request.query_params.get('page_size', 20))
+    paginator = Paginator(logs, page_size)
+    page_obj = paginator.get_page(page)
+    
+    # Serialize
+    data = [
+        {
+            'id': log.id,
+            'actor_id': log.actor_id,
+            'action': log.action,
+            'entity_type': log.entity_type,
+            'entity_id': log.entity_id,
+            'status': log.after_data.get('status', 'SUCCESS') if log.after_data else 'SUCCESS',
+            'meta': log.after_data,
+            'ip_address': log.ip_address,
+            'user_agent': log.user_agent[:100] if log.user_agent else '',
+            'created_at': log.created_at.isoformat(),
+        }
+        for log in page_obj
+    ]
+    
+    return ok(
+        data={
+            'results': data,
+            'count': paginator.count,
+            'page': page,
+            'page_size': page_size,
+            'total_pages': paginator.num_pages,
+        },
+        request=request
+    )
