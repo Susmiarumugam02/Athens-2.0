@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from system.utils import get_current_tenant
+from system.api_response import ok, fail
 from .models import *
 from .serializers import *
 from .permissions import WorkforceServiceEnabled, IsWorkforceAdmin
@@ -57,7 +58,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         instance.status = 'inactive'
         instance.save()
-        return Response({'detail': 'Employee marked as inactive'}, status=status.HTTP_200_OK)
+        return ok(data={'detail': 'Employee marked as inactive'}, request=request)
 
 # MODULE 2: ATTENDANCE & WORK HOURS MANAGEMENT
 
@@ -127,20 +128,20 @@ class PayrollCycleViewSet(viewsets.ModelViewSet):
         try:
             from .services import PayrollService
             result = PayrollService.process_payroll_cycle(cycle, tenant.id)
-            return Response(result, status=status.HTTP_200_OK)
+            return ok(data=result, request=request)
         except ValueError as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return fail('VALIDATION_ERROR', str(e), status=status.HTTP_400_BAD_REQUEST, request=request)
         except Exception as e:
-            return Response({'error': f'Payroll processing failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return fail('PROCESSING_FAILED', f'Payroll processing failed: {str(e)}', status=status.HTTP_500_INTERNAL_SERVER_ERROR, request=request)
     
     @action(detail=True, methods=['post'])
     def lock(self, request, pk=None):
         cycle = self.get_object()
         if cycle.status != 'processed':
-            return Response({'error': 'Only processed cycles can be locked'}, status=status.HTTP_400_BAD_REQUEST)
+            return fail('INVALID_STATUS', 'Only processed cycles can be locked', status=status.HTTP_400_BAD_REQUEST, request=request)
         cycle.status = 'locked'
         cycle.save()
-        return Response({'detail': 'Payroll cycle locked'}, status=status.HTTP_200_OK)
+        return ok(data={'detail': 'Payroll cycle locked'}, request=request)
 
 class PayrollEntryViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PayrollEntrySerializer
