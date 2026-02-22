@@ -183,6 +183,7 @@ REST_FRAMEWORK = {
         "user": "1000/hour",
     },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "system.exception_handler.custom_exception_handler",
 }
 
 # JWT Configuration
