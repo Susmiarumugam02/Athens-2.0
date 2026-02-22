@@ -2,7 +2,7 @@ from django.urls import path, include
 from .views import (
     unified_login, token_refresh, logout, list_users,
     dashboard_overview, get_projects, get_admin_users,
-    reset_user_password, toggle_user_status
+    reset_user_password, toggle_user_status, my_permissions
 )
 from .company_settings import (
     company_details, upload_logo, company_documents, delete_document
@@ -22,6 +22,9 @@ urlpatterns = [
     # User Management
     path("users/<int:user_id>/reset-password/", reset_user_password, name='reset-user-password'),
     path("users/<int:user_id>/toggle-status/", toggle_user_status, name='toggle-user-status'),
+    
+    # RBAC
+    path("me/permissions/", my_permissions, name='my-permissions'),
     
     # MasterAdmin endpoints
     path("masteradmin/", include('authentication.masteradmin.urls')),

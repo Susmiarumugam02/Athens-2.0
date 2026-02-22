@@ -5,6 +5,7 @@ from django.utils import timezone
 # Import tenant models
 from .tenant_models import AthensTenant, TenantAuditLog, DEFAULT_MODULES, DEFAULT_MENUS  # noqa
 from .tenant_resolver import TenantResolver, get_current_tenant  # noqa
+from . import rbac_permissions  # noqa
 
 
 class Project(models.Model):

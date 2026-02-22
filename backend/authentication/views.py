@@ -13,6 +13,8 @@ from .models import User, UserType, SecurityLog
 from .utils import log_security_event
 from .tenant_utils import get_tenant_for_user, get_tenant_id_for_filtering
 from .permissions import IsSuperAdmin
+from .rbac_permissions import RequireTenantContext, RequireTenantPermission
+from .tenant_resolver import get_current_tenant
 from system.api_response import ok, fail
 
 
@@ -391,6 +393,74 @@ def my_tenant(request):
         'admin_email': tenant.admin_email,
     }
     return ok(data=data, request=request)
+
+
+@api_view(['GET'])
+@permission_classes([RequireTenantContext])
+def my_permissions(request):
+    """
+    Get current user's roles and permissions for their tenant.
+    Returns tenant context, user type, and available permissions.
+    """
+    user = request.user
+    
+    # SuperAdmin has all permissions
+    if user.user_type == UserType.SUPERADMIN:
+        return Response({
+            'tenant_id': None,
+            'user_type': user.user_type,
+            'roles': ['SUPERADMIN'],
+            'permissions': ['*'],
+        })
+    
+    # Get tenant from request context (attached by RequireTenantContext)
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        tenant = get_current_tenant(user)
+    
+    # Map user_type to roles
+    role_map = {
+        'masteradmin': ['MASTER_ADMIN'],
+        'projectadmin': ['PROJECT_ADMIN'],
+        'adminuser': ['ADMIN_USER'],
+        'companyuser': ['COMPANY_USER'],
+        'serviceuser': ['SERVICE_USER'],
+    }
+    
+    # Map user_type to permissions (simplified - expand later)
+    permission_map = {
+        'masteradmin': [
+            'tenant.read', 'tenant.write',
+            'user.read', 'user.write',
+            'project.read', 'project.write',
+            'service.read', 'service.write',
+        ],
+        'projectadmin': [
+            'project.read', 'project.write',
+            'user.read', 'user.write',
+        ],
+        'adminuser': [
+            'project.read',
+            'user.read',
+        ],
+        'companyuser': [
+            'project.read',
+        ],
+        'serviceuser': [
+            'service.read',
+        ],
+    }
+    
+    roles = role_map.get(user.user_type, [])
+    permissions = permission_map.get(user.user_type, [])
+    
+    return Response({
+        'tenant_id': str(tenant.id) if tenant else None,
+        'user_type': user.user_type,
+        'admin_type': user.admin_type,
+        'roles': roles,
+        'permissions': permissions,
+    })
 
 
 
