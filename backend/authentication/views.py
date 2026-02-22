@@ -13,6 +13,7 @@ from .models import User, UserType, SecurityLog
 from .utils import log_security_event
 from .tenant_utils import get_tenant_for_user, get_tenant_id_for_filtering
 from .permissions import IsSuperAdmin
+from system.api_response import ok, fail
 
 
 class LoginThrottle(AnonRateThrottle):
@@ -248,7 +249,7 @@ def list_users(request):
         for u in users
     ]
     
-    return Response(data)
+    return ok(data=data, request=request)
 
 
 @api_view(['GET'])
@@ -271,9 +272,9 @@ def company_data(request):
     
     tenant, error = get_tenant_for_user(user)
     if not tenant:
-        return Response({'error': 'No company associated'}, status=status.HTTP_404_NOT_FOUND)
+        return fail('NO_COMPANY', 'No company associated', status=404, request=request)
     
-    return Response({
+    data = {
         'success': True,
         'company_name': tenant.name,
         'company_logo': None,
@@ -281,7 +282,8 @@ def company_data(request):
         'contact_phone': '',
         'contact_email': tenant.admin_email,
         'athens_tenant_id': str(tenant.id),
-    })
+    }
+    return ok(data=data, request=request)
 
 
 @api_view(['GET'])
@@ -323,9 +325,9 @@ def reset_user_password(request, user_id):
     try:
         target_user = User.objects.get(id=user_id)
         # In production, send email with reset link
-        return Response({'message': 'Password reset email sent'})
+        return ok(data={'message': 'Password reset email sent'}, request=request)
     except User.DoesNotExist:
-        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        return fail('USER_NOT_FOUND', 'User not found', status=404, request=request)
 
 
 @api_view(['POST'])
@@ -336,9 +338,9 @@ def toggle_user_status(request, user_id):
         target_user = User.objects.get(id=user_id)
         target_user.is_active = not target_user.is_active
         target_user.save()
-        return Response({'message': 'User status updated', 'is_active': target_user.is_active})
+        return ok(data={'message': 'User status updated', 'is_active': target_user.is_active}, request=request)
     except User.DoesNotExist:
-        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        return fail('USER_NOT_FOUND', 'User not found', status=404, request=request)
 
 
 @api_view(['GET'])
@@ -364,11 +366,12 @@ def induction_status(request):
 def subscription_status(request):
     """Get subscription status"""
     tenant_id = get_tenant_id_for_filtering(request.user)
-    return Response({
+    data = {
         'isTrialing': False,
         'subscriptionStatus': 'active',
         'tenantId': str(tenant_id) if tenant_id else None,
-    })
+    }
+    return ok(data=data, request=request)
 
 
 @api_view(['GET'])
@@ -379,14 +382,15 @@ def my_tenant(request):
     
     tenant, error = get_tenant_for_user(user)
     if not tenant:
-        return Response({'error': 'No tenant assigned'}, status=status.HTTP_404_NOT_FOUND)
+        return fail('NO_TENANT', 'No tenant assigned', status=404, request=request)
     
-    return Response({
+    data = {
         'id': tenant.id,
         'name': tenant.name,
         'athens_tenant_id': tenant.id,
         'admin_email': tenant.admin_email,
-    })
+    }
+    return ok(data=data, request=request)
 
 
 
