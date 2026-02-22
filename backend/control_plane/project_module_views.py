@@ -6,6 +6,7 @@ from django.db import transaction
 from .project_modules import ProjectModule
 from system.utils import get_current_tenant
 from rest_framework import serializers
+from authentication.permissions import IsMasterAdmin, IsCompanyUser
 
 class ProjectModuleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -63,13 +64,13 @@ class ProjectModuleViewSet(viewsets.ModelViewSet):
         
         return Response(ProjectModuleSerializer(module).data)
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], permission_classes=[IsMasterAdmin | IsCompanyUser])
     def enabled(self, request):
         """Get enabled modules for current user's projects"""
         user = request.user
         
         # For company users, get modules for their project
-        if user.user_type == 'companyuser':
+        if IsCompanyUser().has_permission(request, self):
             if not hasattr(user, 'project') or not user.project:
                 return Response([])
             
@@ -80,7 +81,7 @@ class ProjectModuleViewSet(viewsets.ModelViewSet):
             return Response(list(modules))
         
         # For masteradmin, get all modules for their tenant
-        if user.user_type == 'masteradmin':
+        if IsMasterAdmin().has_permission(request, self):
             if not user.tenant:
                 return Response([])
             
