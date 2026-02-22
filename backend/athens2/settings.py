@@ -60,7 +60,7 @@ INSTALLED_APPS = [
 
 # Conditionally add PTW and dependencies
 if FEATURE_PTW_ENABLED:
-    INSTALLED_APPS += ['worker', 'ptw']
+    INSTALLED_APPS += ['worker', 'ptw', 'permissions']
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
