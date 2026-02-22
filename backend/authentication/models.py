@@ -2,6 +2,9 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.db import models
 from django.utils import timezone
 
+# Import tenant models
+from .tenant_models import AthensTenant, TenantAuditLog, DEFAULT_MODULES, DEFAULT_MENUS  # noqa
+
 
 class Project(models.Model):
     """Business Project Model for Athens modules"""
