@@ -2,7 +2,10 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from authentication.models import CustomUser
-from authentication.tenant_scoped_utils import ensure_tenant_context, ensure_project
+try:
+    from authentication.tenant_scoped_utils import ensure_tenant_context, ensure_project
+except ImportError:
+    from ptw.compat.tenant_utils import ensure_tenant_context, ensure_project
 from django.db.models import Q
 
 @api_view(['GET'])

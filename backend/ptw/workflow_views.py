@@ -14,7 +14,7 @@ from .signature_service import signature_service
 from .workflow_manager import workflow_manager
 from .unified_error_handling import PTWValidationError, PTWPermissionError, PTWWorkflowError
 from authentication.models import CustomUser
-from authentication.serializers import AdminUserCommonSerializer
+# from authentication.serializers import AdminUserCommonSerializer  # Optional - lazy import if needed
 from .status_utils import normalize_permit_status
 import logging
 

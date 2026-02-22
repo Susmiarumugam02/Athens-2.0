@@ -34,7 +34,7 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
 
 # Feature Flags
-FEATURE_PTW_ENABLED = False  # Set to True to enable PTW module
+FEATURE_PTW_ENABLED = True  # PTW module enabled
 
 # Application definition
 
