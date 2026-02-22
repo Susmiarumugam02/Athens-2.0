@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     'superadmin',
     'workforce',
     'ergon',
+    'worker',
+    'ptw',
 ]
 
 MIDDLEWARE = [

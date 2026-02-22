@@ -14,6 +14,7 @@ urlpatterns = [
     path('api/superadmin/', include('superadmin.urls')),
     path('api/workforce/', include('workforce.urls')),
     path('api/ergon/', include('ergon.urls')),
+    path('api/ptw/', include('ptw.urls')),
     
     # Company settings endpoints
     path('api/company/details/', company_details, name='company-details'),
