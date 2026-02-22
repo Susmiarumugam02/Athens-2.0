@@ -6,6 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 from datetime import timedelta
 from system.utils import get_current_tenant
+from system.api_response import ok, fail
 from .models import *
 from .serializers import *
 from .permissions import ErgonServiceEnabled, IsErgonAdmin
@@ -104,7 +105,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         description = request.data.get('description', '')
         
         if progress is None or not (0 <= int(progress) <= 100):
-            return Response({'error': 'Invalid progress value'}, status=status.HTTP_400_BAD_REQUEST)
+            return fail('INVALID_PROGRESS', 'Invalid progress value', status=status.HTTP_400_BAD_REQUEST, request=request)
         
         with transaction.atomic():
             # Update task
@@ -129,19 +130,19 @@ class TaskViewSet(viewsets.ModelViewSet):
                 status=task.status
             )
         
-        return Response(TaskSerializer(task).data)
+        return ok(data=TaskSerializer(task).data, request=request)
     
     @action(detail=True, methods=['get'])
     def progress_history(self, request, pk=None):
         task = self.get_object()
         history = task.progress_history.all()
-        return Response(TaskProgressHistorySerializer(history, many=True).data)
+        return ok(data=TaskProgressHistorySerializer(history, many=True).data, request=request)
     
     @action(detail=True, methods=['get'])
     def history(self, request, pk=None):
         task = self.get_object()
         history = task.history.all()
-        return Response(TaskHistorySerializer(history, many=True).data)
+        return ok(data=TaskHistorySerializer(history, many=True).data, request=request)
 
 class ContactViewSet(viewsets.ModelViewSet):
     serializer_class = ContactSerializer
@@ -184,7 +185,7 @@ class FollowupViewSet(viewsets.ModelViewSet):
                 notes='Follow-up marked as completed',
                 created_by=request.user
             )
-        return Response(FollowupSerializer(followup).data)
+        return ok(data=FollowupSerializer(followup).data, request=request)
     
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
@@ -199,14 +200,14 @@ class FollowupViewSet(viewsets.ModelViewSet):
                 notes=f'Cancelled: {reason}',
                 created_by=request.user
             )
-        return Response(FollowupSerializer(followup).data)
+        return ok(data=FollowupSerializer(followup).data, request=request)
     
     @action(detail=True, methods=['post'])
     def reschedule(self, request, pk=None):
         followup = self.get_object()
         new_date = request.data.get('new_date')
         if not new_date:
-            return Response({'error': 'new_date required'}, status=status.HTTP_400_BAD_REQUEST)
+            return fail('MISSING_FIELD', 'new_date required', status=status.HTTP_400_BAD_REQUEST, request=request)
         
         with transaction.atomic():
             old_date = followup.followup_date
@@ -221,13 +222,13 @@ class FollowupViewSet(viewsets.ModelViewSet):
                 notes=f'Rescheduled from {old_date} to {new_date}',
                 created_by=request.user
             )
-        return Response(FollowupSerializer(followup).data)
+        return ok(data=FollowupSerializer(followup).data, request=request)
     
     @action(detail=False, methods=['get'])
     def reminders(self, request):
         tenant, error = get_current_tenant(request.user)
         if error:
-            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
+            return fail('TENANT_ERROR', error, status=status.HTTP_400_BAD_REQUEST, request=request)
         
         today = timezone.now().date()
         upcoming = Followup.objects.filter(
@@ -237,13 +238,13 @@ class FollowupViewSet(viewsets.ModelViewSet):
             followup_date__lte=today + timedelta(days=7)
         ).order_by('followup_date')
         
-        return Response(FollowupSerializer(upcoming, many=True).data)
+        return ok(data=FollowupSerializer(upcoming, many=True).data, request=request)
     
     @action(detail=True, methods=['get'])
     def history(self, request, pk=None):
         followup = self.get_object()
         history = followup.history.all()
-        return Response(FollowupHistorySerializer(history, many=True).data)
+        return ok(data=FollowupHistorySerializer(history, many=True).data, request=request)
 
 class ManpowerViewSet(viewsets.ModelViewSet):
     serializer_class = ManpowerSerializer
@@ -370,7 +371,7 @@ class DailyPlannerViewSet(viewsets.ModelViewSet):
     def start_task(self, request, pk=None):
         daily_task = self.get_object()
         if daily_task.status != 'not_started':
-            return Response({'error': 'Task already started'}, status=status.HTTP_400_BAD_REQUEST)
+            return fail('INVALID_STATUS', 'Task already started', status=status.HTTP_400_BAD_REQUEST, request=request)
         
         now = timezone.now()
         sla_hours = float(daily_task.task.sla_hours) if daily_task.task else 0.25
@@ -395,13 +396,13 @@ class DailyPlannerViewSet(viewsets.ModelViewSet):
                 notes=f'SLA: {sla_hours} hours'
             )
         
-        return Response(DailyTaskSerializer(daily_task).data)
+        return ok(data=DailyTaskSerializer(daily_task).data, request=request)
     
     @action(detail=True, methods=['post'])
     def pause_task(self, request, pk=None):
         daily_task = self.get_object()
         if daily_task.status != 'in_progress':
-            return Response({'error': 'Task not in progress'}, status=status.HTTP_400_BAD_REQUEST)
+            return fail('INVALID_STATUS', 'Task not in progress', status=status.HTTP_400_BAD_REQUEST, request=request)
         
         now = timezone.now()
         active_time = (now - daily_task.start_time).total_seconds() if daily_task.start_time else 0
@@ -426,13 +427,13 @@ class DailyPlannerViewSet(viewsets.ModelViewSet):
                 duration_seconds=int(active_time)
             )
         
-        return Response(DailyTaskSerializer(daily_task).data)
+        return ok(data=DailyTaskSerializer(daily_task).data, request=request)
     
     @action(detail=True, methods=['post'])
     def resume_task(self, request, pk=None):
         daily_task = self.get_object()
         if daily_task.status != 'on_break':
-            return Response({'error': 'Task not paused'}, status=status.HTTP_400_BAD_REQUEST)
+            return fail('INVALID_STATUS', 'Task not paused', status=status.HTTP_400_BAD_REQUEST, request=request)
         
         now = timezone.now()
         pause_time = (now - daily_task.pause_start_time).total_seconds() if daily_task.pause_start_time else 0
@@ -460,7 +461,7 @@ class DailyPlannerViewSet(viewsets.ModelViewSet):
                 notes='Break duration'
             )
         
-        return Response(DailyTaskSerializer(daily_task).data)
+        return ok(data=DailyTaskSerializer(daily_task).data, request=request)
     
     @action(detail=True, methods=['post'])
     def complete_task(self, request, pk=None):
@@ -492,7 +493,7 @@ class DailyPlannerViewSet(viewsets.ModelViewSet):
                 created_by=request.user
             )
         
-        return Response(DailyTaskSerializer(daily_task).data)
+        return ok(data=DailyTaskSerializer(daily_task).data, request=request)
     
     @action(detail=True, methods=['post'])
     def postpone_task(self, request, pk=None):
@@ -501,7 +502,7 @@ class DailyPlannerViewSet(viewsets.ModelViewSet):
         reason = request.data.get('reason', '')
         
         if not new_date:
-            return Response({'error': 'new_date required'}, status=status.HTTP_400_BAD_REQUEST)
+            return fail('MISSING_FIELD', 'new_date required', status=status.HTTP_400_BAD_REQUEST, request=request)
         
         tenant, _ = get_current_tenant(request.user)
         
@@ -532,13 +533,13 @@ class DailyPlannerViewSet(viewsets.ModelViewSet):
                 created_by=request.user
             )
         
-        return Response(DailyTaskSerializer(daily_task).data)
+        return ok(data=DailyTaskSerializer(daily_task).data, request=request)
     
     @action(detail=False, methods=['post'])
     def rollover(self, request):
         tenant, error = get_current_tenant(request.user)
         if error:
-            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
+            return fail('TENANT_ERROR', error, status=status.HTTP_400_BAD_REQUEST, request=request)
         
         yesterday = timezone.now().date() - timedelta(days=1)
         today = timezone.now().date()
@@ -576,16 +577,16 @@ class DailyPlannerViewSet(viewsets.ModelViewSet):
                     task.save()
                     rolled_count += 1
         
-        return Response({'rolled_over': rolled_count})
+        return ok(data={'rolled_over': rolled_count}, request=request)
     
     @action(detail=True, methods=['get'])
     def history(self, request, pk=None):
         daily_task = self.get_object()
         history = daily_task.history.all()
-        return Response(DailyTaskHistorySerializer(history, many=True).data)
+        return ok(data=DailyTaskHistorySerializer(history, many=True).data, request=request)
     
     @action(detail=True, methods=['get'])
     def sla_history(self, request, pk=None):
         daily_task = self.get_object()
         sla_history = daily_task.sla_history.all()
-        return Response(SLAHistorySerializer(sla_history, many=True).data)
+        return ok(data=SLAHistorySerializer(sla_history, many=True).data, request=request)
