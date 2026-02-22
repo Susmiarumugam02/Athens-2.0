@@ -1,6 +1,7 @@
 from rest_framework import permissions
 from control_plane.models import TenantService, Service
 from system.utils import get_current_tenant
+from authentication.permissions import IsServiceAdmin
 
 
 class WorkforceServiceEnabled(permissions.BasePermission):
@@ -23,13 +24,6 @@ class WorkforceServiceEnabled(permissions.BasePermission):
             return False
 
 
-class IsWorkforceAdmin(permissions.BasePermission):
-    """Owner/Admin can manage workforce"""
-    
-    def has_permission(self, request, view):
-        user = request.user
-        if user.user_type == 'masteradmin':
-            return True
-        if user.user_type == 'companyuser' and user.admin_type:
-            return True
-        return False
+class IsWorkforceAdmin(IsServiceAdmin):
+    """Owner/Admin can manage workforce (deprecated: use IsServiceAdmin directly)"""
+    pass
