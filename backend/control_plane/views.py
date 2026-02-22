@@ -6,10 +6,12 @@ from django.utils import timezone
 from django.db import transaction
 
 from authentication.permissions import IsSuperAdmin
+from authentication.rbac_permissions import RequireTenantPermission
 from authentication.models import User, UserType, SecurityLog
 from authentication.utils import log_security_event
 from authentication.tenant_utils import get_tenant_for_user
 from system.api_response import ok, fail
+from system.audit_utils import audit_log, AuditLogMixin
 from .models import Tenant, Subscription, AthensTenantLink, AthensModuleSubscription, AthensAuditLog, DEFAULT_ATHENS_MODULES, Service, TenantService
 from .serializers import (
     TenantSerializer, SubscriptionSerializer,
@@ -194,11 +196,19 @@ class TenantViewSet(viewsets.ModelViewSet):
             return ok(data={'enabled_modules': enabled_modules, 'status': 'updated'}, request=request)
 
 
-class SubscriptionViewSet(viewsets.ModelViewSet):
+class SubscriptionViewSet(AuditLogMixin, viewsets.ModelViewSet):
     """Subscription management for superadmin"""
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionSerializer
     permission_classes = [IsAuthenticated, IsSuperAdmin]
+    
+    # Audit configuration
+    audit_action_map = {
+        'create': 'subscription.create',
+        'update': 'subscription.update',
+        'destroy': 'subscription.delete',
+    }
+    audit_target_type = 'Subscription'
     
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -231,6 +241,9 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         subscription = serializer.save(created_by=self.request.user)
+        
+        # Audit logging handled by AuditLogMixin
+        # Also log to SecurityLog for backward compatibility
         log_security_event(
             self.request, self.request.user,
             SecurityLog.EventType.SUBSCRIPTION_CHANGED,
@@ -241,6 +254,8 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
                 'plan': subscription.plan_name
             }
         )
+        
+        return subscription
 
 
 
@@ -389,11 +404,19 @@ class TenantServiceViewSet(viewsets.ReadOnlyModelViewSet):
         return ok(data={'message': 'Service toggled', 'is_enabled': ts.is_enabled}, request=request)
 
 
-class MasterAdminViewSet(viewsets.ModelViewSet):
+class MasterAdminViewSet(AuditLogMixin, viewsets.ModelViewSet):
     """Master Admin management for superadmin"""
     queryset = User.objects.filter(user_type=UserType.MASTERADMIN)
     serializer_class = MasterAdminSerializer
     permission_classes = [IsAuthenticated, IsSuperAdmin]
+    
+    # Audit configuration
+    audit_action_map = {
+        'create': 'masteradmin.create',
+        'update': 'masteradmin.update',
+        'destroy': 'masteradmin.delete',
+    }
+    audit_target_type = 'MasterAdmin'
     
     def get_serializer_class(self):
         if self.action == 'create':
@@ -402,12 +425,17 @@ class MasterAdminViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         master_admin = serializer.save()
+        
+        # Audit logging handled by AuditLogMixin
+        # Also log to SecurityLog for backward compatibility
         log_security_event(
             self.request, self.request.user,
             SecurityLog.EventType.MASTER_CREATED,
             SecurityLog.Severity.INFO,
             {'master_admin_id': master_admin.id, 'email': master_admin.email}
         )
+        
+        return master_admin
     
     def update(self, request, *args, **kwargs):
         """Update master admin"""
