@@ -9,6 +9,7 @@ import os
 import subprocess
 from datetime import datetime
 
+from system.api_response import ok, fail
 from superadmin.models import SystemSettings, DatabaseBackup
 from superadmin.serializers import SystemSettingsSerializer, DatabaseBackupSerializer
 from superadmin.permissions import IsSuperAdmin
@@ -21,7 +22,7 @@ class SystemSettingsView(APIView):
     def get(self, request):
         settings_obj = SystemSettings.get_settings()
         serializer = SystemSettingsSerializer(settings_obj)
-        return Response(serializer.data)
+        return ok(data=serializer.data, request=request)
     
     def put(self, request):
         settings_obj = SystemSettings.get_settings()
@@ -39,8 +40,8 @@ class SystemSettingsView(APIView):
                 request_data=request.data,
             )
             
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return ok(data=serializer.data, request=request)
+        return fail('VALIDATION_ERROR', 'Invalid data', details=serializer.errors, status=status.HTTP_400_BAD_REQUEST, request=request)
 
 
 class DatabaseBackupViewSet(viewsets.ModelViewSet):
@@ -110,17 +111,14 @@ class DatabaseBackupViewSet(viewsets.ModelViewSet):
             )
             
             serializer = DatabaseBackupSerializer(backup)
-            return Response(serializer.data)
+            return ok(data=serializer.data, request=request)
             
         except Exception as e:
             backup.status = 'failed'
             backup.error_message = str(e)
             backup.save()
             
-            return Response(
-                {'error': f'Backup failed: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return fail('BACKUP_FAILED', f'Backup failed: {str(e)}', status=status.HTTP_500_INTERNAL_SERVER_ERROR, request=request)
     
     @action(detail=True, methods=['get'])
     def download(self, request, pk=None):
@@ -128,10 +126,7 @@ class DatabaseBackupViewSet(viewsets.ModelViewSet):
         backup = self.get_object()
         
         if not os.path.exists(backup.file_path):
-            return Response(
-                {'error': 'Backup file not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return fail('FILE_NOT_FOUND', 'Backup file not found', status=status.HTTP_404_NOT_FOUND, request=request)
         
         log_audit(
             user=request.user,
@@ -155,10 +150,7 @@ class DatabaseBackupViewSet(viewsets.ModelViewSet):
         backup = self.get_object()
         
         if not os.path.exists(backup.file_path):
-            return Response(
-                {'error': 'Backup file not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return fail('FILE_NOT_FOUND', 'Backup file not found', status=status.HTTP_404_NOT_FOUND, request=request)
         
         try:
             db_settings = settings.DATABASES['default']
@@ -187,18 +179,12 @@ class DatabaseBackupViewSet(viewsets.ModelViewSet):
                     user_agent=get_user_agent(request),
                 )
                 
-                return Response({'message': 'Database restored successfully'})
+                return ok(data={'message': 'Database restored successfully'}, request=request)
             else:
-                return Response(
-                    {'error': f'Restore failed: {result.stderr}'},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
+                return fail('RESTORE_FAILED', f'Restore failed: {result.stderr}', status=status.HTTP_500_INTERNAL_SERVER_ERROR, request=request)
                 
         except Exception as e:
-            return Response(
-                {'error': f'Restore failed: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return fail('RESTORE_FAILED', f'Restore failed: {str(e)}', status=status.HTTP_500_INTERNAL_SERVER_ERROR, request=request)
 
 
 class MaintenanceModeView(APIView):
@@ -220,7 +206,7 @@ class MaintenanceModeView(APIView):
             request_data={'maintenance_mode': settings_obj.maintenance_mode},
         )
         
-        return Response({
+        return ok(data={
             'message': f"Maintenance mode {'enabled' if settings_obj.maintenance_mode else 'disabled'}",
             'maintenance_mode': settings_obj.maintenance_mode
-        })
+        }, request=request)

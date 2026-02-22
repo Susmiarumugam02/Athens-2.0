@@ -5,6 +5,7 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import timedelta
 
+from system.api_response import ok
 from superadmin.permissions import IsSuperAdmin
 from authentication.models import User, UserType, SecurityLog, ServiceUserSession
 from superadmin.models import AuditLog
@@ -43,14 +44,14 @@ class DashboardStatsView(APIView):
         # System health
         system_health = 'healthy'  # Can be enhanced with actual health checks
         
-        return Response({
+        return ok(data={
             'total_users': total_users,
             'active_users': active_users,
             'active_sessions': active_sessions,
             'recent_activity_count': recent_activity_count,
             'failed_logins': failed_logins,
             'system_health': system_health,
-        })
+        }, request=request)
 
 
 class DashboardActivityView(APIView):
@@ -73,7 +74,7 @@ class DashboardActivityView(APIView):
             'resource_id': log.resource_id,
         } for log in recent_logs]
         
-        return Response(activity)
+        return ok(data=activity, request=request)
 
 
 class AnalyticsView(APIView):
@@ -97,12 +98,12 @@ class AnalyticsView(APIView):
         # Module usage
         module_usage = self._get_module_usage(start_date, now)
         
-        return Response({
+        return ok(data={
             'user_growth': user_growth,
             'login_activity': login_activity,
             'top_users': top_users,
             'module_usage': module_usage,
-        })
+        }, request=request)
     
     def _get_user_growth(self, start_date, end_date):
         """Get user growth over time"""

@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
+from system.api_response import ok, fail
 from superadmin.models import Role, Permission, RolePermission
 from superadmin.serializers import RoleSerializer, PermissionSerializer
 from superadmin.permissions import IsSuperAdmin
@@ -19,17 +20,11 @@ class RoleViewSet(AuditLogMixin, viewsets.ModelViewSet):
         instance = self.get_object()
         
         if instance.is_system_role:
-            return Response(
-                {'error': 'Cannot delete system role'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return fail('SYSTEM_ROLE_PROTECTED', 'Cannot delete system role', status=status.HTTP_400_BAD_REQUEST, request=request)
         
         # Check if role has users
         if instance.userrole_set.exists():
-            return Response(
-                {'error': 'Cannot delete role with assigned users'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return fail('ROLE_IN_USE', 'Cannot delete role with assigned users', status=status.HTTP_400_BAD_REQUEST, request=request)
         
         return super().destroy(request, *args, **kwargs)
     
@@ -46,7 +41,7 @@ class RoleViewSet(AuditLogMixin, viewsets.ModelViewSet):
         for perm_id in permission_ids:
             RolePermission.objects.create(role=role, permission_id=perm_id)
         
-        return Response({'message': 'Permissions assigned successfully'})
+        return ok(data={'message': 'Permissions assigned successfully'}, request=request)
 
 
 class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
@@ -68,4 +63,4 @@ class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
     def modules(self, request):
         """Get list of all modules"""
         modules = Permission.objects.values_list('module', flat=True).distinct()
-        return Response(list(modules))
+        return ok(data=list(modules), request=request)

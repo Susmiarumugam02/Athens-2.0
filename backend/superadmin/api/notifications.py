@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 
+from system.api_response import ok
 from superadmin.models import Announcement, NotificationDelivery
 from superadmin.serializers import AnnouncementSerializer, NotificationDeliverySerializer
 from superadmin.permissions import IsSuperAdmin
@@ -86,10 +87,10 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
             'failed': deliveries.filter(delivery_status='failed').count(),
         }
         
-        return Response({
+        return ok(data={
             'stats': stats,
             'deliveries': serializer.data
-        })
+        }, request=request)
     
     @action(detail=True, methods=['post'])
     def toggle_status(self, request, pk=None):
@@ -108,10 +109,10 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
             user_agent=get_user_agent(request),
         )
         
-        return Response({
+        return ok(data={
             'message': f"Announcement {'activated' if announcement.is_active else 'deactivated'}",
             'is_active': announcement.is_active
-        })
+        }, request=request)
 
 
 class NotificationDeliveryViewSet(viewsets.ReadOnlyModelViewSet):

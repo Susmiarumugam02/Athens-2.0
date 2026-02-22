@@ -7,6 +7,7 @@ from django.db.models import Q, Count
 import csv
 from datetime import datetime
 
+from system.api_response import ok
 from superadmin.models import AuditLog
 from superadmin.serializers import AuditLogSerializer
 from superadmin.permissions import IsSuperAdmin
@@ -117,4 +118,4 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         for action in actions:
             stats['by_action'][action['action']] = action['count']
         
-        return Response(stats)
+        return ok(data=stats, request=request)

@@ -6,6 +6,7 @@ from django.contrib.auth.hashers import make_password
 from django.utils import timezone
 from django.db.models import Q
 
+from system.api_response import ok, fail
 from authentication.models import User, UserType, ServiceUserSession
 from superadmin.models import UserRole
 from superadmin.serializers import SuperAdminUserSerializer
@@ -64,10 +65,10 @@ class SuperAdminUserViewSet(AuditLogMixin, viewsets.ModelViewSet):
             user_agent=get_user_agent(request),
         )
         
-        return Response({
+        return ok(data={
             'message': 'Password reset successfully',
             'temporary_password': temp_password
-        })
+        }, request=request)
     
     @action(detail=True, methods=['get'])
     def sessions(self, request, pk=None):
@@ -88,7 +89,7 @@ class SuperAdminUserViewSet(AuditLogMixin, viewsets.ModelViewSet):
             'expires_at': session.expires_at,
         } for session in sessions]
         
-        return Response(session_data)
+        return ok(data=session_data, request=request)
     
     @action(detail=True, methods=['post'], url_path='sessions/(?P<session_id>[^/.]+)/revoke')
     def revoke_session(self, request, pk=None, session_id=None):
@@ -109,12 +110,9 @@ class SuperAdminUserViewSet(AuditLogMixin, viewsets.ModelViewSet):
                 user_agent=get_user_agent(request),
             )
             
-            return Response({'message': 'Session revoked successfully'})
+            return ok(data={'message': 'Session revoked successfully'}, request=request)
         except ServiceUserSession.DoesNotExist:
-            return Response(
-                {'error': 'Session not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return fail('SESSION_NOT_FOUND', 'Session not found', status=status.HTTP_404_NOT_FOUND, request=request)
     
     @action(detail=True, methods=['post'])
     def toggle_status(self, request, pk=None):
@@ -134,7 +132,7 @@ class SuperAdminUserViewSet(AuditLogMixin, viewsets.ModelViewSet):
             request_data={'is_active': user.is_active},
         )
         
-        return Response({
+        return ok(data={
             'message': f"User {'enabled' if user.is_active else 'disabled'} successfully",
             'is_active': user.is_active
-        })
+        }, request=request)
