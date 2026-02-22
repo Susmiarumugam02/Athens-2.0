@@ -33,6 +33,9 @@ DEBUG = True
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
 
+# Feature Flags
+FEATURE_PTW_ENABLED = False  # Set to True to enable PTW module
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -53,9 +56,11 @@ INSTALLED_APPS = [
     'superadmin',
     'workforce',
     'ergon',
-    'worker',
-    'ptw',
 ]
+
+# Conditionally add PTW and dependencies
+if FEATURE_PTW_ENABLED:
+    INSTALLED_APPS += ['worker', 'ptw']
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
