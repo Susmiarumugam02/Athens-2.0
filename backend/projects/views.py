@@ -5,6 +5,7 @@ from django.db.models import Q
 from authentication.models import User, UserType, SecurityLog
 from authentication.permissions import IsSuperAdminOrMasterAdmin
 from authentication.tenant_utils import get_tenant_id_for_filtering, require_tenant
+from system.api_response import ok, fail
 from .models import Project, ProjectMembership
 from .serializers import ProjectSerializer, ProjectMembershipSerializer, AddMemberSerializer
 from .permissions import IsProjectMemberOrAdmin
@@ -121,7 +122,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             }
         )
         
-        return Response({"status": "activated"})
+        return ok(data={"status": "activated"}, request=request)
     
     @action(detail=True, methods=["post"])
     def deactivate(self, request, pk=None):
@@ -143,7 +144,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             }
         )
         
-        return Response({"status": "deactivated"})
+        return ok(data={"status": "deactivated"}, request=request)
     
     @action(detail=True, methods=["post"])
     def archive(self, request, pk=None):
@@ -165,7 +166,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             }
         )
         
-        return Response({"status": "archived"})
+        return ok(data={"status": "archived"}, request=request)
     
     @action(detail=True, methods=["get", "post"])
     def members(self, request, pk=None):
@@ -174,7 +175,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if request.method == "GET":
             memberships = project.memberships.select_related("user").all()
             serializer = ProjectMembershipSerializer(memberships, many=True)
-            return Response(serializer.data)
+            return ok(data=serializer.data, request=request)
         
         elif request.method == "POST":
             serializer = AddMemberSerializer(data=request.data)
@@ -191,9 +192,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 if user_tenant_id != project.company_id:
                     raise User.DoesNotExist
             except User.DoesNotExist:
-                return Response(
-                    {"error": "User not found or not in same company"},
-                    status=status.HTTP_400_BAD_REQUEST
+                return fail(
+                    'INVALID_USER',
+                    'User not found or not in same company',
+                    status=400,
+                    request=request
                 )
             
             # Create or update membership
@@ -224,7 +227,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             )
             
             result_serializer = ProjectMembershipSerializer(membership)
-            return Response(result_serializer.data, status=status.HTTP_201_CREATED)
+            return ok(data=result_serializer.data, status=201, request=request)
 
 
 class ProjectMembershipViewSet(viewsets.ModelViewSet):
