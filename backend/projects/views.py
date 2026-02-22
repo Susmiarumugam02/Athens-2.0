@@ -15,6 +15,36 @@ class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
     permission_classes = [IsProjectMemberOrAdmin]
     
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return ok(data=serializer.data, request=request)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
+
     def get_queryset(self):
         user = self.request.user
         queryset = Project.objects.select_related("company", "created_by").prefetch_related("memberships")
@@ -235,6 +265,36 @@ class ProjectMembershipViewSet(viewsets.ModelViewSet):
     permission_classes = [IsSuperAdminOrMasterAdmin]
     http_method_names = ["get", "patch", "delete"]
     
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return ok(data=serializer.data, request=request)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
+
     def get_queryset(self):
         user = self.request.user
         queryset = ProjectMembership.objects.select_related("project", "user")

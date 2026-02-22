@@ -16,6 +16,36 @@ class DepartmentViewSet(viewsets.ModelViewSet):
     serializer_class = DepartmentSerializer
     permission_classes = [IsAuthenticated, WorkforceServiceEnabled, IsWorkforceAdmin]
     
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return ok(data=serializer.data, request=request)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
+
     def get_queryset(self):
         tenant, error = get_current_tenant(self.request.user)
         if error:
@@ -30,6 +60,36 @@ class DesignationViewSet(viewsets.ModelViewSet):
     serializer_class = DesignationSerializer
     permission_classes = [IsAuthenticated, WorkforceServiceEnabled, IsWorkforceAdmin]
     
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return ok(data=serializer.data, request=request)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
+
     def get_queryset(self):
         tenant, error = get_current_tenant(self.request.user)
         if error:
@@ -44,6 +104,36 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     serializer_class = EmployeeSerializer
     permission_classes = [IsAuthenticated, WorkforceServiceEnabled, IsWorkforceAdmin]
     
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return ok(data=serializer.data, request=request)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
+
     def get_queryset(self):
         tenant, error = get_current_tenant(self.request.user)
         if error:
@@ -66,6 +156,36 @@ class ShiftScheduleViewSet(viewsets.ModelViewSet):
     serializer_class = ShiftScheduleSerializer
     permission_classes = [IsAuthenticated, WorkforceServiceEnabled, IsWorkforceAdmin]
     
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return ok(data=serializer.data, request=request)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
+
     def get_queryset(self):
         tenant, error = get_current_tenant(self.request.user)
         if error:
@@ -80,6 +200,36 @@ class HolidayViewSet(viewsets.ModelViewSet):
     serializer_class = HolidaySerializer
     permission_classes = [IsAuthenticated, WorkforceServiceEnabled, IsWorkforceAdmin]
     
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return ok(data=serializer.data, request=request)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
+
     def get_queryset(self):
         tenant, error = get_current_tenant(self.request.user)
         if error:
@@ -94,6 +244,36 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     serializer_class = AttendanceSerializer
     permission_classes = [IsAuthenticated, WorkforceServiceEnabled]
     
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return ok(data=serializer.data, request=request)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
+
     def get_queryset(self):
         tenant, error = get_current_tenant(self.request.user)
         if error:
@@ -110,6 +290,36 @@ class PayrollCycleViewSet(viewsets.ModelViewSet):
     serializer_class = PayrollCycleSerializer
     permission_classes = [IsAuthenticated, WorkforceServiceEnabled, IsWorkforceAdmin]
     
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return ok(data=serializer.data, request=request)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
+
     def get_queryset(self):
         tenant, error = get_current_tenant(self.request.user)
         if error:
@@ -147,6 +357,17 @@ class PayrollEntryViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PayrollEntrySerializer
     permission_classes = [IsAuthenticated, WorkforceServiceEnabled]
     
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
+
     def get_queryset(self):
         tenant, error = get_current_tenant(self.request.user)
         if error:
@@ -157,6 +378,36 @@ class PayrollSettingsViewSet(viewsets.ModelViewSet):
     serializer_class = PayrollSettingsSerializer
     permission_classes = [IsAuthenticated, WorkforceServiceEnabled, IsWorkforceAdmin]
     
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return ok(data=serializer.data, request=request)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
+
     def get_queryset(self):
         tenant, error = get_current_tenant(self.request.user)
         if error:
@@ -171,6 +422,36 @@ class BonusRecordViewSet(viewsets.ModelViewSet):
     serializer_class = BonusRecordSerializer
     permission_classes = [IsAuthenticated, WorkforceServiceEnabled, IsWorkforceAdmin]
     
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return ok(data=serializer.data, request=request)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
+
     def get_queryset(self):
         tenant, error = get_current_tenant(self.request.user)
         if error:
@@ -185,6 +466,36 @@ class FineViewSet(viewsets.ModelViewSet):
     serializer_class = FineSerializer
     permission_classes = [IsAuthenticated, WorkforceServiceEnabled, IsWorkforceAdmin]
     
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return ok(data=serializer.data, request=request)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
+
     def get_queryset(self):
         tenant, error = get_current_tenant(self.request.user)
         if error:
@@ -199,6 +510,36 @@ class AdvanceViewSet(viewsets.ModelViewSet):
     serializer_class = AdvanceSerializer
     permission_classes = [IsAuthenticated, WorkforceServiceEnabled, IsWorkforceAdmin]
     
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return ok(data=serializer.data, request=request)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
+
     def get_queryset(self):
         tenant, error = get_current_tenant(self.request.user)
         if error:
@@ -215,6 +556,36 @@ class EmployeeProfileViewSet(viewsets.ModelViewSet):
     serializer_class = EmployeeProfileSerializer
     permission_classes = [IsAuthenticated, WorkforceServiceEnabled, IsWorkforceAdmin]
     
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return ok(data=serializer.data, request=request)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
+
     def get_queryset(self):
         tenant, error = get_current_tenant(self.request.user)
         if error:
@@ -229,6 +600,36 @@ class LeaveTypeViewSet(viewsets.ModelViewSet):
     serializer_class = LeaveTypeSerializer
     permission_classes = [IsAuthenticated, WorkforceServiceEnabled, IsWorkforceAdmin]
     
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return ok(data=serializer.data, request=request)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
+
     def get_queryset(self):
         tenant, error = get_current_tenant(self.request.user)
         if error:
@@ -243,6 +644,36 @@ class LeaveBalanceViewSet(viewsets.ModelViewSet):
     serializer_class = LeaveBalanceSerializer
     permission_classes = [IsAuthenticated, WorkforceServiceEnabled]
     
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return ok(data=serializer.data, request=request)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
+
     def get_queryset(self):
         tenant, error = get_current_tenant(self.request.user)
         if error:
@@ -257,6 +688,36 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
     serializer_class = LeaveRequestSerializer
     permission_classes = [IsAuthenticated, WorkforceServiceEnabled]
     
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return ok(data=serializer.data, request=request)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
+
     def get_queryset(self):
         tenant, error = get_current_tenant(self.request.user)
         if error:
