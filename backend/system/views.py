@@ -8,12 +8,13 @@ from authentication.permissions import IsServiceAdmin
 from .serializers import ServiceSerializer, TenantServiceSerializer
 from .utils import get_current_tenant
 from .service_manager import ServiceManager
+from .api_response import ok, fail
 
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def health(request):
-    return Response({"status": "ok"})
+    return ok(data={"status": "ok"}, request=request)
 
 
 @api_view(["GET"])
@@ -22,7 +23,7 @@ def list_services(request):
     """List all available services"""
     services = ServiceManager.get_available_services()
     serializer = ServiceSerializer(services, many=True)
-    return Response(serializer.data)
+    return ok(data=serializer.data, request=request)
 
 
 @api_view(["GET"])
@@ -37,13 +38,13 @@ def list_tenant_services(request):
             from control_plane.models import TenantService
             tenant_services = TenantService.objects.filter(is_enabled=True).select_related('service', 'tenant')
             serializer = TenantServiceSerializer(tenant_services, many=True)
-            return Response(serializer.data)
+            return ok(data=serializer.data, request=request)
         
         from control_plane.models import Tenant
         try:
             tenant = Tenant.objects.get(id=tenant_id)
         except Tenant.DoesNotExist:
-            return Response({"error": "Tenant not found"}, status=status.HTTP_404_NOT_FOUND)
+            return fail('NOT_FOUND', 'Tenant not found', status=404, request=request)
     else:
         tenant, error = get_current_tenant(request.user)
         if error:
@@ -51,7 +52,7 @@ def list_tenant_services(request):
     
     tenant_services = ServiceManager.get_tenant_services(tenant, enabled_only=True)
     serializer = TenantServiceSerializer(tenant_services, many=True)
-    return Response(serializer.data)
+    return ok(data=serializer.data, request=request)
 
 
 @api_view(["POST"])
@@ -62,13 +63,13 @@ def enable_service(request, service_code):
     if request.user.user_type == 'superadmin':
         tenant_id = request.data.get('tenant_id') or request.headers.get('X-Tenant-ID')
         if not tenant_id:
-            return Response({"error": "tenant_id required for Superadmin"}, status=status.HTTP_400_BAD_REQUEST)
+            return fail('INVALID_INPUT', 'tenant_id required for Superadmin', status=400, request=request)
         
         from control_plane.models import Tenant
         try:
             tenant = Tenant.objects.get(id=tenant_id)
         except Tenant.DoesNotExist:
-            return Response({"error": "Tenant not found"}, status=status.HTTP_404_NOT_FOUND)
+            return fail('NOT_FOUND', 'Tenant not found', status=404, request=request)
     else:
         # Regular users need Owner/Admin permission
         service_admin_perm = IsServiceAdmin()
@@ -95,15 +96,18 @@ def enable_service(request, service_code):
         )
         
         serializer = TenantServiceSerializer(tenant_service)
-        return Response({
-            "message": f"Service {tenant_service.service.name} {'enabled' if created else 'already enabled'}",
-            "data": serializer.data
-        }, status=status.HTTP_200_OK)
+        return ok(
+            data={
+                "message": f"Service {tenant_service.service.name} {'enabled' if created else 'already enabled'}",
+                "service": serializer.data
+            },
+            request=request
+        )
         
     except ValidationError as e:
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return fail('VALIDATION_ERROR', str(e), status=400, request=request)
     except Exception as e:
-        return Response({"error": "Failed to enable service"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return fail('INTERNAL_ERROR', 'Failed to enable service', details=str(e), status=500, request=request)
 
 
 @api_view(["POST"])
@@ -114,13 +118,13 @@ def disable_service(request, service_code):
     if request.user.user_type == 'superadmin':
         tenant_id = request.data.get('tenant_id') or request.headers.get('X-Tenant-ID')
         if not tenant_id:
-            return Response({"error": "tenant_id required for Superadmin"}, status=status.HTTP_400_BAD_REQUEST)
+            return fail('INVALID_INPUT', 'tenant_id required for Superadmin', status=400, request=request)
         
         from control_plane.models import Tenant
         try:
             tenant = Tenant.objects.get(id=tenant_id)
         except Tenant.DoesNotExist:
-            return Response({"error": "Tenant not found"}, status=status.HTTP_404_NOT_FOUND)
+            return fail('NOT_FOUND', 'Tenant not found', status=404, request=request)
     else:
         # Regular users need Owner/Admin permission
         service_admin_perm = IsServiceAdmin()
@@ -143,15 +147,13 @@ def disable_service(request, service_code):
             reason=reason
         )
         
-        if disabled:
-            return Response({"message": f"Service disabled"}, status=status.HTTP_200_OK)
-        else:
-            return Response({"message": "Service already disabled"}, status=status.HTTP_200_OK)
+        message = "Service disabled" if disabled else "Service already disabled"
+        return ok(data={"message": message}, request=request)
             
     except ValidationError as e:
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return fail('VALIDATION_ERROR', str(e), status=400, request=request)
     except Exception as e:
-        return Response({"error": "Failed to disable service"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return fail('INTERNAL_ERROR', 'Failed to disable service', details=str(e), status=500, request=request)
 
 
 @api_view(["GET"])
@@ -163,7 +165,7 @@ def service_stats(request):
         return error
     
     stats = ServiceManager.get_service_stats(tenant)
-    return Response(stats)
+    return ok(data=stats, request=request)
 
 
 @api_view(["POST"])
@@ -187,15 +189,18 @@ def update_service_config(request, service_code):
         )
         
         serializer = TenantServiceSerializer(tenant_service)
-        return Response({
-            "message": "Configuration updated",
-            "data": serializer.data
-        }, status=status.HTTP_200_OK)
+        return ok(
+            data={
+                "message": "Configuration updated",
+                "service": serializer.data
+            },
+            request=request
+        )
         
     except ValidationError as e:
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return fail('VALIDATION_ERROR', str(e), status=400, request=request)
     except Exception as e:
-        return Response({"error": "Failed to update configuration"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return fail('INTERNAL_ERROR', 'Failed to update configuration', details=str(e), status=500, request=request)
 
 
 @api_view(["POST"])
@@ -209,7 +214,7 @@ def change_service_tier(request, service_code):
     try:
         new_tier = request.data.get('tier')
         if not new_tier:
-            return Response({"error": "Tier is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return fail('INVALID_INPUT', 'Tier is required', status=400, request=request)
         
         tenant_service = ServiceManager.change_service_tier(
             tenant=tenant,
@@ -219,12 +224,15 @@ def change_service_tier(request, service_code):
         )
         
         serializer = TenantServiceSerializer(tenant_service)
-        return Response({
-            "message": f"Tier changed to {new_tier}",
-            "data": serializer.data
-        }, status=status.HTTP_200_OK)
+        return ok(
+            data={
+                "message": f"Tier changed to {new_tier}",
+                "service": serializer.data
+            },
+            request=request
+        )
         
     except ValidationError as e:
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return fail('VALIDATION_ERROR', str(e), status=400, request=request)
     except Exception as e:
-        return Response({"error": "Failed to change tier"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return fail('INTERNAL_ERROR', 'Failed to change tier', details=str(e), status=500, request=request)
