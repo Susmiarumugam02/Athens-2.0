@@ -76,8 +76,11 @@ from .canonical_workflow_manager import canonical_workflow_manager
 from .api_errors import ptw_api_errors
 from .status_utils import normalize_permit_status
 from authentication.models import CustomUser
-from permissions.decorators import require_permission
-from authentication.tenant_scoped_utils import ensure_tenant_context, ensure_project, enforce_collaboration_read_only
+# from permissions.decorators import require_permission  # Replaced with RequireTenantPermission
+try:
+    from authentication.tenant_scoped_utils import ensure_tenant_context, ensure_project, enforce_collaboration_read_only
+except ImportError:
+    from .compat.tenant_utils import ensure_tenant_context, ensure_project, enforce_collaboration_read_only
 from .template_utils import resolve_permit_type_template
 from rest_framework import serializers
 
@@ -232,7 +235,7 @@ class PermitViewSet(AuditLogMixin, PTWBaseViewSet):
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to send creation notifications for permit {permit.id}: {str(e)}")
     
-    @require_permission('edit')
+    # @require_permission('edit')  # Replaced with RequireTenantPermission at class level
     def update(self, request, *args, **kwargs):
         permit = self.get_object()
         if not ptw_permissions.can_edit_permit(request.user, permit):
@@ -242,7 +245,7 @@ class PermitViewSet(AuditLogMixin, PTWBaseViewSet):
             )
         return super().update(request, *args, **kwargs)
     
-    @require_permission('edit')
+    # @require_permission('edit')  # Replaced with RequireTenantPermission at class level
     def partial_update(self, request, *args, **kwargs):
         permit = self.get_object()
         if not ptw_permissions.can_edit_permit(request.user, permit):
@@ -252,7 +255,7 @@ class PermitViewSet(AuditLogMixin, PTWBaseViewSet):
             )
         return super().partial_update(request, *args, **kwargs)
     
-    @require_permission('delete')
+    # @require_permission('delete')  # Replaced with RequireTenantPermission at class level
     def destroy(self, request, *args, **kwargs):
         return super().destroy(request, *args, **kwargs)
 
