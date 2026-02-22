@@ -265,3 +265,85 @@ class ServiceUserSession(models.Model):
     
     def __str__(self):
         return f"{self.user.email} - {self.session_key[:8]}"
+
+
+class UserDetail(models.Model):
+    """Extended user profile for Athens modules"""
+    athens_tenant_id = models.UUIDField(
+        null=True,
+        blank=True,
+        help_text="Athens tenant identifier for multi-tenant isolation"
+    )
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='user_detail')
+    employee_id = models.CharField(max_length=100, blank=True)
+    gender = models.CharField(max_length=20, blank=True)
+    father_or_spouse_name = models.CharField(max_length=255, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    nationality = models.CharField(max_length=100, blank=True)
+    education_level = models.CharField(max_length=255, blank=True)
+    date_of_joining = models.DateField(null=True, blank=True)
+    email = models.EmailField(blank=True)
+    mobile = models.CharField(max_length=20, blank=True)
+    uan = models.CharField(max_length=100, blank=True)
+    pan = models.CharField(max_length=100, blank=True)
+    pan_attachment = models.FileField(upload_to='pan_attachments/', null=True, blank=True)
+    aadhaar = models.CharField(max_length=100, blank=True)
+    aadhaar_attachment = models.FileField(upload_to='aadhaar_attachments/', null=True, blank=True)
+    mark_of_identification = models.CharField(max_length=255, blank=True)
+    photo = models.ImageField(upload_to='photos/', null=True, blank=True)
+    specimen_signature = models.ImageField(upload_to='signatures/', null=True, blank=True)
+    signature_template = models.ImageField(upload_to='signature_templates/', null=True, blank=True)
+    signature_template_data = models.JSONField(null=True, blank=True, help_text="Stores template configuration data")
+    is_approved = models.BooleanField(default=False)
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_user_details')
+    approved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "user_details"
+
+    def approve(self, approver):
+        self.is_approved = True
+        self.approved_by = approver
+        self.approved_at = timezone.now()
+        self.save()
+
+    def __str__(self):
+        return f"UserDetail for {self.user.username or self.user.email}"
+
+
+class AdminDetail(models.Model):
+    """Extended admin profile for Athens modules"""
+    athens_tenant_id = models.UUIDField(
+        null=True,
+        blank=True,
+        help_text="Athens tenant identifier for multi-tenant isolation"
+    )
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='admin_detail')
+    name = models.CharField(max_length=150, blank=True, null=True)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    pan_number = models.CharField(max_length=100, blank=True, null=True)
+    gst_number = models.CharField(max_length=100, blank=True, null=True)
+    photo = models.ImageField(upload_to='admin_photos/', null=True, blank=True)
+    logo = models.ImageField(upload_to='admin_logos/', null=True, blank=True)
+    signature_template = models.ImageField(upload_to='admin_signature_templates/', null=True, blank=True)
+    signature_template_data = models.JSONField(null=True, blank=True, help_text="Stores template configuration data")
+    is_approved = models.BooleanField(default=False)
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_admin_details')
+    approved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "admin_details"
+
+    def save(self, *args, **kwargs):
+        if not self.name and hasattr(self.user, 'name') and self.user.name:
+            self.name = self.user.name
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"AdminDetail for {self.user.username or self.user.email}"

@@ -211,3 +211,76 @@ class AthensAuditLog(models.Model):
 
     def __str__(self):
         return f"{self.action} - {self.entity_type}:{self.entity_id} by {self.actor}"
+
+
+class CollaborationProject(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = 'active', 'Active'
+        PAUSED = 'paused', 'Paused'
+        ENDED = 'ended', 'Ended'
+
+    slug = models.SlugField(max_length=100, unique=True)
+    title = models.CharField(max_length=255)
+    status = models.CharField(max_length=32, choices=Status.choices, default=Status.ACTIVE)
+    created_by = models.ForeignKey(
+        "authentication.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_collaboration_projects',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "collaboration_projects"
+
+    def __str__(self):
+        return self.title
+
+
+class CollaborationMembership(models.Model):
+    class Role(models.TextChoices):
+        CLIENT = 'client', 'Client'
+        EPC = 'epc', 'EPC'
+        CONTRACTOR = 'contractor', 'Contractor'
+        VIEWER = 'viewer', 'Viewer'
+
+    class Status(models.TextChoices):
+        ACTIVE = 'active', 'Active'
+        INACTIVE = 'inactive', 'Inactive'
+
+    collaboration_project = models.ForeignKey(
+        CollaborationProject,
+        on_delete=models.CASCADE,
+        related_name='memberships',
+    )
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='collaboration_memberships')
+    role = models.CharField(max_length=32, choices=Role.choices)
+    status = models.CharField(max_length=32, choices=Status.choices, default=Status.ACTIVE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('collaboration_project', 'tenant')
+        db_table = "collaboration_memberships"
+
+    def __str__(self):
+        return f"{self.collaboration_project_id}:{self.tenant_id}:{self.role}"
+
+
+class CollaborationSharePolicy(models.Model):
+    collaboration_project = models.ForeignKey(
+        CollaborationProject,
+        on_delete=models.CASCADE,
+        related_name='share_policies',
+    )
+    domain = models.CharField(max_length=100)
+    allowed_actions = models.JSONField(default=list)
+    filters = models.JSONField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('collaboration_project', 'domain')
+        db_table = "collaboration_share_policies"
+
+    def __str__(self):
+        return f"{self.collaboration_project_id}:{self.domain}"
