@@ -23,6 +23,30 @@ class TenantViewSet(viewsets.ModelViewSet):
     serializer_class = TenantSerializer
     permission_classes = [IsAuthenticated, IsSuperAdmin]
     
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return ok(data=serializer.data, request=request)
+    
     def perform_create(self, serializer):
         tenant = serializer.save(created_by=self.request.user)
         log_security_event(
@@ -176,6 +200,35 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     serializer_class = SubscriptionSerializer
     permission_classes = [IsAuthenticated, IsSuperAdmin]
     
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return ok(data=serializer.data, request=request)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
+    
     def perform_create(self, serializer):
         subscription = serializer.save(created_by=self.request.user)
         log_security_event(
@@ -196,6 +249,16 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = SecurityLog.objects.all()
     serializer_class = SecurityLogSerializer
     permission_classes = [IsAuthenticated, IsSuperAdmin]
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return ok(data=serializer.data, request=request)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return ok(data=serializer.data, request=request)
     
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -390,4 +453,4 @@ class MasterAdminViewSet(viewsets.ModelViewSet):
             {'deleted_user_id': user_id, 'email': email}
         )
         
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
