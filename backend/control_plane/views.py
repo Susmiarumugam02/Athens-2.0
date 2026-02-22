@@ -9,6 +9,7 @@ from authentication.permissions import IsSuperAdmin
 from authentication.models import User, UserType, SecurityLog
 from authentication.utils import log_security_event
 from authentication.tenant_utils import get_tenant_for_user
+from system.api_response import ok, fail
 from .models import Tenant, Subscription, AthensTenantLink, AthensModuleSubscription, AthensAuditLog, DEFAULT_ATHENS_MODULES, Service, TenantService
 from .serializers import (
     TenantSerializer, SubscriptionSerializer,
@@ -45,12 +46,9 @@ class TenantViewSet(viewsets.ModelViewSet):
                 SecurityLog.Severity.WARNING,
                 {'tenant_id': tenant_id, 'tenant_name': tenant_name}
             )
-            return Response({'message': 'Tenant deleted successfully'}, status=status.HTTP_200_OK)
+            return ok(data={'message': 'Tenant deleted successfully'}, request=request)
         except Exception as e:
-            return Response(
-                {'error': str(e)}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return fail('DELETE_FAILED', str(e), status=400, request=request)
     
     @action(detail=True, methods=['post'])
     def disable(self, request, pk=None):
@@ -66,7 +64,7 @@ class TenantViewSet(viewsets.ModelViewSet):
             {'tenant_id': tenant.id, 'tenant_name': tenant.name}
         )
         
-        return Response({'message': 'Tenant disabled'})
+        return ok(data={'message': 'Tenant disabled'}, request=request)
     
     @action(detail=True, methods=['post'])
     def enable(self, request, pk=None):
@@ -82,7 +80,7 @@ class TenantViewSet(viewsets.ModelViewSet):
             {'tenant_id': tenant.id, 'tenant_name': tenant.name, 'action': 'enabled'}
         )
         
-        return Response({'message': 'Tenant enabled'})
+        return ok(data={'message': 'Tenant enabled'}, request=request)
 
     @action(detail=True, methods=['post'])
     def sync_athens(self, request, pk=None):
@@ -110,11 +108,12 @@ class TenantViewSet(viewsets.ModelViewSet):
             after_data={'enabled_modules': athens_link.enabled_modules}
         )
         
-        return Response({
+        data = {
             'status': 'synced',
             'created': created,
             'enabled_modules': athens_link.enabled_modules
-        })
+        }
+        return ok(data=data, request=request)
 
     @action(detail=True, methods=['get', 'patch'])
     def athens_modules(self, request, pk=None):
@@ -124,13 +123,14 @@ class TenantViewSet(viewsets.ModelViewSet):
         try:
             athens_link = tenant.athens_link
         except AthensTenantLink.DoesNotExist:
-            return Response({'error': 'Athens tenant link not found'}, status=status.HTTP_404_NOT_FOUND)
+            return fail('LINK_NOT_FOUND', 'Athens tenant link not found', status=404, request=request)
         
         if request.method == 'GET':
-            return Response({
+            data = {
                 'enabled_modules': athens_link.enabled_modules,
                 'available_modules': DEFAULT_ATHENS_MODULES
-            })
+            }
+            return ok(data=data, request=request)
         
         elif request.method == 'PATCH':
             enabled_modules = request.data.get('enabled_modules', [])
@@ -138,9 +138,11 @@ class TenantViewSet(viewsets.ModelViewSet):
             # Validate modules
             invalid = [m for m in enabled_modules if m not in DEFAULT_ATHENS_MODULES]
             if invalid:
-                return Response(
-                    {'error': f'Invalid modules: {invalid}'}, 
-                    status=status.HTTP_400_BAD_REQUEST
+                return fail(
+                    'INVALID_MODULES',
+                    f'Invalid modules: {invalid}',
+                    status=400,
+                    request=request
                 )
             
             before_data = {'enabled_modules': athens_link.enabled_modules}
@@ -165,7 +167,7 @@ class TenantViewSet(viewsets.ModelViewSet):
                 after_data={'enabled_modules': enabled_modules}
             )
             
-            return Response({'enabled_modules': enabled_modules, 'status': 'updated'})
+            return ok(data={'enabled_modules': enabled_modules, 'status': 'updated'}, request=request)
 
 
 class SubscriptionViewSet(viewsets.ModelViewSet):
@@ -264,7 +266,7 @@ class AthensAuditLogViewSet(viewsets.ReadOnlyModelViewSet):
                 'created_at': log.created_at
             })
         
-        return Response(data)
+        return ok(data=data, request=request)
 
 
 class TenantServiceViewSet(viewsets.ReadOnlyModelViewSet):
@@ -284,7 +286,7 @@ class TenantServiceViewSet(viewsets.ReadOnlyModelViewSet):
                 'enabled_at': ts.enabled_at,
                 'disabled_at': ts.disabled_at
             })
-        return Response(data)
+        return ok(data=data, request=request)
     
     @action(detail=False, methods=['post'], url_path='toggle')
     def toggle(self, request):
@@ -297,7 +299,7 @@ class TenantServiceViewSet(viewsets.ReadOnlyModelViewSet):
             tenant = Tenant.objects.get(id=tenant_id)
             service = Service.objects.get(code=service_code)
         except (Tenant.DoesNotExist, Service.DoesNotExist):
-            return Response({'error': 'Tenant or Service not found'}, status=status.HTTP_404_NOT_FOUND)
+            return fail('NOT_FOUND', 'Tenant or Service not found', status=404, request=request)
         
         ts, created = TenantService.objects.get_or_create(
             tenant=tenant,
@@ -321,7 +323,7 @@ class TenantServiceViewSet(viewsets.ReadOnlyModelViewSet):
             {'tenant_id': tenant_id, 'service_code': service_code, 'enabled': enable}
         )
         
-        return Response({'message': 'Service toggled', 'is_enabled': ts.is_enabled})
+        return ok(data={'message': 'Service toggled', 'is_enabled': ts.is_enabled}, request=request)
 
 
 class MasterAdminViewSet(viewsets.ModelViewSet):
@@ -365,15 +367,12 @@ class MasterAdminViewSet(viewsets.ModelViewSet):
                 instance.athens_tenant_id = tenant.id
                 instance.company_id = tenant.id
             except Tenant.DoesNotExist:
-                return Response(
-                    {'error': 'Tenant not found'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                return fail('TENANT_NOT_FOUND', 'Tenant not found', status=400, request=request)
         
         instance.save()
         
         serializer = self.get_serializer(instance)
-        return Response(serializer.data)
+        return ok(data=serializer.data, request=request)
     
     def destroy(self, request, *args, **kwargs):
         """Delete master admin"""
