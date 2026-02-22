@@ -65,6 +65,10 @@ const { FollowupsPage, AdvanceExpensesPage, ManpowerMachineryPage, FinancialLedg
 const WorkforceLanding = React.lazy(() => import('../pages/workforce/WorkforceLandingPage'))
 const { ProfileManagementPage, AttendancePage, LeaveManagementPage } = await import('../pages/workforce/WorkforceComponents')
 
+// PTW Components
+const PTWLanding = React.lazy(() => import('../pages/ptw/PTWLandingPage'))
+const PermitsPage = React.lazy(() => import('../pages/ptw/PermitsPage'))
+
 
 
 // Company
@@ -368,6 +372,10 @@ export const AppRouter: React.FC = () => {
         <Route path="workforce/profiles" element={<SuspenseWrapper><ProfileManagementPage /></SuspenseWrapper>} />
         <Route path="workforce/attendance" element={<SuspenseWrapper><AttendancePage /></SuspenseWrapper>} />
         <Route path="workforce/leave" element={<SuspenseWrapper><LeaveManagementPage /></SuspenseWrapper>} />
+        
+        {/* PTW Routes */}
+        <Route path="ptw" element={<SuspenseWrapper><PTWLanding /></SuspenseWrapper>} />
+        <Route path="ptw/permits" element={<SuspenseWrapper><PermitsPage /></SuspenseWrapper>} />
         
         <Route path="settings" element={<SuspenseWrapper><MasterAdminSettings /></SuspenseWrapper>} />
       </Route>
