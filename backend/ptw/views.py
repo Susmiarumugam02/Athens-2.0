@@ -26,6 +26,8 @@ from io import BytesIO
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter, A4
 from authentication.tenant_scoped import TenantScopedViewSet, TenantScopedReadOnlyViewSet
+from authentication.rbac_permissions import RequireTenantPermission
+from system.audit_utils import audit_log, AuditLogMixin
 from .throttles import PTWSyncThrottle, PTWBulkExportThrottle, PTWKpiThrottle
 from .observability import log_ptw_event, time_endpoint
 try:
@@ -145,16 +147,23 @@ class WorkflowTemplateViewSet(PTWBaseViewSet):
     filterset_fields = ['permit_type', 'risk_level']
     project_required = False
 
-class PermitViewSet(PTWBaseViewSet):
+class PermitViewSet(AuditLogMixin, PTWBaseViewSet):
     queryset = Permit.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [RequireTenantPermission]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = PermitFilter
     search_fields = ['permit_number', 'title', 'location', 'description']
     ordering_fields = ['created_at', 'planned_start_time', 'planned_end_time', 'risk_score', 'permit_number']
     ordering = ['-created_at']
     model = Permit  # Required for permission decorator
-    # Pagination enabled by default (uses DRF settings)
+    
+    # Audit configuration
+    audit_action_map = {
+        'create': 'ptw.create',
+        'update': 'ptw.update',
+        'destroy': 'ptw.delete',
+    }
+    audit_target_type = 'PTWPermit'
     
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
