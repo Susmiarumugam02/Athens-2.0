@@ -4,16 +4,26 @@ from rest_framework.response import Response
 from django.db.models import Q
 from authentication.models import User, UserType, SecurityLog
 from authentication.permissions import IsSuperAdminOrMasterAdmin
+from authentication.rbac_permissions import RequireTenantPermission
 from authentication.tenant_utils import get_tenant_id_for_filtering, require_tenant
 from system.api_response import ok, fail
+from system.audit_utils import audit_log, AuditLogMixin
 from .models import Project, ProjectMembership
 from .serializers import ProjectSerializer, ProjectMembershipSerializer, AddMemberSerializer
 from .permissions import IsProjectMemberOrAdmin
 
 
-class ProjectViewSet(viewsets.ModelViewSet):
+class ProjectViewSet(AuditLogMixin, viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
-    permission_classes = [IsProjectMemberOrAdmin]
+    permission_classes = [RequireTenantPermission]
+    
+    # Audit logging configuration
+    audit_action_map = {
+        'create': 'project.create',
+        'update': 'project.update',
+        'destroy': 'project.delete',
+    }
+    audit_target_type = 'Project'
     
 
     def list(self, request, *args, **kwargs):
@@ -100,7 +110,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
             created_by=user
         )
         
-        # Log event
+        # Audit logging handled by AuditLogMixin
+        # But also log to SecurityLog for backward compatibility
         SecurityLog.objects.create(
             event_type="project_created",
             severity="info",
@@ -114,11 +125,15 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 "project_code": project.code,
             }
         )
+        
+        return project
     
     def perform_update(self, serializer):
         user = self.request.user
         project = serializer.save()
         
+        # Audit logging handled by AuditLogMixin
+        # But also log to SecurityLog for backward compatibility
         SecurityLog.objects.create(
             event_type="project_updated",
             severity="info",
@@ -131,6 +146,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 "project_name": project.name,
             }
         )
+        
+        return project
     
     @action(detail=True, methods=["post"])
     def activate(self, request, pk=None):
