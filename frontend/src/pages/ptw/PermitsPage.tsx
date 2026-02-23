@@ -18,15 +18,27 @@ export default function PermitsPage() {
   const { token } = useAuthStore()
 
   useEffect(() => {
+    if (!token) {
+      setLoading(false)
+      return
+    }
+    
     fetch('/api/ptw/permits/', {
       headers: { Authorization: `Bearer ${token}` }
     })
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error('Unauthorized')
+        return r.json()
+      })
       .then(data => {
-        setPermits(data.results || data)
+        const permitsList = Array.isArray(data) ? data : (data.results || [])
+        setPermits(permitsList)
         setLoading(false)
       })
-      .catch(() => setLoading(false))
+      .catch(() => {
+        setPermits([])
+        setLoading(false)
+      })
   }, [token])
 
   if (loading) return <div className="p-6">Loading...</div>
