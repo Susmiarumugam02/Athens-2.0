@@ -625,37 +625,6 @@ class PermitListSerializer(serializers.ModelSerializer):
     
     def get_workers_count(self, obj):
         return obj.assigned_workers.count()
-    
-    def get_is_expired(self, obj):
-        return obj.is_expired()
-    
-    def get_risk_color(self, obj):
-        colors = {
-            'low': '#52c41a',
-            'medium': '#faad14',
-            'high': '#fa8c16',
-            'extreme': '#ff4d4f'
-        }
-        return colors.get(obj.risk_level, '#d9d9d9')
-    
-    def get_status_color(self, obj):
-        colors = {
-            'draft': '#d9d9d9',
-            'submitted': '#1890ff',
-            'pending_verification': '#13c2c2',
-            'under_review': '#faad14',
-            'pending_approval': '#fa8c16',
-            'approved': '#52c41a',
-            'active': '#52c41a',
-            'suspended': '#fa8c16',
-            'completed': '#722ed1',
-            'cancelled': '#8c8c8c',
-            'expired': '#ff4d4f',
-            'rejected': '#ff4d4f'
-        }
-        return colors.get(obj.status, '#d9d9d9')
-    
-    # Removed extension-related methods
 
 class PermitCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer for creating and updating permits"""
@@ -663,6 +632,7 @@ class PermitCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permit
         fields = [
+            'id', 'permit_number',  # Add read-only fields
             'permit_type', 'title', 'description', 'work_order_id',
             'location', 'gps_coordinates', 'site_layout',
             'planned_start_time', 'planned_end_time', 'work_nature',
@@ -674,6 +644,7 @@ class PermitCreateUpdateSerializer(serializers.ModelSerializer):
             'mobile_created', 'offline_id', 'compliance_standards', 'permit_parameters',
             'other_hazards', 'verifier', 'status'
         ]
+        read_only_fields = ['id', 'permit_number']
     
     def validate_permit_type(self, value):
         """Validate permit type exists and is active"""
