@@ -61,11 +61,12 @@ class RequireTenantContext(permissions.BasePermission):
             return True
         
         # Attach tenant context using resolver
-        resolver = TenantResolver()
         try:
-            tenant = resolver.resolve_tenant(request)
-            resolver.attach_tenant_context(request, tenant)
-            return True
+            tenant = TenantResolver.resolve_tenant(request)
+            if tenant:
+                TenantResolver.attach_tenant_context(request, tenant)
+                return True
+            return False
         except Exception:
             return False
 
@@ -95,10 +96,13 @@ class RequireTenantPermission(permissions.BasePermission):
             return True
         
         # Attach tenant context
-        resolver = TenantResolver()
         try:
-            tenant = resolver.resolve_tenant(request)
-            resolver.attach_tenant_context(request, tenant)
+            tenant = TenantResolver.resolve_tenant(request)
+            if not tenant:
+                raise PermissionDenied({"error": "TENANT_CONTEXT_REQUIRED", "message": "Tenant context missing"})
+            TenantResolver.attach_tenant_context(request, tenant)
+        except PermissionDenied:
+            raise
         except Exception:
             raise PermissionDenied({"error": "TENANT_CONTEXT_REQUIRED", "message": "Tenant context missing"})
         
