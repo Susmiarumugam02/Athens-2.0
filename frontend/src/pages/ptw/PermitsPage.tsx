@@ -18,7 +18,7 @@ export default function PermitsPage() {
   const { token } = useAuthStore()
 
   useEffect(() => {
-    fetch('http://localhost:8004/api/ptw/permits/', {
+    fetch('/api/ptw/permits/', {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(r => r.json())
