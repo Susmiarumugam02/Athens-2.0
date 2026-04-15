@@ -30,8 +30,7 @@ const ATHENS_MENU_ITEMS: MenuItem[] = [
   { label: 'Inspection', description: 'Inspection management', href: '/inspection', icon: ClipboardList, roles: ['companyuser'] },
   
   // Training & Development
-  { label: 'Induction Training', description: 'Employee induction', href: '/induction-training', icon: BookOpen, roles: ['companyuser'] },
-  { label: 'Job Training', description: 'Job-specific training', href: '/job-training', icon: HardHat, roles: ['companyuser'] },
+  { label: 'Training', description: 'Induction & Job Training', href: '/training', icon: BookOpen, roles: ['companyuser'] },
   { label: 'TBT', description: 'Tool Box Talk', href: '/tbt', icon: MessageSquare, roles: ['companyuser'] },
   
   // ERGON Category (Operations & Finance)

@@ -56,11 +56,16 @@ INSTALLED_APPS = [
     'superadmin',
     'workforce',
     'ergon',
+    'ergon_manpower',
+    'safetyobservation',
+    'inductiontraining',
+    'jobtraining',
+    'tbt',
 ]
 
 # Conditionally add PTW and dependencies
 if FEATURE_PTW_ENABLED:
-    INSTALLED_APPS += ['worker', 'ptw', 'permissions']
+    INSTALLED_APPS += ['permit_to_work']
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',

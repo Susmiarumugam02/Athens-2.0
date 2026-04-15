@@ -108,7 +108,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone_number = models.CharField(max_length=20, null=True, blank=True)
     grade = models.CharField(max_length=1, null=True, blank=True)
     created_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='created_users')
-    project = models.ForeignKey('Project', on_delete=models.CASCADE, null=True, blank=True, related_name='users')
+    project = models.ForeignKey('Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='users')
     
     # Tenant scoping for MasterAdmin users
     athens_tenant_id = models.UUIDField(null=True, blank=True, db_index=True, help_text="DEPRECATED: Legacy tenant ID. Use tenant FK.")

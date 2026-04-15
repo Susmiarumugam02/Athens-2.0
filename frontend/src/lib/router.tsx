@@ -59,15 +59,45 @@ const MasterAdminErgon = React.lazy(() => import('../pages/masteradmin/Ergon'))
 const ErgonLanding = React.lazy(() => import('../pages/ergon/ErgonLandingPage'))
 const TaskManagement = React.lazy(() => import('../pages/ergon/TaskManagementPage'))
 const DailyPlanner = React.lazy(() => import('../pages/ergon/DailyPlannerPage'))
-const { FollowupsPage, AdvanceExpensesPage, ManpowerMachineryPage, FinancialLedgerPage } = await import('../pages/ergon/ErgonComponents')
+const FollowupsPage = React.lazy(() => import('../pages/ergon/FollowupsPage'))
+const AdvanceExpensesPage = React.lazy(() => import('../pages/ergon/AdvanceExpensesPage'))
+const ManpowerMachineryPage = React.lazy(() => import('../pages/ergon/ManpowerMachineryPage'))
+const FinancialLedgerPage = React.lazy(() => import('../pages/ergon/FinancialLedgerPage'))
 
 // Workforce Components
 const WorkforceLanding = React.lazy(() => import('../pages/workforce/WorkforceLandingPage'))
-const { ProfileManagementPage, AttendancePage, LeaveManagementPage } = await import('../pages/workforce/WorkforceComponents')
+const ProfileManagementPage = React.lazy(() => import('../pages/workforce/ProfileManagementPage'))
+const AttendancePage = React.lazy(() => import('../pages/workforce/AttendancePage'))
+const LeaveManagementPage = React.lazy(() => import('../pages/workforce/LeaveManagementPage'))
+const EmployeeManagementPage = React.lazy(() => import('../pages/workforce/EmployeeManagementPage'))
+const PayrollWagesPage = React.lazy(() => import('../pages/workforce/PayrollWagesPage'))
 
 // PTW Components
-const PTWLanding = React.lazy(() => import('../pages/ptw/PTWLandingPage'))
-const PermitsPage = React.lazy(() => import('../pages/ptw/PermitsPage'))
+const PTWPage = React.lazy(() => import('../pages/ptw/PTWPage'))
+
+// New Modules - Inspection
+const InspectionDashboard = React.lazy(() => import('../pages/inspection/components/InspectionDashboard'))
+const InspectionList = React.lazy(() => import('../pages/inspection/components/InspectionList'))
+const InspectionCreate = React.lazy(() => import('../pages/inspection/components/InspectionCreate'))
+
+// Incident Management
+const IncidentManagementPage = React.lazy(() => import('../pages/incidentmanagement/IncidentManagementPage'))
+
+// ESG
+const ESGDashboard = React.lazy(() => import('../pages/esg/components/CarbonFootprintDashboard'))
+
+// Safety Observation
+const SafetyObservationRoutes = React.lazy(() => import('../pages/safetyobservation/index'))
+
+// Quality
+const QualityDashboard = React.lazy(() => import('../pages/quality/components/DefectManagement'))
+
+// MoM
+const MoMList = React.lazy(() => import('../pages/mom/components/MomEdit'))
+
+// Training Modules
+const TrainingPage = React.lazy(() => import('../pages/training/TrainingPage'))
+const TBTPage = React.lazy(() => import('../pages/tbt/TBTPage'))
 
 
 
@@ -372,10 +402,30 @@ export const AppRouter: React.FC = () => {
         <Route path="workforce/profiles" element={<SuspenseWrapper><ProfileManagementPage /></SuspenseWrapper>} />
         <Route path="workforce/attendance" element={<SuspenseWrapper><AttendancePage /></SuspenseWrapper>} />
         <Route path="workforce/leave" element={<SuspenseWrapper><LeaveManagementPage /></SuspenseWrapper>} />
+        <Route path="workforce/employees" element={<SuspenseWrapper><EmployeeManagementPage /></SuspenseWrapper>} />
+        <Route path="workforce/payroll" element={<SuspenseWrapper><PayrollWagesPage /></SuspenseWrapper>} />
         
         {/* PTW Routes */}
-        <Route path="ptw" element={<SuspenseWrapper><PTWLanding /></SuspenseWrapper>} />
-        <Route path="ptw/permits" element={<SuspenseWrapper><PermitsPage /></SuspenseWrapper>} />
+        <Route path="ptw" element={<SuspenseWrapper><PTWPage /></SuspenseWrapper>} />
+        
+        {/* New Module Routes */}
+        <Route path="inspection" element={<SuspenseWrapper><InspectionDashboard /></SuspenseWrapper>} />
+        <Route path="inspection/list" element={<SuspenseWrapper><InspectionList /></SuspenseWrapper>} />
+        <Route path="inspection/create" element={<SuspenseWrapper><InspectionCreate /></SuspenseWrapper>} />
+        
+        <Route path="incident-management" element={<SuspenseWrapper><IncidentManagementPage /></SuspenseWrapper>} />
+        
+        <Route path="esg" element={<SuspenseWrapper><ESGDashboard /></SuspenseWrapper>} />
+        
+        <Route path="safety-observation/*" element={<SuspenseWrapper><SafetyObservationRoutes /></SuspenseWrapper>} />
+        
+        <Route path="quality" element={<SuspenseWrapper><QualityDashboard /></SuspenseWrapper>} />
+        
+        <Route path="mom" element={<SuspenseWrapper><MoMList /></SuspenseWrapper>} />
+        
+        <Route path="training" element={<SuspenseWrapper><TrainingPage /></SuspenseWrapper>} />
+        
+        <Route path="tbt" element={<SuspenseWrapper><TBTPage /></SuspenseWrapper>} />
         
         <Route path="settings" element={<SuspenseWrapper><MasterAdminSettings /></SuspenseWrapper>} />
       </Route>

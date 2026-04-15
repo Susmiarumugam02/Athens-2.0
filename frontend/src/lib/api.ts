@@ -62,6 +62,20 @@ const api: AxiosInstance = axios.create({
 
 import tokenManager from './tokenManager'
 
+// Redirect guard to prevent infinite loop
+let authRedirectInProgress = false
+
+function redirectToLoginOnce() {
+  if (authRedirectInProgress) return
+  authRedirectInProgress = true
+
+  tokenManager.clearTokens()
+  localStorage.removeItem('auth-storage')
+  sessionStorage.clear()
+
+  window.location.replace('/login')
+}
+
 // Token management
 const getToken = (): string | null => {
   const token = tokenManager.getAccessToken()
@@ -83,6 +97,13 @@ const clearTokens = (): void => {
   tokenManager.clearTokens()
 }
 
+const isJwt = (token: string | null): token is string => {
+  if (!token) return false
+  const t = token.trim()
+  if (!t || t === 'null' || t === 'undefined') return false
+  return t.split('.').length === 3
+}
+
 // Request interceptor to add auth token (exclude login endpoints)
 api.interceptors.request.use(
   (config) => {
@@ -92,12 +113,17 @@ api.interceptors.request.use(
                            config.url?.includes('/health/')
 
     if (!isLoginEndpoint) {
-      // Check if this is a service user endpoint (HR, Finance, Inventory, CRM)
+      // Patch B: Block no-token requests early (except service users)
       const isServiceUserEndpoint = config.url?.includes('/api/hr/') ||
                                    config.url?.includes('/api/finance/') ||
                                    config.url?.includes('/api/inventory/') ||
                                    config.url?.includes('/api/crm/')
       
+      const token = getToken()
+      if ((!token || !isJwt(token)) && !isServiceUserEndpoint) {
+        clearTokens()
+        return Promise.reject(Object.assign(new Error('NO_VALID_AUTH_TOKEN'), { code: 'NO_VALID_AUTH_TOKEN' }))
+      }
       if (isServiceUserEndpoint) {
         // Use session key as query parameter for service user endpoints
         let sessionKey = sessionStorage.getItem('service_session_key')
@@ -122,16 +148,12 @@ api.interceptors.request.use(
       } else {
         // Use JWT token for regular endpoints (including Athens)
         const token = getToken()
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`
-        } else {
-          // Only warn for non-public endpoints
-          const isPublicEndpoint = config.url?.includes('/health/') || 
-                                  config.url?.includes('/validate-token/')
-          if (!isPublicEndpoint) {
-            console.warn('[API] Making authenticated request without token:', config.url)
-          }
+        if (!isJwt(token)) {
+          clearTokens()
+          return Promise.reject(Object.assign(new Error('NO_VALID_AUTH_TOKEN'), { code: 'NO_VALID_AUTH_TOKEN' }))
         }
+        config.headers = config.headers || {}
+        config.headers.Authorization = `Bearer ${token}`
       }
     }
 
@@ -154,6 +176,16 @@ api.interceptors.response.use(
   },
   async (error: AxiosError) => {
     const originalRequest = error.config as any
+
+    // Patch A: Don't redirect on canceled/aborted requests
+    if (
+      axios.isCancel?.(error) ||
+      (error as any)?.code === 'ERR_CANCELED' ||
+      (error as any)?.code === 'NO_AUTH_TOKEN' ||
+      (error as any)?.code === 'NO_VALID_AUTH_TOKEN'
+    ) {
+      return Promise.reject(error)
+    }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
@@ -193,19 +225,14 @@ api.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${access}`
           return api(originalRequest)
         } catch (refreshError: any) {
-          // Refresh failed, clear tokens but DON'T redirect immediately
-          clearTokens()
-          localStorage.removeItem('auth-storage')
-          sessionStorage.clear()
-          
-          // Only redirect if not already on login page
+          // Refresh failed, use redirect guard
           if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/unauthorized')) {
             if (isAthensEmployeeEndpoint) {
               toast.error('Authentication expired. Please login again to access employee management.')
             } else {
               toast.error('Session expired. Please login again.')
             }
-            window.location.href = '/login'
+            redirectToLoginOnce()
           }
           return Promise.reject(refreshError)
         }
@@ -287,9 +314,16 @@ export const apiClient = {
     return api.delete(url, config)
   },
 
-  // Authentication - Unified Login (v3 - 1770374883)
-  login: (credentials: { email: string; password: string; totp_code?: string }) =>
-    api.post('/api/auth/login/', credentials),
+  // Authentication - Unified Login (compatible with email/username backend variants)
+  login: (credentials: { email?: string; username?: string; password: string; totp_code?: string }) => {
+    const identity = (credentials.email || credentials.username || '').trim()
+    return api.post('/api/auth/login/', {
+      email: identity,
+      username: identity,
+      password: credentials.password,
+      totp_code: credentials.totp_code,
+    })
+  },
 
   changeCompanyUserPassword: (data: { current_password: string; new_password: string; confirm_password: string; force_logout_all?: boolean }) =>
     api.post('/api/company-dashboard/security/password-change/', data),

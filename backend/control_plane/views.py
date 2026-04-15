@@ -466,19 +466,47 @@ class MasterAdminViewSet(AuditLogMixin, viewsets.ModelViewSet):
         return ok(data=serializer.data, request=request)
     
     def destroy(self, request, *args, **kwargs):
-        """Delete master admin"""
+        """Delete master admin with cascade handling"""
         instance = self.get_object()
+        
+        # Prevent self-deletion
+        if instance.id == request.user.id:
+            return fail(
+                'CANNOT_DELETE_SELF',
+                'You cannot delete your own account',
+                status=400,
+                request=request
+            )
+        
         email = instance.email
         user_id = instance.id
         
-        # Just delete - all FKs are SET_NULL
-        instance.delete()
-        
-        log_security_event(
-            request, request.user,
-            SecurityLog.EventType.MASTER_DISABLED,
-            SecurityLog.Severity.WARNING,
-            {'deleted_user_id': user_id, 'email': email}
-        )
-        
-        return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
+        try:
+            with transaction.atomic():
+                # Django will handle CASCADE/SET_NULL based on model definitions
+                instance.delete()
+            
+            log_security_event(
+                request, request.user,
+                SecurityLog.EventType.MASTER_DISABLED,
+                SecurityLog.Severity.WARNING,
+                {'deleted_user_id': user_id, 'email': email}
+            )
+            
+            return ok(data={'message': 'Master admin deleted successfully'}, request=request)
+        except Exception as e:
+            error_msg = str(e)
+            # Provide user-friendly error messages
+            if 'foreign key constraint' in error_msg.lower():
+                return fail(
+                    'HAS_DEPENDENCIES',
+                    'Cannot delete: User has related records. Please reassign or delete related data first.',
+                    status=400,
+                    request=request
+                )
+            return fail(
+                'DELETE_FAILED',
+                f'Failed to delete master admin: {error_msg}',
+                status=400,
+                request=request
+            )

@@ -50,7 +50,7 @@ export default function CompanySettings() {
 
   const loadCompanyDetails = async () => {
     try {
-      const response = await apiClient.get('/api/company/details/')
+      const response = await apiClient.getCompanyDetails()
       setDetails(response.data)
       if (response.data.company_logo) {
         setLogoPreview(response.data.company_logo)
@@ -75,7 +75,7 @@ export default function CompanySettings() {
     setSaving(true)
     try {
       console.log('Saving company details:', details)
-      const response = await apiClient.put('/api/company/details/', details)
+      const response = await apiClient.updateCompanyDetails(details)
       console.log('Save response:', response.data)
       toast.success('Company details updated successfully')
     } catch (error: any) {

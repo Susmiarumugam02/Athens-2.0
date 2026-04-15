@@ -32,7 +32,11 @@ class TokenManager {
         sessionStorage.setItem('_at', encrypted);
       }
     }
-    return encrypted ? this.decrypt(encrypted) : null;
+    const token = encrypted ? this.decrypt(encrypted) : null;
+    if (!this.isJwt(token)) {
+      return null;
+    }
+    return token;
   }
 
   getRefreshToken(): string | null {
@@ -43,7 +47,11 @@ class TokenManager {
         sessionStorage.setItem('_rt', encrypted);
       }
     }
-    return encrypted ? this.decrypt(encrypted) : null;
+    const token = encrypted ? this.decrypt(encrypted) : null;
+    if (!this.isJwt(token)) {
+      return null;
+    }
+    return token;
   }
 
   clearTokens(): void {
@@ -70,9 +78,18 @@ class TokenManager {
     }
   }
 
+  private isJwt(token: string | null): token is string {
+    if (!token) return false;
+    const t = token.trim();
+    if (!t || t === 'null' || t === 'undefined') return false;
+    return t.split('.').length === 3;
+  }
+
   // Check if tokens exist
   hasTokens(): boolean {
-    return !!(this.getAccessToken() && this.getRefreshToken());
+    const accessToken = this.getAccessToken();
+    const refreshToken = this.getRefreshToken();
+    return this.isJwt(accessToken) && this.isJwt(refreshToken);
   }
 }
 

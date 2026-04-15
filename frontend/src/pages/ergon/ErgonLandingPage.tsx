@@ -1,67 +1,162 @@
-import { useNavigate } from 'react-router-dom'
-import { useEnabledModules } from '../../hooks/useEnabledModules'
-import { CheckSquare, Calendar, Bell, FileText, Users, Briefcase } from 'lucide-react'
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, Row, Col, Statistic } from 'antd';
+import { CheckSquareOutlined, CalendarOutlined, BellOutlined, FileTextOutlined, TeamOutlined, BankOutlined, ClockCircleOutlined, AlertOutlined, WalletOutlined } from '@ant-design/icons';
 
 const ERGON_COMPONENTS = [
-  { code: 'ergon_tasks', name: 'Task Management', description: 'Create and manage tasks', icon: CheckSquare, href: '/app/ergon/tasks', color: 'from-blue-500 to-cyan-500' },
-  { code: 'ergon_planner', name: 'Daily Planner', description: 'Daily task execution with SLA tracking', icon: Calendar, href: '/app/ergon/planner', color: 'from-purple-500 to-pink-500' },
-  { code: 'ergon_followups', name: 'Follow-ups', description: 'Track follow-ups and reminders', icon: Bell, href: '/app/ergon/followups', color: 'from-yellow-500 to-orange-500' },
-  { code: 'ergon_advance', name: 'Advance/Expenses', description: 'Manage advances and expenses', icon: FileText, href: '/app/ergon/advance', color: 'from-green-500 to-emerald-500' },
-  { code: 'ergon_manpower', name: 'Manpower/Machinery', description: 'Resource allocation', icon: Users, href: '/app/ergon/manpower', color: 'from-indigo-500 to-blue-500' },
-  { code: 'ergon_ledger', name: 'Financial Ledger', description: 'Financial tracking', icon: Briefcase, href: '/app/ergon/ledger', color: 'from-red-500 to-pink-500' },
-]
+  { code: 'ergon_tasks', name: 'Task Management', description: 'Create and manage tasks', icon: CheckSquareOutlined, href: '/app/ergon/tasks', color: '#1890ff' },
+  { code: 'ergon_planner', name: 'Daily Planner', description: 'Daily task execution with SLA tracking', icon: CalendarOutlined, href: '/app/ergon/planner', color: '#722ed1' },
+  { code: 'ergon_followups', name: 'Follow-ups', description: 'Track follow-ups and reminders', icon: BellOutlined, href: '/app/ergon/followups', color: '#fa8c16' },
+  { code: 'ergon_advance', name: 'Advance/Expenses', description: 'Manage advances and expenses', icon: FileTextOutlined, href: '/app/ergon/advance', color: '#52c41a' },
+  { code: 'ergon_manpower', name: 'Manpower/Machinery', description: 'Resource allocation', icon: TeamOutlined, href: '/app/ergon/manpower', color: '#13c2c2' },
+  { code: 'ergon_ledger', name: 'Financial Ledger', description: 'Financial tracking', icon: BankOutlined, href: '/app/ergon/ledger', color: '#eb2f96' },
+];
+
+const mockData = {
+  kpis: {
+    totalTasks: 245,
+    activeTasks: 89,
+    completedTasks: 156,
+    overdueTask: 12,
+    totalExpenses: 485000,
+    pendingApprovals: 8,
+    resourceUtilization: 78,
+    budgetUtilization: 65
+  }
+};
 
 export default function ErgonLandingPage() {
-  const navigate = useNavigate()
-  const { enabledModules, loading } = useEnabledModules()
-
-  const availableComponents = ERGON_COMPONENTS.filter(c => enabledModules.includes(c.code))
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-border border-t-primary rounded-full animate-spin"></div>
-      </div>
-    )
-  }
+  const navigate = useNavigate();
 
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">ERGON</h1>
-        <p className="text-muted-foreground">Operations & Finance Management</p>
+    <div style={{ padding: '24px' }}>
+      {/* Header */}
+      <div style={{ marginBottom: '24px' }}>
+        <p style={{ margin: 0, color: '#8c8c8c' }}>Operations & Finance Management - Real-time tracking and analytics</p>
       </div>
 
-      {availableComponents.length === 0 ? (
-        <div className="text-center py-12 bg-card rounded-xl border border-border">
-          <p className="text-muted-foreground">No ERGON components enabled for your project</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {availableComponents.map((component) => {
-            const Icon = component.icon
+      {/* KPI Cards */}
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="Total Tasks"
+              value={mockData.kpis.totalTasks}
+              prefix={<CheckSquareOutlined />}
+              valueStyle={{ color: '#1890ff' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="Active Tasks"
+              value={mockData.kpis.activeTasks}
+              prefix={<ClockCircleOutlined />}
+              valueStyle={{ color: '#1890ff' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="Completed"
+              value={mockData.kpis.completedTasks}
+              prefix={<CheckSquareOutlined />}
+              valueStyle={{ color: '#52c41a' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="Overdue"
+              value={mockData.kpis.overdueTask}
+              prefix={<AlertOutlined />}
+              valueStyle={{ color: '#ff4d4f' }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="Total Expenses"
+              value={`₹${(mockData.kpis.totalExpenses / 1000).toFixed(0)}K`}
+              prefix={<WalletOutlined />}
+              valueStyle={{ color: '#722ed1' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="Pending Approvals"
+              value={mockData.kpis.pendingApprovals}
+              prefix={<BellOutlined />}
+              valueStyle={{ color: '#faad14' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="Resource Util."
+              value={`${mockData.kpis.resourceUtilization}%`}
+              prefix={<TeamOutlined />}
+              valueStyle={{ color: '#13c2c2' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="Budget Util."
+              value={`${mockData.kpis.budgetUtilization}%`}
+              prefix={<BankOutlined />}
+              valueStyle={{ color: '#52c41a' }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* ERGON Modules */}
+      <div>
+        <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px' }}>ERGON Modules</h2>
+        <Row gutter={16}>
+          {ERGON_COMPONENTS.map((component) => {
+            const Icon = component.icon;
             return (
-              <button
-                key={component.code}
-                onClick={() => navigate(component.href)}
-                className="group bg-card rounded-xl border border-border p-6 hover:border-primary hover:shadow-lg transition-all duration-200 text-left"
-              >
-                <div className={`inline-flex p-3 rounded-lg bg-gradient-to-br ${component.color} mb-4`}>
-                  <Icon className="h-6 w-6 text-white" />
-                </div>
-                
-                <h3 className="text-lg font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
-                  {component.name}
-                </h3>
-                
-                <p className="text-sm text-muted-foreground">
-                  {component.description}
-                </p>
-              </button>
-            )
+              <Col xs={24} sm={12} md={8} lg={6} key={component.code}>
+                <Card
+                  hoverable
+                  onClick={() => navigate(component.href)}
+                  style={{ marginBottom: '16px' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+                    <div style={{ 
+                      width: '48px', 
+                      height: '48px', 
+                      borderRadius: '8px', 
+                      background: component.color, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      marginRight: '12px'
+                    }}>
+                      <Icon style={{ fontSize: '24px', color: '#fff' }} />
+                    </div>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>{component.name}</h3>
+                  </div>
+                  <p style={{ margin: 0, color: '#8c8c8c', fontSize: '14px' }}>{component.description}</p>
+                </Card>
+              </Col>
+            );
           })}
-        </div>
-      )}
+        </Row>
+      </div>
     </div>
-  )
+  );
 }

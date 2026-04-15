@@ -7,6 +7,7 @@ import { SapSidebar } from '../components/layout/SapSidebar'
 import { menuByRole } from '../components/layout/menuConfig'
 import { useEnabledModules } from '../hooks/useEnabledModules'
 import { apiClient } from '../lib/api'
+import tokenManager from '../lib/tokenManager'
 
 const CompanyLayout: React.FC = () => {
   const navigate = useNavigate()
@@ -19,20 +20,24 @@ const CompanyLayout: React.FC = () => {
   const sidebarItems = menuByRole.companyuser('/app', enabledModules)
 
   useEffect(() => {
-    if (hydrated && user) {
+    // Patch C: Only fetch if token exists
+    if (hydrated && user && tokenManager.hasTokens()) {
       fetchCompanyInfo()
     }
   }, [hydrated, user])
 
   const fetchCompanyInfo = async () => {
     try {
-      const response = await apiClient.get('/api/company/details/')
+      const response = await apiClient.getCompanyDetails()
       setCompanyInfo({
         name: response.data.company_name || 'Company',
         logo: response.data.company_logo
       })
     } catch (error) {
-      console.error('Failed to fetch company info:', error)
+      // Don't spam console for expected no-token case
+      if ((error as any)?.code !== 'NO_AUTH_TOKEN') {
+        console.error('Failed to fetch company info:', error)
+      }
       // Fallback to user data
       setCompanyInfo({
         name: user?.company_name || 'Company',

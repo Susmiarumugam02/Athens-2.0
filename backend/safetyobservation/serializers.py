@@ -1,5 +1,20 @@
 from rest_framework import serializers
-from .models import SafetyObservation, SafetyObservationFile
+from .models import SafetyObservation, SafetyObservationFile, SafetyObservationAttachment
+
+class SafetyObservationAttachmentSerializer(serializers.ModelSerializer):
+    uploaded_by_name = serializers.CharField(source='uploaded_by.username', read_only=True)
+    file_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SafetyObservationAttachment
+        fields = ['id', 'file', 'file_url', 'file_name', 'file_type', 'mime_type', 'size_bytes', 'uploaded_by', 'uploaded_by_name', 'created_at']
+        read_only_fields = ['id', 'uploaded_by', 'uploaded_by_name', 'created_at']
+
+    def get_file_url(self, obj):
+        request = self.context.get('request')
+        if obj.file and request:
+            return request.build_absolute_uri(obj.file.url)
+        return None
 
 class SafetyObservationFileSerializer(serializers.ModelSerializer):
     uploaded_by_name = serializers.CharField(source='uploaded_by.username', read_only=True)
@@ -11,6 +26,12 @@ class SafetyObservationFileSerializer(serializers.ModelSerializer):
 
 class SafetyObservationSerializer(serializers.ModelSerializer):
     files = SafetyObservationFileSerializer(many=True, read_only=True)
+    attachments = SafetyObservationAttachmentSerializer(many=True, read_only=True)
+    attachment_count = serializers.SerializerMethodField()
+    can_edit = serializers.SerializerMethodField()
+    days_until_due = serializers.IntegerField(read_only=True)
+    is_overdue = serializers.BooleanField(read_only=True)
+    is_due_soon = serializers.BooleanField(read_only=True)
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
     
     # File upload fields
@@ -28,12 +49,19 @@ class SafetyObservationSerializer(serializers.ModelSerializer):
             'typeOfObservation', 'classification', 'safetyObservationFound',
             'severity', 'likelihood', 'riskScore',
             'correctivePreventiveAction', 'correctiveActionAssignedTo', 'commitmentDate',
-            'observationStatus', 'remarks',
+            'observationStatus', 'submitted_at', 'closed_at', 'closed_by', 'target_close_date', 'remarks',
             'is_environmental', 'env_incident_type',
             'created_at', 'updated_at', 'created_by', 'created_by_username',
-            'files', 'beforePictures'
+            'files', 'attachments', 'attachment_count', 'can_edit', 'beforePictures',
+            'days_until_due', 'is_overdue', 'is_due_soon'
         ]
-        read_only_fields = ['id', 'observationID', 'riskScore', 'created_at', 'updated_at', 'created_by', 'created_by_username', 'files']
+        read_only_fields = ['id', 'observationID', 'riskScore', 'submitted_at', 'closed_at', 'closed_by', 'created_at', 'updated_at', 'created_by', 'created_by_username', 'files', 'attachments', 'attachment_count', 'can_edit', 'days_until_due', 'is_overdue', 'is_due_soon']
+
+    def get_attachment_count(self, obj):
+        return obj.attachments.count()
+
+    def get_can_edit(self, obj):
+        return obj.observationStatus == 'draft'
 
     def create(self, validated_data):
         # Extract file data

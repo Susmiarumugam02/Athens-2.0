@@ -3,8 +3,8 @@ from rest_framework import permissions
 class SafetyObservationPermission(permissions.BasePermission):
     """
     Custom permission for SafetyObservation:
-    - adminuser with admin_type 'clientuser' or 'epcuser' can create and view
-    - adminuser with admin_type 'contractoruser' can view only
+    - adminuser/companyuser with admin_type 'clientuser'/'client' or 'epcuser'/'epc' can create and view
+    - adminuser/companyuser with admin_type 'contractoruser'/'contractor' can view only
     - projectadmin users can view/edit/delete observations created by their clientusers
     """
 
@@ -13,18 +13,19 @@ class SafetyObservationPermission(permissions.BasePermission):
         if not user or not user.is_authenticated:
             return False
 
-        if getattr(user, 'user_type', None) == 'adminuser':
+        user_type = getattr(user, 'user_type', None)
+        if user_type in ['adminuser', 'companyuser']:
             admin_type = getattr(user, 'admin_type', None)
-            if admin_type == 'epcuser':
+            if admin_type in ['epcuser', 'epc']:
                 # Allow all operations including DELETE
                 return True
-            elif admin_type == 'clientuser':
+            elif admin_type in ['clientuser', 'client']:
                 # Allow create, safe methods, update methods, and DELETE
                 if request.method in permissions.SAFE_METHODS or request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
                     return True
                 else:
                     return False
-            elif admin_type == 'contractoruser':
+            elif admin_type in ['contractoruser', 'contractor']:
                 # View and update if assigned, no DELETE
                 if request.method in permissions.SAFE_METHODS or request.method in ['PUT', 'PATCH']:
                     return True
@@ -33,7 +34,7 @@ class SafetyObservationPermission(permissions.BasePermission):
             else:
                 return False
 
-        if getattr(user, 'user_type', None) == 'projectadmin':
+        if user_type == 'projectadmin':
             # Allow access to list and retrieve views; object-level permissions will handle edit/delete
             if view.action in ['list', 'retrieve']:
                 return True
@@ -42,6 +43,10 @@ class SafetyObservationPermission(permissions.BasePermission):
                 return True
             return False
 
+        # Fallback: allow authenticated users with tenant access
+        if getattr(user, 'athens_tenant_id', None):
+            return True
+
         return False
 
     def has_object_permission(self, request, view, obj):
@@ -49,9 +54,10 @@ class SafetyObservationPermission(permissions.BasePermission):
         if not user or not user.is_authenticated:
             return False
 
-        if getattr(user, 'user_type', None) == 'adminuser':
+        user_type = getattr(user, 'user_type', None)
+        if user_type in ['adminuser', 'companyuser']:
             admin_type = getattr(user, 'admin_type', None)
-            if admin_type == 'epcuser':
+            if admin_type in ['epcuser', 'epc']:
                 # EPCUser has full permissions for all observations (except closed ones for modifications)
                 if request.method == 'DELETE':
                     return True  # Allow delete regardless of status
@@ -61,7 +67,7 @@ class SafetyObservationPermission(permissions.BasePermission):
                 else:
                     # If observation is closed, allow only safe methods (view)
                     return request.method in permissions.SAFE_METHODS
-            elif admin_type == 'clientuser':
+            elif admin_type in ['clientuser', 'client']:
                 # ClientUser can view all and update/delete if they created it
                 if request.method in permissions.SAFE_METHODS:
                     return True
@@ -76,7 +82,7 @@ class SafetyObservationPermission(permissions.BasePermission):
                     return False
                 else:
                     return False
-            elif admin_type == 'contractoruser':
+            elif admin_type in ['contractoruser', 'contractor']:
                 # View and update if assigned to them, no DELETE
                 if request.method in permissions.SAFE_METHODS:
                     return True
@@ -90,7 +96,7 @@ class SafetyObservationPermission(permissions.BasePermission):
             else:
                 return False
 
-        if getattr(user, 'user_type', None) == 'projectadmin':
+        if user_type == 'projectadmin':
             # projectadmin can view/edit/delete observations created by their clientusers
             # Check if the observation's created_by user was created by this projectadmin
             if obj.created_by and obj.created_by.created_by == user:

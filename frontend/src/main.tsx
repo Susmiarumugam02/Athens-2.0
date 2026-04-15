@@ -1,8 +1,10 @@
 import React, { useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import "@/styles/sap/enable-sap.css";
+import "./styles/compact-kpi.css";
 import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ConfigProvider } from 'antd';
 import { AppRouter } from "./lib/router";
 import { Toaster } from "sonner";
 import { useAuthStore } from "./store/authStore";
@@ -29,10 +31,18 @@ function AppWrapper() {
   }, [])
 
   return (
-    <>
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: '#1890ff',
+          borderRadius: 8,
+          fontSize: 14,
+        },
+      }}
+    >
       <AppRouter />
       <Toaster position="top-right" richColors />
-    </>
+    </ConfigProvider>
   )
 }
 

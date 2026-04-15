@@ -16,10 +16,16 @@ export default defineConfig({
       '@features': path.resolve(__dirname, './src/features'),
     },
   },
+  optimizeDeps: {
+    include: ['antd'],
+  },
   build: {
     rollupOptions: {
       output: {
-        manualChunks: undefined,
+        manualChunks: {
+          'antd-vendor': ['antd'],
+          'antd-icons': ['@ant-design/icons'],
+        },
       },
     },
   },

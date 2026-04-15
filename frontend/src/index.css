@@ -42,6 +42,14 @@
     --app-surface: 0 0% 100%;
     --app-hover: 210 40% 96.1%;
     
+    /* Incident Management CSS Variables */
+    --color-ui-base: #ffffff;
+    --color-border: #eef0f4;
+    --color-text-base: #1e293b;
+    --color-ui-active: #fafafa;
+    --color-ui-hover: #f7f8fa;
+    --color-primary: #1890ff;
+    
     --radius: 0.5rem;
   }
 
@@ -83,6 +91,14 @@
     --app-canvas: 222.2 84% 4.9%;
     --app-surface: 217.2 32.6% 17.5%;
     --app-hover: 217.2 32.6% 20%;
+    
+    /* Incident Management Dark Mode */
+    --color-ui-base: #1A1D26;
+    --color-border: #2C313D;
+    --color-text-base: #e3e4e8;
+    --color-ui-active: #242833;
+    --color-ui-hover: #242833;
+    --color-primary: #5865f2;
   }
 
   * {

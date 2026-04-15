@@ -3,26 +3,65 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
-from .models import SafetyObservation, SafetyObservationFile
-from .serializers import SafetyObservationSerializer
+from django.utils import timezone
+from django.http import StreamingHttpResponse
+from django.db.models import Count
+from datetime import timedelta
+import csv
+from .models import SafetyObservation, SafetyObservationFile, SafetyObservationAttachment
+from .serializers import SafetyObservationSerializer, SafetyObservationAttachmentSerializer
 from .permissions import SafetyObservationPermission
-from permissions.decorators import require_permission
-from authentication.tenant_scoped import TenantScopedViewSet
+from .audit import log_change
 import logging
 
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
-class SafetyObservationViewSet(TenantScopedViewSet):
+# Allowed MIME types and max file size
+ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']
+MAX_FILE_SIZE_MB = 10
+MAX_ATTACHMENTS_PER_OBSERVATION = 10
+
+class SafetyObservationViewSet(viewsets.ModelViewSet):
     serializer_class = SafetyObservationSerializer
     permission_classes = [IsAuthenticated, SafetyObservationPermission]
     lookup_field = 'observationID'
-    model = SafetyObservation  # Required for permission decorator
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        return queryset.order_by('-created_at')
+        user = self.request.user
+        tenant_id = getattr(user, 'athens_tenant_id', None)
+        if not tenant_id:
+            return SafetyObservation.objects.none()
+        
+        qs = SafetyObservation.objects.filter(athens_tenant_id=tenant_id).order_by('-created_at')
+        
+        # SLA filters
+        today = timezone.localdate()
+        
+        if self.request.query_params.get('overdue') == 'true':
+            qs = qs.filter(target_close_date__lt=today).exclude(observationStatus='closed')
+        
+        if self.request.query_params.get('due_soon') == 'true':
+            qs = qs.filter(
+                target_close_date__gte=today,
+                target_close_date__lte=today + timedelta(days=7)
+            ).exclude(observationStatus='closed')
+        
+        return qs
+
+    def get_object(self):
+        """Override to enforce tenant isolation on direct ID access"""
+        obj = super().get_object()
+        user = self.request.user
+        tenant_id = getattr(user, 'athens_tenant_id', None)
+        
+        # Enforce tenant boundary - prevent cross-tenant access via URL manipulation
+        if obj.athens_tenant_id != tenant_id:
+            from rest_framework.exceptions import NotFound
+            raise NotFound("Observation not found")
+        
+        return obj
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -30,32 +69,29 @@ class SafetyObservationViewSet(TenantScopedViewSet):
         return context
 
     def perform_create(self, serializer):
-        """PROJECT ISOLATION: Auto-assign project on creation and ensure data persistence"""
-        # PROJECT ISOLATION: Ensure user has a project
-        if not self.get_user_project():
+        user = self.request.user
+        tenant_id = getattr(user, 'athens_tenant_id', None)
+        if not tenant_id:
             from rest_framework.exceptions import ValidationError
-            raise ValidationError("User must be assigned to a project to create safety observations.")
+            raise ValidationError("User must have athens_tenant_id")
         
-        # Save with proper project assignment
         observation = serializer.save(
-            created_by=self.request.user,
-            project=self.get_user_project()
+            created_by=user,
+            athens_tenant_id=tenant_id
         )
         
-        # Ensure the observation is properly saved with all required fields
-        if not observation.project:
-            observation.project = self.get_user_project()
-            observation.save()
+        # Log creation
+        log_change(observation, user, 'created')
 
         # Send assignment notification if someone is assigned
         if observation.correctiveActionAssignedTo:
             self._send_assignment_notification(observation)
 
-    @require_permission('edit')
+    # @require_permission('edit')  # Disabled
     def update(self, request, *args, **kwargs):
         return super().update(request, *args, **kwargs)
     
-    @require_permission('edit')
+    # @require_permission('edit')  # Disabled
     def partial_update(self, request, *args, **kwargs):
         return super().partial_update(request, *args, **kwargs)
     
@@ -90,8 +126,27 @@ class SafetyObservationViewSet(TenantScopedViewSet):
             )
 
     def perform_update(self, serializer):
-        old_instance = SafetyObservation.objects.get(pk=serializer.instance.pk)
+        # Get old instance before save
+        old_instance = self.get_object()
+        old_data = {
+            'typeOfObservation': old_instance.typeOfObservation,
+            'severity': old_instance.severity,
+            'workLocation': old_instance.workLocation,
+            'correctiveActionAssignedTo': old_instance.correctiveActionAssignedTo,
+            'target_close_date': old_instance.target_close_date,
+        }
+        
         observation = serializer.save()
+        
+        # Log field changes
+        for field, old_val in old_data.items():
+            new_val = getattr(observation, field)
+            if old_val != new_val:
+                # Special handling for assignment changes
+                if field == 'correctiveActionAssignedTo' and old_val and new_val:
+                    log_change(observation, self.request.user, 'assigned', field, old_val, new_val)
+                else:
+                    log_change(observation, self.request.user, 'updated', field, old_val, new_val)
 
         # Check for status changes and send appropriate notifications
         self._handle_status_change_notifications(old_instance, observation)
@@ -445,35 +500,270 @@ class SafetyObservationViewSet(TenantScopedViewSet):
 
     @action(detail=False, methods=['get'], url_path='project-users')
     def project_users(self, request):
-        """Get users from the same project for assignment dropdown (only induction-trained users)"""
+        """Get users from the same tenant for assignment dropdown"""
         user = request.user
+        tenant_id = getattr(user, 'athens_tenant_id', None)
         
-        # PROJECT ISOLATION: Only return users from the same project
-        if not user.project:
+        if not tenant_id:
             return Response({
-                'error': 'Project access required',
-                'message': 'User must be assigned to a project to access project users.'
+                'error': 'Tenant access required',
+                'message': 'User must have athens_tenant_id.'
             }, status=status.HTTP_403_FORBIDDEN)
         
-        # Get users from the same project using strict project isolation with induction training requirement
-        from authentication.project_isolation import apply_user_project_isolation_with_induction
-        
-        project_users = apply_user_project_isolation_with_induction(
-            User.objects.filter(is_active=True).exclude(admin_type='master'),
-            user
-        ).values('id', 'username', 'name', 'surname')
+        # Get users from the same tenant
+        project_users = User.objects.filter(
+            is_active=True,
+            athens_tenant_id=tenant_id
+        ).exclude(user_type='superadmin').values('id', 'username', 'email')
         
         # Format for dropdown
         users_list = []
         for user_data in project_users:
-            display_name = f"{user_data['name']} {user_data['surname']}".strip() if user_data['name'] else user_data['username']
             users_list.append({
                 'username': user_data['username'],
-                'display_name': display_name
+                'display_name': user_data['email'] or user_data['username']
             })
         
         return Response({
             'users': users_list,
-            'count': len(users_list),
-            'message': 'Only induction-trained users are shown'
+            'count': len(users_list)
+        })
+
+    @action(detail=True, methods=['post'], url_path='upload-attachment')
+    def upload_attachment(self, request, observationID=None):
+        """Upload attachment (photo/document) to observation"""
+        observation = self.get_object()
+        
+        # Check attachment limit
+        if observation.attachments.count() >= MAX_ATTACHMENTS_PER_OBSERVATION:
+            return Response(
+                {'error': f'Maximum {MAX_ATTACHMENTS_PER_OBSERVATION} attachments allowed per observation'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate MIME type
+        mime_type = file.content_type
+        if mime_type not in ALLOWED_MIME_TYPES:
+            return Response(
+                {'error': f'File type not allowed. Allowed types: {', '.join(ALLOWED_MIME_TYPES)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate file size
+        size_mb = file.size / (1024 * 1024)
+        if size_mb > MAX_FILE_SIZE_MB:
+            return Response(
+                {'error': f'File size exceeds {MAX_FILE_SIZE_MB}MB limit'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Create attachment
+        attachment = SafetyObservationAttachment.objects.create(
+            observation=observation,
+            athens_tenant_id=observation.athens_tenant_id,
+            file=file,
+            file_name=file.name,
+            file_type=request.data.get('file_type', 'before'),
+            mime_type=mime_type,
+            size_bytes=file.size,
+            uploaded_by=request.user
+        )
+        
+        # Log attachment addition
+        log_change(observation, request.user, 'attachment_added', details=f"File: {attachment.file_name}")
+        
+        serializer = SafetyObservationAttachmentSerializer(attachment, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get'], url_path='attachments')
+    def list_attachments(self, request, observationID=None):
+        """List all attachments for observation"""
+        observation = self.get_object()
+        attachments = observation.attachments.all()
+        serializer = SafetyObservationAttachmentSerializer(attachments, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['delete'], url_path='attachments/(?P<attachment_id>[^/.]+)')
+    def delete_attachment(self, request, observationID=None, attachment_id=None):
+        """Delete specific attachment"""
+        observation = self.get_object()
+        
+        try:
+            attachment = SafetyObservationAttachment.objects.get(
+                id=attachment_id,
+                observation=observation,
+                athens_tenant_id=observation.athens_tenant_id
+            )
+            
+            # Only creator or uploader can delete
+            if attachment.uploaded_by != request.user and observation.created_by != request.user:
+                return Response(
+                    {'error': 'Permission denied'},
+                    status=status.HTTP_403_FORBIDDEN
+            )
+            
+            # Log before deletion
+            log_change(observation, request.user, 'attachment_deleted', details=f"File: {attachment.file_name}")
+            
+            attachment.file.delete()  # Delete file from storage
+            attachment.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+            
+        except SafetyObservationAttachment.DoesNotExist:
+            return Response({'error': 'Attachment not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['post'], url_path='transition')
+    def transition(self, request, observationID=None):
+        """Transition observation status (draft→submitted→closed)"""
+        observation = self.get_object()
+        to_status = request.data.get('to_status')
+        
+        if not to_status:
+            return Response({'error': 'to_status required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        old_status = observation.observationStatus
+        
+        # Validate transitions
+        allowed_transitions = {
+            'draft': ['submitted'],
+            'submitted': ['closed', 'draft'],  # Can reopen to draft
+            'closed': ['submitted']  # Can reopen
+        }
+        
+        if to_status not in allowed_transitions.get(old_status, []):
+            return Response(
+                {'error': f'Cannot transition from {old_status} to {to_status}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Permission checks
+        if to_status == 'submitted' and observation.created_by != request.user:
+            return Response({'error': 'Only creator can submit'}, status=status.HTTP_403_FORBIDDEN)
+        
+        if to_status == 'closed' and not (request.user.is_staff or observation.created_by == request.user):
+            return Response({'error': 'Only owner/admin can close'}, status=status.HTTP_403_FORBIDDEN)
+        
+        # Update status and timestamps
+        observation.observationStatus = to_status
+        
+        if to_status == 'submitted':
+            observation.submitted_at = timezone.now()
+        elif to_status == 'closed':
+            observation.closed_at = timezone.now()
+            observation.closed_by = request.user
+        
+        observation.save()
+        
+        # Log status change
+        log_change(observation, request.user, 'status_changed', 'observationStatus', old_status, to_status)
+        
+        serializer = self.get_serializer(observation)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], url_path='export')
+    def export_csv(self, request):
+        """Export observations to CSV with current filters applied"""
+        # Get filtered queryset (respects tenant + filters)
+        qs = self.get_queryset()
+        
+        # Optimize query
+        qs = qs.select_related('created_by').annotate(
+            attachment_count=Count('attachments')
+        )
+        
+        # CSV generator for streaming
+        def csv_generator():
+            # CSV writer setup
+            class Echo:
+                def write(self, value):
+                    return value
+            
+            writer = csv.writer(Echo())
+            
+            # Header row
+            yield writer.writerow([
+                'ID',
+                'Status',
+                'Severity',
+                'Type',
+                'Location',
+                'Assigned To',
+                'Created By',
+                'Created At',
+                'Target Close Date',
+                'Days Until Due',
+                'Is Overdue',
+                'Is Due Soon',
+                'Submitted At',
+                'Closed At',
+                'Attachment Count'
+            ])
+            
+            # Data rows
+            for obs in qs.iterator(chunk_size=100):
+                yield writer.writerow([
+                    obs.observationID,
+                    obs.observationStatus,
+                    obs.get_severity_display() if hasattr(obs, 'get_severity_display') else obs.severity,
+                    obs.typeOfObservation,
+                    obs.workLocation,
+                    obs.correctiveActionAssignedTo or '',
+                    obs.created_by.username if obs.created_by else '',
+                    obs.created_at.strftime('%Y-%m-%d %H:%M:%S') if obs.created_at else '',
+                    obs.target_close_date.strftime('%Y-%m-%d') if obs.target_close_date else '',
+                    obs.days_until_due if obs.days_until_due is not None else '',
+                    'Yes' if obs.is_overdue else 'No',
+                    'Yes' if obs.is_due_soon else 'No',
+                    obs.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if obs.submitted_at else '',
+                    obs.closed_at.strftime('%Y-%m-%d %H:%M:%S') if obs.closed_at else '',
+                    obs.attachment_count
+                ])
+        
+        # Generate filename with current date
+        filename = f"safety_observations_{timezone.now().strftime('%Y-%m-%d')}.csv"
+        
+        # Create streaming response
+        response = StreamingHttpResponse(csv_generator(), content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+    
+    @action(detail=True, methods=['get'], url_path='audit-logs')
+    def audit_logs(self, request, observationID=None):
+        """Get audit trail for observation with pagination"""
+        observation = self.get_object()
+        
+        # Pagination params
+        limit = min(int(request.query_params.get('limit', 50)), 200)  # Cap at 200
+        offset = int(request.query_params.get('offset', 0))
+        
+        # Get logs with tenant isolation
+        logs = observation.audit_logs.filter(
+            athens_tenant_id=observation.athens_tenant_id
+        ).select_related('user')[offset:offset + limit]
+        
+        total_count = observation.audit_logs.filter(
+            athens_tenant_id=observation.athens_tenant_id
+        ).count()
+        
+        data = [{
+            'id': log.id,
+            'user': log.user.get_full_name() if log.user and hasattr(log.user, 'get_full_name') else (log.user.username if log.user else 'System'),
+            'action': log.get_action_display(),
+            'field_name': log.field_name,
+            'old_value': log.old_value,
+            'new_value': log.new_value,
+            'details': log.details,
+            'timestamp': log.timestamp.isoformat()
+        } for log in logs]
+        
+        return Response({
+            'results': data,
+            'count': len(data),
+            'total': total_count,
+            'limit': limit,
+            'offset': offset
         })

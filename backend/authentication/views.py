@@ -27,7 +27,7 @@ class LoginThrottle(AnonRateThrottle):
 @throttle_classes([LoginThrottle])
 def unified_login(request):
     """Unified login endpoint for all user types"""
-    email = request.data.get('email')
+    email = (request.data.get('email') or request.data.get('username') or '').strip()
     password = request.data.get('password')
     totp_code = request.data.get('totp_code')
     
@@ -461,7 +461,6 @@ def my_permissions(request):
         'roles': roles,
         'permissions': permissions,
     })
-
 
 
 

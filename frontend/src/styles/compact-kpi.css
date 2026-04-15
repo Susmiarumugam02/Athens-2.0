@@ -1,0 +1,30 @@
+/* Compact KPI Cards - Global Styles */
+.compact-kpi-card .ant-card-body {
+  padding: 12px 16px !important;
+}
+
+.compact-kpi-card .ant-statistic {
+  margin-bottom: 0 !important;
+}
+
+.compact-kpi-card .ant-statistic-title {
+  font-size: 12px !important;
+  margin-bottom: 4px !important;
+}
+
+.compact-kpi-card .ant-statistic-content {
+  font-size: 20px !important;
+}
+
+.compact-kpi-card .ant-statistic-content-value {
+  font-size: 20px !important;
+}
+
+/* Compact Row Spacing */
+.compact-kpi-row {
+  margin-bottom: 12px !important;
+}
+
+.compact-kpi-row .ant-col {
+  padding: 4px !important;
+}

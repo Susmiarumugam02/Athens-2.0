@@ -14,19 +14,24 @@ urlpatterns = [
     path('api/superadmin/', include('superadmin.urls')),
     path('api/workforce/', include('workforce.urls')),
     path('api/ergon/', include('ergon.urls')),
+    path('api/ergon/manpower/', include('ergon_manpower.urls')),
+    path('api/safety-observation/', include('safetyobservation.urls')),
+    path('api/induction-training/', include('inductiontraining.urls')),
+    path('api/job-training/', include('jobtraining.urls')),
+    path('api/tbt/', include('tbt.urls')),
     
-    # Company settings endpoints
-    path('api/company/details/', company_details, name='company-details'),
-    path('api/company/logo/', upload_logo, name='company-logo'),
-    path('api/company/documents/', company_documents, name='company-documents'),
-    path('api/company/documents/<int:doc_id>/', delete_document, name='delete-document'),
+    # Company settings endpoints (under /api/auth/ for consistency)
+    path('api/auth/company/details/', company_details, name='company-details'),
+    path('api/auth/company/logo/', upload_logo, name='company-logo'),
+    path('api/auth/company/documents/', company_documents, name='company-documents'),
+    path('api/auth/company/documents/<int:doc_id>/', delete_document, name='delete-document'),
     
     path('admin/', admin.site.urls),
 ]
 
 # Conditionally add PTW routes
 if getattr(settings, 'FEATURE_PTW_ENABLED', False):
-    urlpatterns.insert(7, path('api/ptw/', include('ptw.urls')))
+    urlpatterns.insert(7, path('api/ptw/', include('permit_to_work.urls')))
 
 # Serve media files in development
 if settings.DEBUG:

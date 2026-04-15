@@ -1,4 +1,5 @@
 # Athens 2.0 - Complete Database Schema (Updated)
+# Athens 2.0 - Complete Database Schema (Updated)
 
 ## 📊 Database Overview
 
@@ -316,7 +317,6 @@ GROUP BY cm.company_name, cm.company_type;
 ```
 
 ---
-
 **Last Updated:** February 20, 2025  
 **Database Version:** PostgreSQL 14+  
 **Total Tables:** 77 (3 new contractor compliance tables)

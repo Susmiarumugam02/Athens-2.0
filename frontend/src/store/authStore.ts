@@ -25,7 +25,7 @@ interface AuthState {
   hydrated: boolean
 
   // Actions
-  login: (credentials: { email: string; password: string; totp_code?: string }) => Promise<boolean | {requires_2fa: boolean, user_id: number}>
+  login: (credentials: { email?: string; username?: string; password: string; totp_code?: string }) => Promise<boolean | {requires_2fa: boolean, user_id: number}>
   logout: () => void
   initializeAuth: () => void
   clearError: () => void
@@ -108,7 +108,12 @@ export const useAuthStore = create<AuthState>()(
           // Store tokens
           setTokens(data.access, data.refresh)
           
-          const userData = data.user
+          const userData = data.user || {
+            id: data.user_id,
+            email: data.username || credentials.email || credentials.username || '',
+            user_type: data.django_user_type || data.usertype || 'projectadmin',
+            admin_type: data.usertype || undefined,
+          }
           
           // Normalize user type and set projectId to null for MasterAdmin
           if (userData.user_type === 'masteradmin' || userData.user_type === 'MASTER_ADMIN' || userData.user_type === 'master') {
@@ -124,8 +129,8 @@ export const useAuthStore = create<AuthState>()(
             firstLoginRequired: data.first_login_required || false,
             approvalPending: data.approval_pending || false,
             approvalStatus: data.approval_status || null,
-            mustChangePassword: data.must_change_password || data.must_reset_password || false,
-            forcePasswordReset: data.force_password_reset || false,
+            mustChangePassword: data.must_change_password || data.must_reset_password || data.isPasswordResetRequired || false,
+            forcePasswordReset: data.force_password_reset || data.isPasswordResetRequired || false,
           }
           
           set(newState)

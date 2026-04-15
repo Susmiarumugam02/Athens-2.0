@@ -18,6 +18,21 @@ Real layouts and pages with full CRUD operations for control plane management.
 - Component primitives: Reusable KPICard with 4 variants
 - Design guard: Checklist enforced for all future modules
 
+## 🛠️ Deployment & Operations
+
+**NEW:** Comprehensive deployment and troubleshooting documentation:
+- **[DEPLOYMENT_TROUBLESHOOTING.md](./DEPLOYMENT_TROUBLESHOOTING.md)** - Complete troubleshooting guide
+- **[scripts/](./scripts/)** - Automated verification and health check scripts
+  - `verify-ports.sh` - Port configuration validation
+  - `health-check.sh` - Automated health monitoring
+  - `pre-deploy-check.sh` - Pre-deployment validation
+
+**Common Issues Documented:**
+- ✅ 502 Bad Gateway (port mismatch)
+- ✅ Master admin delete errors
+- ✅ Service configuration verification
+- ✅ Automated recovery procedures
+
 ## ✅ MasterAdmin Module - COMPLETE
 
 **Self-contained tenant/company management suite** imported as a pluggable module.
@@ -55,13 +70,13 @@ Real layouts and pages with full CRUD operations for control plane management.
 
 **ERGON and Workforce are CATEGORIES, not individual modules.**
 
-**ERGON Category** (Operations & Finance):
-- Task Management (`ergon_tasks`)
-- Daily Planner (`ergon_planner`) - Full implementation with SLA tracking
-- Follow-ups (`ergon_followups`)
-- Advance/Expenses (`ergon_advance`)
-- Manpower/Machinery (`ergon_manpower`)
-- Financial Ledger (`ergon_ledger`)
+**ERGON Category** (Operations & Finance): ⭐ **ALL 6 MODULES COMPLETE**
+- Task Management (`ergon_tasks`) ✅
+- Daily Planner (`ergon_planner`) ✅ Full implementation with SLA tracking
+- Follow-ups (`ergon_followups`) ✅ **NEW**
+- Advance/Expenses (`ergon_advance`) ✅ **NEW**
+- Manpower/Machinery (`ergon_manpower`) ✅ **NEW**
+- Financial Ledger (`ergon_ledger`) ✅ **NEW**
 
 **Workforce Category** (HR & Attendance):
 - Profile Management (`workforce_profile`)
@@ -79,6 +94,8 @@ Real layouts and pages with full CRUD operations for control plane management.
 - ✅ Full routing for all components
 
 **Quick Access:**
+- [ERGON Modules Complete](./ERGON_MODULES_COMPLETE.md) ⭐ **NEW**
+- [ERGON Quick Card](./ERGON_QUICK_CARD.md) ⭐ **NEW**
 - [Component Architecture Complete](./COMPONENT_ARCHITECTURE_COMPLETE.md) ⭐ **NEW**
 - [Module Architecture Corrected](./MODULE_ARCHITECTURE_CORRECTED.md)
 - [ERGON Daily Planner Spec](./ERGON_DAILY_PLANNER_COMPLETE_SPEC.md)
@@ -86,6 +103,8 @@ Real layouts and pages with full CRUD operations for control plane management.
 - [Workforce Quick Card](./WORKFORCE_QUICK_CARD.md) ⭐ **NEW**
 - [Contractor Compliance Architecture](./CONTRACTOR_COMPLIANCE_ARCHITECTURE.md) ⭐ **NEW**
 - [Contractor Compliance Quick Card](./CONTRACTOR_COMPLIANCE_QUICK_CARD.md) ⭐ **NEW**
+- [Module Standardization Complete](./MODULE_STANDARDIZATION_COMPLETE.md) ⭐ **NEW**
+- [Module Standardization Quick Card](./MODULE_STANDARDIZATION_QUICK_CARD.md) ⭐ **NEW**
 
 **Quick Access:**
 - [MasterAdmin Quick Start](./MASTERADMIN_QUICK_START.md)
@@ -114,11 +133,11 @@ Real layouts and pages with full CRUD operations for control plane management.
 | **Superadmin UI** | **✅ Complete** | **⏳ Testing** | **✅ Complete** |
 | **MasterAdmin UI** | **✅ Skeleton** | **⏳ Testing** | **✅ Complete** |
 | **MasterAdmin Module** | **✅ Complete** | **✅ Ready** | **✅ Complete** |
-| **Service Enablement** | **✅ Complete** | **✅ Ready** | **✅ Complete** |
+| **ERGON Module** | **✅ Complete** | **✅ Ready** | **✅ Complete** |
 | **Workforce Module** | **✅ Complete** | **⏳ Testing** | **✅ Complete** |
 | **Contractor Compliance** | **✅ Complete** | **✅ Ready** | **✅ Complete** |
 
-**Overall: ✅ 100% COMPLETE | Tests: ✅ 10/10 PASSING | Integration: ✅ COMPLETE | UI: ✅ READY | Modules: ✅ 3 COMPLETE**
+**Overall: ✅ 100% COMPLETE | Tests: ✅ 10/10 PASSING | Integration: ✅ COMPLETE | UI: ✅ READY | Modules: ✅ 4 COMPLETE**
 
 ---
 
@@ -143,6 +162,18 @@ npm run dev
 ---
 
 ## 📚 Documentation
+
+### Operations & Troubleshooting ⭐ **NEW**
+- **[FINAL_CLOSURE_REPORT.md](./FINAL_CLOSURE_REPORT.md)** - Safety Observation 499 fix closure ⭐ **NEW**
+- **[FRONTEND_AUTH_FIX_COMPLETE.md](./FRONTEND_AUTH_FIX_COMPLETE.md)** - Frontend auth lifecycle fix ⭐ **NEW**
+- **[FRONTEND_AUTH_FIX_QUICK_CARD.md](./FRONTEND_AUTH_FIX_QUICK_CARD.md)** - Quick reference card ⭐ **NEW**
+- **[OPS_QUICK_REFERENCE.md](./OPS_QUICK_REFERENCE.md)** - Quick reference card for ops team
+- **[DEPLOYMENT_TROUBLESHOOTING.md](./DEPLOYMENT_TROUBLESHOOTING.md)** - Complete troubleshooting guide
+- **[ORCHESTRATOR_CHECKLIST.md](./ORCHESTRATOR_CHECKLIST.md)** - Deployment checklist
+- **[ERROR_RECTIFICATION_SUMMARY.md](./ERROR_RECTIFICATION_SUMMARY.md)** - Executive summary
+- **[INCIDENT_REPORT_20260223.md](./INCIDENT_REPORT_20260223.md)** - Recent incident analysis
+- **[scripts/README.md](./scripts/README.md)** - Automated scripts documentation
+- **[scripts/verify-auth-fix.sh](./scripts/verify-auth-fix.sh)** - Auth fix verification ⭐ **NEW**
 
 ### Quick Access
 - **[QUICK_START_SUPERADMIN.md](./QUICK_START_SUPERADMIN.md)** - Superadmin UI quick start
