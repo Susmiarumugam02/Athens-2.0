@@ -1,0 +1,331 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { Shield, TrendingUp, TrendingDown, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
+import { safetyObservationApi } from './api';
+import toast from 'react-hot-toast';
+
+interface KPICardProps {
+  title: string;
+  value: number | string;
+  subtitle?: string;
+  icon: React.ReactNode;
+  trend?: { value: number; isUp: boolean };
+  onClick?: () => void;
+  color?: string;
+}
+
+const KPICard: React.FC<KPICardProps> = ({ title, value, subtitle, icon, trend, onClick, color = 'text-primary' }) => (
+  <div
+    onClick={onClick}
+    className={`bg-card border border-border rounded-xl p-3 ${onClick ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}`}
+  >
+    <div className="flex items-start justify-between mb-2">
+      <div className={`p-2 rounded-lg bg-accent ${color}`}>
+        {icon}
+      </div>
+      {trend && (
+        <div className={`flex items-center gap-1 text-xs ${trend.isUp ? 'text-green-600' : 'text-red-600'}`}>
+          {trend.isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+          {Math.abs(trend.value)}%
+        </div>
+      )}
+    </div>
+    <div className="text-2xl font-bold text-foreground mb-0.5">{value}</div>
+    <div className="text-xs font-medium text-foreground mb-0.5">{title}</div>
+    {subtitle && <div className="text-xs text-muted-foreground">{subtitle}</div>}
+  </div>
+);
+
+const SafetyObservationLanding: React.FC = () => {
+  const [observations, setObservations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState('30');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [severityFilter, setSeverityFilter] = useState('all');
+  const [slaFilter, setSlaFilter] = useState('all');
+
+  useEffect(() => {
+    loadData();
+  }, [dateRange, statusFilter, severityFilter, slaFilter]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (slaFilter === 'overdue') params.append('overdue', 'true');
+      if (slaFilter === 'due_soon') params.append('due_soon', 'true');
+      
+      const response = await safetyObservationApi.getAll();
+      setObservations(response.data);
+    } catch (error) {
+      toast.error('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const metrics = useMemo(() => {
+    const filtered = observations.filter(obs => {
+      const matchStatus = statusFilter === 'all' || obs.observationStatus === statusFilter;
+      const matchSeverity = severityFilter === 'all' || obs.severity === severityFilter;
+      return matchStatus && matchSeverity;
+    });
+
+    const total = filtered.length;
+    const open = filtered.filter(o => o.observationStatus !== 'closed').length;
+    const overdue = filtered.filter(o => o.is_overdue).length;
+    const dueSoon = filtered.filter(o => o.is_due_soon).length;
+    const closed = filtered.filter(o => o.observationStatus === 'closed').length;
+    const closureRate = total > 0 ? Math.round((closed / total) * 100) : 0;
+
+    // Top locations
+    const locationMap = new Map<string, { count: number; overdue: number }>();
+    filtered.forEach(obs => {
+      const loc = obs.workLocation || 'Unknown';
+      const existing = locationMap.get(loc) || { count: 0, overdue: 0 };
+      locationMap.set(loc, {
+        count: existing.count + 1,
+        overdue: existing.overdue + (obs.is_overdue ? 1 : 0)
+      });
+    });
+    const topLocations = Array.from(locationMap.entries())
+      .map(([location, data]) => ({ location, ...data }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // Recent activity
+    const recent = [...filtered]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 8);
+
+    return { total, open, overdue, dueSoon, closed, closureRate, topLocations, recent };
+  }, [observations, statusFilter, severityFilter]);
+
+  const handleKPIClick = (_filter: { status?: string; sla?: string }) => {
+    // KPI click handled by parent component
+  };
+
+  const getSeverityColor = (severity: string) => {
+    const colors: any = {
+      low: 'bg-blue-100 text-blue-800',
+      medium: 'bg-yellow-100 text-yellow-800',
+      high: 'bg-orange-100 text-orange-800',
+      critical: 'bg-red-100 text-red-800'
+    };
+    return colors[severity] || 'bg-gray-100 text-gray-800';
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 bg-accent rounded w-1/3"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="h-32 bg-accent rounded-xl"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Filters */}
+      <div className="bg-card border border-border rounded-xl p-4">
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-muted-foreground">Period:</label>
+            <select
+              value={dateRange}
+              onChange={(e) => setDateRange(e.target.value)}
+              className="px-3 py-1.5 pr-8 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary w-auto"
+            >
+              <option value="7">Last 7 days</option>
+              <option value="30">Last 30 days</option>
+              <option value="90">Last 90 days</option>
+            </select>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-muted-foreground">Status:</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-1.5 pr-8 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary w-auto"
+            >
+              <option value="all">All</option>
+              <option value="draft">Draft</option>
+              <option value="submitted">Submitted</option>
+              <option value="closed">Closed</option>
+            </select>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-muted-foreground">Severity:</label>
+            <select
+              value={severityFilter}
+              onChange={(e) => setSeverityFilter(e.target.value)}
+              className="px-3 py-1.5 pr-8 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary w-auto"
+            >
+              <option value="all">All</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-muted-foreground">SLA:</label>
+            <select
+              value={slaFilter}
+              onChange={(e) => setSlaFilter(e.target.value)}
+              className="px-3 py-1.5 pr-8 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary w-auto"
+            >
+              <option value="all">All</option>
+              <option value="overdue">Overdue</option>
+              <option value="due_soon">Due Soon</option>
+            </select>
+          </div>
+          
+          {(statusFilter !== 'all' || severityFilter !== 'all' || slaFilter !== 'all') && (
+            <button
+              onClick={() => {
+                setStatusFilter('all');
+                setSeverityFilter('all');
+                setSlaFilter('all');
+              }}
+              className="px-3 py-1.5 text-sm text-primary hover:text-primary/80 font-medium"
+            >
+              Clear Filters
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <KPICard
+          title="Total Observations"
+          value={metrics.total}
+          subtitle={`Last ${dateRange} days`}
+          icon={<Shield className="h-5 w-5" />}
+          onClick={() => navigate('/app/safety-observation/list')}
+        />
+        <KPICard
+          title="Open Observations"
+          value={metrics.open}
+          subtitle="Pending closure"
+          icon={<Clock className="h-5 w-5" />}
+          color="text-blue-600"
+          onClick={() => handleKPIClick({ status: 'submitted' })}
+        />
+        <KPICard
+          title="Overdue"
+          value={metrics.overdue}
+          subtitle="Past target date"
+          icon={<AlertTriangle className="h-5 w-5" />}
+          color="text-red-600"
+          onClick={() => handleKPIClick({ sla: 'overdue' })}
+        />
+        <KPICard
+          title="Due Soon"
+          value={metrics.dueSoon}
+          subtitle="Within 7 days"
+          icon={<Clock className="h-5 w-5" />}
+          color="text-yellow-600"
+          onClick={() => handleKPIClick({ sla: 'due_soon' })}
+        />
+        <KPICard
+          title="Closed"
+          value={metrics.closed}
+          subtitle="Completed"
+          icon={<CheckCircle className="h-5 w-5" />}
+          color="text-green-600"
+          onClick={() => handleKPIClick({ status: 'closed' })}
+        />
+        <KPICard
+          title="Closure Rate"
+          value={`${metrics.closureRate}%`}
+          subtitle="Of total observations"
+          icon={<TrendingUp className="h-5 w-5" />}
+          color="text-green-600"
+        />
+      </div>
+
+      {/* Insights Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top Risk Locations */}
+        <div className="bg-card border border-border rounded-xl p-6">
+          <h3 className="text-lg font-semibold mb-4">Top Risk Locations</h3>
+          {metrics.topLocations.length > 0 ? (
+            <div className="space-y-2">
+              {metrics.topLocations.map((loc, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3 bg-accent rounded-lg"
+                >
+                  <div className="flex-1">
+                    <div className="font-medium">{loc.location}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {loc.count} observation{loc.count !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+                  {loc.overdue > 0 && (
+                    <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-medium">
+                      {loc.overdue} overdue
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">No data available</div>
+          )}
+        </div>
+
+        {/* Recent Activity */}
+        <div className="bg-card border border-border rounded-xl p-6">
+          <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
+          {metrics.recent.length > 0 ? (
+            <div className="space-y-2">
+              {metrics.recent.map((obs) => (
+                <div
+                  key={obs.observationID}
+                  className="flex items-center gap-3 p-3 bg-accent rounded-lg"
+                >
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${getSeverityColor(obs.severity)}`}>
+                    {obs.severity}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{obs.workLocation}</div>
+                    <div className="text-xs text-muted-foreground truncate">{obs.typeOfObservation}</div>
+                  </div>
+                  {obs.is_overdue && (
+                    <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-medium whitespace-nowrap">
+                      Overdue
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">No recent activity</div>
+          )}
+        </div>
+      </div>
+
+      {/* Empty State */}
+      {observations.length === 0 && !loading && (
+        <div className="bg-card border border-border rounded-xl p-12 text-center">
+          <Shield className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-xl font-semibold mb-2">No Safety Observations Yet</h3>
+          <p className="text-muted-foreground mb-6">Get started by creating your first safety observation</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default SafetyObservationLanding;

@@ -1,0 +1,152 @@
+import React from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Users, Calendar, ClipboardList, Briefcase, DollarSign, TrendingUp, TrendingDown, CheckCircle } from 'lucide-react'
+import { pageStyles, kpiCardStyles, moduleCardStyles, gridStyles, colors, getHoverStyle } from '@/styles/designSystem'
+
+const WORKFORCE_COMPONENTS = [
+  { code: 'workforce_profile', name: 'Profile Management', description: 'Employee profiles and information', icon: Users, href: '/app/workforce/profiles', color: '#1890ff' },
+  { code: 'workforce_attendance', name: 'Attendance', description: 'Track employee attendance', icon: Calendar, href: '/app/workforce/attendance', color: '#52c41a' },
+  { code: 'workforce_leave', name: 'Leave Management', description: 'Leave requests and approvals', icon: ClipboardList, href: '/app/workforce/leave', color: '#722ed1' },
+  { code: 'workforce_employee', name: 'Employee Management', description: 'Comprehensive employee data', icon: Briefcase, href: '/app/workforce/employees', color: '#13c2c2' },
+  { code: 'workforce_payroll', name: 'Payroll & Wages', description: 'Salary and wage processing', icon: DollarSign, href: '/app/workforce/payroll', color: '#eb2f96' },
+]
+
+const mockMetrics = {
+  totalEmployees: 156,
+  activeEmployees: 142,
+  onLeave: 8,
+  pendingLeaves: 12,
+  presentToday: 138,
+  avgAttendance: 92,
+  monthlyPayroll: 4850000,
+  departments: 8
+}
+
+interface KPICardProps {
+  title: string
+  value: number | string
+  subtitle?: string
+  icon: React.ReactNode
+  trend?: { value: number; isUp: boolean }
+  onClick?: () => void
+}
+
+const KPICard: React.FC<KPICardProps> = ({ title, value, subtitle, icon, trend, onClick }) => {
+  const [isHovered, setIsHovered] = React.useState(false);
+  return (
+    <div
+      onClick={onClick}
+      style={isHovered && onClick ? getHoverStyle(kpiCardStyles.container) : kpiCardStyles.container}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div style={kpiCardStyles.iconRow}>
+        <div style={kpiCardStyles.icon}>{icon}</div>
+        {trend && (
+          <div style={{ ...kpiCardStyles.trend, color: trend.isUp ? colors.success : colors.error }}>
+            {trend.isUp ? <TrendingUp style={{ width: '14px', height: '14px' }} /> : <TrendingDown style={{ width: '14px', height: '14px' }} />}
+            {Math.abs(trend.value)}%
+          </div>
+        )}
+      </div>
+      <div>
+        <div style={kpiCardStyles.value}>{value}</div>
+        <div style={kpiCardStyles.label}>{title}</div>
+        {subtitle && <div style={kpiCardStyles.subtitle}>{subtitle}</div>}
+      </div>
+    </div>
+  )
+}
+
+export default function WorkforceLandingPage() {
+  const navigate = useNavigate()
+  const [hoveredCard, setHoveredCard] = React.useState<string | null>(null)
+
+  return (
+    <div style={pageStyles.container}>
+      {/* Header */}
+      <div style={pageStyles.header}>
+        <h1 style={pageStyles.title}>Workforce</h1>
+        <p style={{ margin: 0, color: colors.textMuted }}>HR, Attendance & Leave Management - Real-time tracking and analytics</p>
+      </div>
+
+      {/* KPI Cards */}
+      <div style={gridStyles.kpiGrid}>
+        <KPICard
+          title="Total Employees"
+          value={mockMetrics.totalEmployees}
+          subtitle="All employees"
+          icon={<Users style={{ width: '20px', height: '20px' }} />}
+          trend={{ value: 8, isUp: true }}
+        />
+        <KPICard
+          title="Active"
+          value={mockMetrics.activeEmployees}
+          subtitle="Working"
+          icon={<CheckCircle style={{ width: '20px', height: '20px', color: '#52c41a' }} />}
+        />
+        <KPICard
+          title="On Leave"
+          value={mockMetrics.onLeave}
+          subtitle="Currently away"
+          icon={<Calendar style={{ width: '20px', height: '20px', color: '#faad14' }} />}
+        />
+        <KPICard
+          title="Pending Leaves"
+          value={mockMetrics.pendingLeaves}
+          subtitle="Awaiting approval"
+          icon={<ClipboardList style={{ width: '20px', height: '20px', color: '#ff7a45' }} />}
+        />
+        <KPICard
+          title="Present Today"
+          value={mockMetrics.presentToday}
+          subtitle="Checked in"
+          icon={<CheckCircle style={{ width: '20px', height: '20px', color: '#52c41a' }} />}
+        />
+        <KPICard
+          title="Avg Attendance"
+          value={`${mockMetrics.avgAttendance}%`}
+          subtitle="This month"
+          icon={<TrendingUp style={{ width: '20px', height: '20px', color: '#1890ff' }} />}
+        />
+        <KPICard
+          title="Monthly Payroll"
+          value={`₹${(mockMetrics.monthlyPayroll / 100000).toFixed(1)}L`}
+          subtitle="Total salary"
+          icon={<DollarSign style={{ width: '20px', height: '20px', color: '#52c41a' }} />}
+        />
+        <KPICard
+          title="Departments"
+          value={mockMetrics.departments}
+          subtitle="Active"
+          icon={<Briefcase style={{ width: '20px', height: '20px', color: '#722ed1' }} />}
+        />
+      </div>
+
+      {/* Workforce Modules */}
+      <div>
+        <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px' }}>Workforce Modules</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+          {WORKFORCE_COMPONENTS.map((component) => {
+            const Icon = component.icon
+            return (
+              <div
+                key={component.code}
+                onClick={() => navigate(component.href)}
+                style={hoveredCard === component.code ? getHoverStyle(moduleCardStyles.container) : moduleCardStyles.container}
+                onMouseEnter={() => setHoveredCard(component.code)}
+                onMouseLeave={() => setHoveredCard(null)}
+              >
+                <div style={{ ...moduleCardStyles.iconWrapper, background: component.color }}>
+                  <Icon style={{ width: '24px', height: '24px', color: '#fff' }} />
+                </div>
+                <h3 style={moduleCardStyles.title}>{component.name}</h3>
+                <p style={moduleCardStyles.description}>{component.description}</p>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}

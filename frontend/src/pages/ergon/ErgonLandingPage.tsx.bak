@@ -1,0 +1,157 @@
+import React from 'react'
+import { useNavigate } from 'react-router-dom'
+import { CheckSquare, Calendar, Bell, FileText, Users, Briefcase, TrendingUp, TrendingDown, DollarSign, Clock, AlertCircle } from 'lucide-react'
+import { pageStyles, kpiCardStyles, moduleCardStyles, gridStyles, colors, getHoverStyle, gradients } from '@/styles/designSystem'
+
+const ERGON_COMPONENTS = [
+  { code: 'ergon_tasks', name: 'Task Management', description: 'Create and manage tasks', icon: CheckSquare, href: '/app/ergon/tasks', color: '#1890ff' },
+  { code: 'ergon_planner', name: 'Daily Planner', description: 'Daily task execution with SLA tracking', icon: Calendar, href: '/app/ergon/planner', color: '#722ed1' },
+  { code: 'ergon_followups', name: 'Follow-ups', description: 'Track follow-ups and reminders', icon: Bell, href: '/app/ergon/followups', color: '#fa8c16' },
+  { code: 'ergon_advance', name: 'Advance/Expenses', description: 'Manage advances and expenses', icon: FileText, href: '/app/ergon/advance', color: '#52c41a' },
+  { code: 'ergon_manpower', name: 'Manpower/Machinery', description: 'Resource allocation', icon: Users, href: '/app/ergon/manpower', color: '#13c2c2' },
+  { code: 'ergon_ledger', name: 'Financial Ledger', description: 'Financial tracking', icon: Briefcase, href: '/app/ergon/ledger', color: '#eb2f96' },
+]
+
+const mockData = {
+  kpis: {
+    totalTasks: 245,
+    activeTasks: 89,
+    completedTasks: 156,
+    overdueTask: 12,
+    totalExpenses: 485000,
+    pendingApprovals: 8,
+    resourceUtilization: 78,
+    budgetUtilization: 65
+  }
+}
+
+interface KPICardProps {
+  title: string
+  value: number | string
+  subtitle?: string
+  icon: React.ReactNode
+  trend?: { value: number; isUp: boolean }
+  onClick?: () => void
+  color?: string
+}
+
+const KPICard: React.FC<KPICardProps> = ({ title, value, subtitle, icon, trend, onClick, color }) => {
+  const [isHovered, setIsHovered] = React.useState(false);
+  return (
+    <div
+      onClick={onClick}
+      style={isHovered && onClick ? getHoverStyle(kpiCardStyles.container) : kpiCardStyles.container}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div style={kpiCardStyles.iconRow}>
+        <div style={kpiCardStyles.icon}>{icon}</div>
+        {trend && (
+          <div style={{ ...kpiCardStyles.trend, color: trend.isUp ? colors.success : colors.error }}>
+            {trend.isUp ? <TrendingUp style={{ width: '14px', height: '14px' }} /> : <TrendingDown style={{ width: '14px', height: '14px' }} />}
+            {Math.abs(trend.value)}%
+          </div>
+        )}
+      </div>
+      <div>
+        <div style={kpiCardStyles.value}>{value}</div>
+        <div style={kpiCardStyles.label}>{title}</div>
+        {subtitle && <div style={kpiCardStyles.subtitle}>{subtitle}</div>}
+      </div>
+    </div>
+  )
+}
+
+export default function ErgonLandingPage() {
+  const navigate = useNavigate()
+  const [hoveredCard, setHoveredCard] = React.useState<string | null>(null)
+
+  return (
+    <div style={pageStyles.container}>
+      {/* Header */}
+      <div style={pageStyles.header}>
+        <h1 style={pageStyles.title}>ERGON</h1>
+        <p style={{ margin: 0, color: colors.textMuted }}>Operations & Finance Management - Real-time tracking and analytics</p>
+      </div>
+
+      {/* KPI Cards */}
+      <div style={gridStyles.kpiGrid}>
+        <KPICard
+          title="Total Tasks"
+          value={mockData.kpis.totalTasks}
+          subtitle="All time"
+          icon={<CheckSquare style={{ width: '20px', height: '20px' }} />}
+          trend={{ value: 12, isUp: true }}
+        />
+        <KPICard
+          title="Active Tasks"
+          value={mockData.kpis.activeTasks}
+          subtitle="In progress"
+          icon={<Clock style={{ width: '20px', height: '20px', color: '#1890ff' }} />}
+        />
+        <KPICard
+          title="Completed"
+          value={mockData.kpis.completedTasks}
+          subtitle="This month"
+          icon={<CheckSquare style={{ width: '20px', height: '20px', color: '#52c41a' }} />}
+          trend={{ value: 8, isUp: true }}
+        />
+        <KPICard
+          title="Overdue"
+          value={mockData.kpis.overdueTask}
+          subtitle="Needs attention"
+          icon={<AlertCircle style={{ width: '20px', height: '20px', color: '#ff4d4f' }} />}
+        />
+        <KPICard
+          title="Total Expenses"
+          value={`₹${(mockData.kpis.totalExpenses / 1000).toFixed(0)}K`}
+          subtitle="This month"
+          icon={<DollarSign style={{ width: '20px', height: '20px', color: '#722ed1' }} />}
+        />
+        <KPICard
+          title="Pending Approvals"
+          value={mockData.kpis.pendingApprovals}
+          subtitle="Awaiting review"
+          icon={<Bell style={{ width: '20px', height: '20px', color: '#faad14' }} />}
+        />
+        <KPICard
+          title="Resource Util."
+          value={`${mockData.kpis.resourceUtilization}%`}
+          subtitle="Manpower"
+          icon={<Users style={{ width: '20px', height: '20px', color: '#13c2c2' }} />}
+        />
+        <KPICard
+          title="Budget Util."
+          value={`${mockData.kpis.budgetUtilization}%`}
+          subtitle="Financial"
+          icon={<Briefcase style={{ width: '20px', height: '20px', color: '#52c41a' }} />}
+        />
+      </div>
+
+      {/* ERGON Modules */}
+      <div>
+        <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px' }}>ERGON Modules</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+          {ERGON_COMPONENTS.map((component) => {
+            const Icon = component.icon
+            return (
+              <div
+                key={component.code}
+                onClick={() => navigate(component.href)}
+                style={hoveredCard === component.code ? getHoverStyle(moduleCardStyles.container) : moduleCardStyles.container}
+                onMouseEnter={() => setHoveredCard(component.code)}
+                onMouseLeave={() => setHoveredCard(null)}
+              >
+                <div style={{ ...moduleCardStyles.iconWrapper, background: component.color }}>
+                  <Icon style={{ width: '24px', height: '24px', color: '#fff' }} />
+                </div>
+                <h3 style={moduleCardStyles.title}>{component.name}</h3>
+                <p style={moduleCardStyles.description}>{component.description}</p>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}

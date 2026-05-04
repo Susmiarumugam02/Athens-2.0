@@ -1,0 +1,14 @@
+/* SecurityCenter.css — scoped to .sc-form
+   Primary fixes are in component Tailwind classes.
+   This file handles any residual white/opacity overrides
+   that Tailwind JIT may not purge correctly. */
+
+.sc-form input[type="number"],
+.sc-form input[type="text"] {
+  color-scheme: light;
+}
+
+.dark .sc-form input[type="number"],
+.dark .sc-form input[type="text"] {
+  color-scheme: dark;
+}
