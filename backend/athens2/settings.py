@@ -34,7 +34,7 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
 
 # Feature Flags
-FEATURE_PTW_ENABLED = True  # PTW module enabled
+FEATURE_PTW_ENABLED = False  # ptw app replaces permit_to_work
 
 # Application definition
 
@@ -61,11 +61,22 @@ INSTALLED_APPS = [
     'inductiontraining',
     'jobtraining',
     'tbt',
+    'worker',
+    'attendance',
+    'chatbox',
+    'environment',
+    'incidentmanagement',
+    'inspection',
+    'manpower',
+    'mom',
+    'permissions',
+    'quality',
+    'voice_translator',
+    'ai_bot',
+    'ptw',
 ]
 
-# Conditionally add PTW and dependencies
-if FEATURE_PTW_ENABLED:
-    INSTALLED_APPS += ['permit_to_work']
+
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
