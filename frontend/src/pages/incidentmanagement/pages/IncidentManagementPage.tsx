@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Layout, Breadcrumb, Modal, message } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { Layout, Breadcrumb } from 'antd';
 import IncidentDashboard from '../components/IncidentDashboard';
 import IncidentForm from '../components/IncidentForm';
 import IncidentDetail from '../components/IncidentDetail';
-import { IncidentListItem, IncidentFormData } from '../types';
+import type { IncidentFormData, IncidentListItem } from '../types';
 import { useNavigate } from 'react-router-dom';
 
 const { Content } = Layout;
@@ -34,23 +33,11 @@ const IncidentManagementPage: React.FC = () => {
     setModal({ type: null });
   };
 
-  const handleIncidentSubmit = async (data: IncidentFormData) => {
-    try {
-      // The form component handles the API call
-      message.success('Incident submitted successfully');
-      handleCloseModal();
-    } catch (error) {
-      message.error('Failed to submit incident');
-    }
-  };
-
-  const getBreadcrumbItems = () => {
-    return [
-      { title: 'Home' },
-      { title: 'Incident Management' },
-      { title: 'Dashboard' }
-    ];
-  };
+  const getBreadcrumbItems = () => [
+    { title: 'Home' },
+    { title: 'Incident Management' },
+    { title: 'Dashboard' },
+  ];
 
   const getModalTitle = () => {
     switch (modal.type) {
@@ -83,43 +70,33 @@ const IncidentManagementPage: React.FC = () => {
 
       <IncidentDashboard
         onViewIncidents={() => navigate('/dashboard/incidentmanagement/incidents')}
+        onCreateIncident={handleCreateIncident}
       />
 
-      {/* Modals */}
-      <Modal
-        title={getModalTitle()}
-        open={modal.type !== null}
-        onCancel={handleCloseModal}
-        footer={null}
-        width={getModalWidth()}
-        destroyOnHidden
-      >
-        {modal.type === 'create-incident' && (
-          <IncidentForm
-            mode="create"
-            onSubmit={handleIncidentSubmit}
-            onCancel={handleCloseModal}
-          />
-        )}
-        {modal.type === 'edit-incident' && modal.data && (
-          <IncidentForm
-            mode="edit"
-            initialData={modal.data}
-            onSubmit={handleIncidentSubmit}
-            onCancel={handleCloseModal}
-          />
-        )}
-        {modal.type === 'view-incident' && modal.data && (
-          <IncidentDetail
-            incidentId={modal.data.id}
-            onEdit={() => {
-              setModal({ type: 'edit-incident', data: modal.data });
-            }}
-
-            onClose={handleCloseModal}
-          />
-        )}
-      </Modal>
+      <Content>
+        <Modal
+          title={getModalTitle()}
+          open={modal.type !== null}
+          onCancel={handleCloseModal}
+          footer={null}
+          width={getModalWidth()}
+          destroyOnHidden
+        >
+          {modal.type === 'create-incident' && (
+            <IncidentForm mode="create" onCancel={handleCloseModal} />
+          )}
+          {modal.type === 'edit-incident' && modal.data && (
+            <IncidentForm mode="edit" initialData={modal.data} onCancel={handleCloseModal} />
+          )}
+          {modal.type === 'view-incident' && modal.data && (
+            <IncidentDetail
+              incidentId={modal.data.id}
+              onEdit={() => setModal({ type: 'edit-incident', data: modal.data })}
+              onClose={handleCloseModal}
+            />
+          )}
+        </Modal>
+      </Content>
     </div>
   );
 };

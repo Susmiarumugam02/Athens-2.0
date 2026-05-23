@@ -63,7 +63,6 @@ const LeaveApplications: React.FC = () => {
       })
       setApplications(response.data.results || [])
     } catch (error: any) {
-      console.error('Error fetching applications:', error)
       toast.error('Failed to fetch leave applications')
     } finally {
       setLoading(false)
@@ -80,7 +79,6 @@ const LeaveApplications: React.FC = () => {
       })
       setLeaveTypes(response.data.results || [])
     } catch (error: any) {
-      console.error('Error fetching leave types:', error)
       toast.error('Failed to fetch leave types')
     }
   }
@@ -95,7 +93,6 @@ const LeaveApplications: React.FC = () => {
       })
       setEmployees(response.data.results || [])
     } catch (error: any) {
-      console.error('Error fetching employees:', error)
       toast.error('Failed to fetch employees')
     }
   }

@@ -23,6 +23,36 @@ ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']
 MAX_FILE_SIZE_MB = 10
 MAX_ATTACHMENTS_PER_OBSERVATION = 10
 
+
+def _resolve_observation_context(user):
+    """
+    Resolve tenant/project context for Safety Observation without relying only
+    on the legacy athens_tenant_id UUID field. Newer company users commonly
+    have company_id/tenant FK/project FK populated after onboarding.
+    """
+    project = getattr(user, 'project', None)
+    tenant_id = getattr(user, 'company_id', None)
+
+    if not tenant_id and getattr(user, 'tenant_id', None):
+        tenant_id = getattr(user, 'tenant_id', None)
+
+    if not tenant_id:
+        raw_tenant_id = getattr(user, 'athens_tenant_id', None)
+        if raw_tenant_id is not None and str(raw_tenant_id).isdigit():
+            tenant_id = int(raw_tenant_id)
+
+    if not tenant_id and project is not None:
+        # Project.athens_tenant_id is UUID in older data; do not force it into
+        # SafetyObservation.athens_tenant_id, which is an integer. Prefer
+        # company/tenant IDs for integer tenant scoping.
+        tenant_id = getattr(project, 'company_id', None)
+
+    return {
+        'tenant_id': tenant_id,
+        'project': project,
+        'has_project': project is not None,
+    }
+
 class SafetyObservationViewSet(viewsets.ModelViewSet):
     serializer_class = SafetyObservationSerializer
     permission_classes = [IsAuthenticated, SafetyObservationPermission]
@@ -30,8 +60,16 @@ class SafetyObservationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        tenant_id = getattr(user, 'athens_tenant_id', None)
+        context = _resolve_observation_context(user)
+        tenant_id = context['tenant_id']
         if not tenant_id:
+            logger.info(
+                'SafetyObservation queryset denied: no tenant context user_id=%s user_type=%s company_id=%s project_id=%s',
+                getattr(user, 'id', None),
+                getattr(user, 'user_type', None),
+                getattr(user, 'company_id', None),
+                getattr(getattr(user, 'project', None), 'id', None),
+            )
             return SafetyObservation.objects.none()
         
         qs = SafetyObservation.objects.filter(athens_tenant_id=tenant_id).order_by('-created_at')
@@ -54,7 +92,7 @@ class SafetyObservationViewSet(viewsets.ModelViewSet):
         """Override to enforce tenant isolation on direct ID access"""
         obj = super().get_object()
         user = self.request.user
-        tenant_id = getattr(user, 'athens_tenant_id', None)
+        tenant_id = _resolve_observation_context(user)['tenant_id']
         
         # Enforce tenant boundary - prevent cross-tenant access via URL manipulation
         if obj.athens_tenant_id != tenant_id:
@@ -70,14 +108,23 @@ class SafetyObservationViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        tenant_id = getattr(user, 'athens_tenant_id', None)
+        context = _resolve_observation_context(user)
+        tenant_id = context['tenant_id']
         if not tenant_id:
             from rest_framework.exceptions import ValidationError
-            raise ValidationError("User must have athens_tenant_id")
+            logger.warning(
+                'SafetyObservation create denied: no tenant context user_id=%s user_type=%s company_id=%s project_id=%s',
+                getattr(user, 'id', None),
+                getattr(user, 'user_type', None),
+                getattr(user, 'company_id', None),
+                getattr(getattr(user, 'project', None), 'id', None),
+            )
+            raise ValidationError("Tenant context is required")
         
         observation = serializer.save(
             created_by=user,
-            athens_tenant_id=tenant_id
+            athens_tenant_id=tenant_id,
+            project=context['project'],
         )
         
         # Log creation
@@ -86,6 +133,8 @@ class SafetyObservationViewSet(viewsets.ModelViewSet):
         # Send assignment notification if someone is assigned
         if observation.correctiveActionAssignedTo:
             self._send_assignment_notification(observation)
+
+        self._send_high_risk_notifications(observation)
 
     # @require_permission('edit')  # Disabled
     def update(self, request, *args, **kwargs):
@@ -176,6 +225,77 @@ class SafetyObservationViewSet(viewsets.ModelViewSet):
                 )
         except Exception as e:
             pass
+
+    def _send_high_risk_notifications(self, observation):
+        """Notify project safety stakeholders for newly created high-risk observations."""
+        try:
+            risk_score = int(observation.severity or 0) * int(observation.likelihood or 0)
+            if risk_score < 8:
+                return
+
+            from authentication.models_notification import Notification
+
+            project = getattr(observation, 'project', None)
+            stakeholder_filters = {
+                'is_active': True,
+                'company_id': observation.athens_tenant_id,
+            }
+            if project is not None:
+                stakeholder_filters['project'] = project
+
+            stakeholders = User.objects.filter(**stakeholder_filters).exclude(id=getattr(observation.created_by, 'id', None))
+            stakeholders = stakeholders.filter(
+                user_type__in=['adminuser', 'companyuser', 'projectadmin']
+            )
+
+            safety_keywords = ['hse', 'safety', 'supervisor', 'manager', 'head']
+            recipients = []
+            seen = set()
+            for stakeholder in stakeholders[:50]:
+                designation = (getattr(stakeholder, 'designation', '') or '').lower()
+                department = (getattr(stakeholder, 'department', '') or '').lower()
+                role_type = (getattr(stakeholder, 'role_type', '') or '').lower()
+                admin_type = (getattr(stakeholder, 'admin_type', '') or '').lower()
+                should_notify = (
+                    role_type == 'admin'
+                    or admin_type in ['client', 'epc', 'clientuser', 'epcuser']
+                    or any(keyword in designation or keyword in department for keyword in safety_keywords)
+                )
+                if should_notify and stakeholder.id not in seen:
+                    seen.add(stakeholder.id)
+                    recipients.append(stakeholder)
+
+            if not recipients:
+                return
+
+            risk_level = 'Critical' if risk_score >= 12 else 'High'
+            summary = (observation.safetyObservationFound or '')[:180]
+            Notification.objects.bulk_create([
+                Notification(
+                    user=recipient,
+                    title=f'{risk_level} safety observation reported',
+                    message=f'{observation.observationID}: {summary}',
+                    notification_type='safety_observation_assigned',
+                    data={
+                        'observation_id': observation.observationID,
+                        'risk_score': risk_score,
+                        'risk_level': risk_level,
+                        'classification': observation.classification,
+                        'work_location': observation.workLocation,
+                    },
+                    link=f'/dashboard/safetyobservation/{observation.observationID}',
+                    sender=observation.created_by,
+                )
+                for recipient in recipients
+            ])
+            logger.info(
+                'SafetyObservation high-risk notifications sent observation_id=%s risk_score=%s recipients=%s',
+                observation.observationID,
+                risk_score,
+                len(recipients),
+            )
+        except Exception as e:
+            logger.warning('SafetyObservation high-risk notification skipped: %s', str(e))
 
     def _handle_status_change_notifications(self, old_instance, new_instance):
         """Handle notifications based on status changes"""
@@ -502,31 +622,66 @@ class SafetyObservationViewSet(viewsets.ModelViewSet):
     def project_users(self, request):
         """Get users from the same tenant for assignment dropdown"""
         user = request.user
-        tenant_id = getattr(user, 'athens_tenant_id', None)
+        context = _resolve_observation_context(user)
+        tenant_id = context['tenant_id']
+
+        logger.info(
+            'SafetyObservation project-users context user_id=%s tenant_id=%s project_id=%s company_id=%s has_project=%s',
+            getattr(user, 'id', None),
+            tenant_id,
+            getattr(context['project'], 'id', None),
+            getattr(user, 'company_id', None),
+            context['has_project'],
+        )
         
         if not tenant_id:
             return Response({
                 'error': 'Tenant access required',
-                'message': 'User must have athens_tenant_id.'
+                'message': 'Your account is missing tenant access. Contact your administrator.',
+                'project_context': {
+                    'tenant_id': None,
+                    'project_id': None,
+                    'project_name': None,
+                    'has_project': False,
+                    'department': getattr(user, 'department', '') or '',
+                    'work_location': '',
+                }
             }, status=status.HTTP_403_FORBIDDEN)
         
         # Get users from the same tenant
         project_users = User.objects.filter(
             is_active=True,
-            athens_tenant_id=tenant_id
-        ).exclude(user_type='superadmin').values('id', 'username', 'email')
+            company_id=tenant_id,
+        ).exclude(user_type='superadmin')
+
+        if context['project'] is not None:
+            project_users = project_users.filter(project=context['project'])
+
+        project_users = project_users.values('id', 'username', 'email', 'name', 'surname', 'department')
         
         # Format for dropdown
         users_list = []
         for user_data in project_users:
+            display_name = ' '.join(
+                part for part in [user_data.get('name'), user_data.get('surname')] if part
+            ).strip()
             users_list.append({
                 'username': user_data['username'],
-                'display_name': user_data['email'] or user_data['username']
+                'display_name': display_name or user_data['email'] or user_data['username'],
+                'department': user_data.get('department') or '',
             })
         
         return Response({
             'users': users_list,
-            'count': len(users_list)
+            'count': len(users_list),
+            'project_context': {
+                'tenant_id': tenant_id,
+                'project_id': getattr(context['project'], 'id', None),
+                'project_name': getattr(context['project'], 'projectName', None),
+                'has_project': context['has_project'],
+                'department': getattr(user, 'department', '') or '',
+                'work_location': getattr(context['project'], 'location', '') if context['project'] else '',
+            }
         })
 
     @action(detail=True, methods=['post'], url_path='upload-attachment')
@@ -549,7 +704,7 @@ class SafetyObservationViewSet(viewsets.ModelViewSet):
         mime_type = file.content_type
         if mime_type not in ALLOWED_MIME_TYPES:
             return Response(
-                {'error': f'File type not allowed. Allowed types: {', '.join(ALLOWED_MIME_TYPES)}'},
+                {'error': f'File type not allowed. Allowed types: {", ".join(ALLOWED_MIME_TYPES)}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         

@@ -60,7 +60,6 @@ const OfferManagement: React.FC<OfferManagementProps> = ({
       onSuccess()
       onClose()
     } catch (error: any) {
-      console.error('Error sending offer:', error)
       toast.error(error.response?.data?.detail || 'Failed to send offer')
     } finally {
       setLoading(false)

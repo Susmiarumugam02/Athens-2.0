@@ -46,7 +46,6 @@ export const CycleCountManager: React.FC = () => {
       const response = await inventoryApi.getCategoriesDropdown();
       setCategories(response || []);
     } catch (error: any) {
-      console.error('Failed to load categories:', error);
     }
   };
 
@@ -55,7 +54,6 @@ export const CycleCountManager: React.FC = () => {
       const response = await inventoryApi.getWarehousesDropdown();
       setWarehouses(response || []);
     } catch (error: any) {
-      console.error('Failed to load warehouses:', error);
     }
   };
 

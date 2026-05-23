@@ -74,7 +74,6 @@ const SimpleProformaForm: React.FC<SimpleProformaFormProps> = ({
     e.preventDefault()
     
     if (loading) {
-      console.log('Form already submitting, preventing double submission')
       return // Prevent double submission
     }
     
@@ -85,7 +84,6 @@ const SimpleProformaForm: React.FC<SimpleProformaFormProps> = ({
     }
     
     setLoading(true)
-    console.log('Starting proforma creation...')
 
     try {
       // Validate that at least some items are selected
@@ -199,7 +197,6 @@ const SimpleProformaForm: React.FC<SimpleProformaFormProps> = ({
       toast.success(editingInvoice ? 'Proforma Invoice updated successfully!' : 'Proforma Invoice created successfully!')
       onSuccess()
     } catch (error: any) {
-      console.error('Error creating proforma:', error)
       toast.error('Failed to create proforma invoice')
     } finally {
       setLoading(false)

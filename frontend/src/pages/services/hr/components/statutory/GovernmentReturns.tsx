@@ -53,7 +53,6 @@ const GovernmentReturns: React.FC = () => {
       })
       setReturns(response.data.results || [])
     } catch (error) {
-      console.error('Error fetching government returns:', error)
       toast.error('Failed to load government returns')
     } finally {
       setLoading(false)
@@ -102,7 +101,6 @@ const GovernmentReturns: React.FC = () => {
       })
       fetchReturns()
     } catch (error: any) {
-      console.error('Error generating return:', error)
       toast.error('Failed to generate return')
     } finally {
       setGenerating(false)
@@ -120,7 +118,6 @@ const GovernmentReturns: React.FC = () => {
       setSelectedReturn(response.data)
       setViewModalVisible(true)
     } catch (error: any) {
-      console.error('Error viewing return:', error)
       toast.error('Failed to load return details')
     }
   }
@@ -137,7 +134,6 @@ const GovernmentReturns: React.FC = () => {
       toast.success(response.data.message)
       fetchReturns()
     } catch (error: any) {
-      console.error('Error submitting return:', error)
       toast.error('Failed to submit return')
     }
   }

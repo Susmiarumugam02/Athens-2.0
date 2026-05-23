@@ -56,7 +56,7 @@ const SafetyObservationList: React.FC<SafetyObservationListProps> = ({ onView, o
       }
       const exportUrl = `/api/safety-observation/export/?${params.toString()}`;
       
-      fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8004'}${exportUrl}`, {
+      fetch(`${import.meta.env.VITE_API_URL || ''}${exportUrl}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       .then(response => response.blob())

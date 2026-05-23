@@ -34,7 +34,6 @@ export const SimpleGovernmentIntegration: React.FC = () => {
       const response = await apiClient.get('/api/finance/customers/')
       setCustomers(response.data.results || [])
     } catch (error) {
-      console.error('Failed to fetch customers:', error)
     }
   }
 

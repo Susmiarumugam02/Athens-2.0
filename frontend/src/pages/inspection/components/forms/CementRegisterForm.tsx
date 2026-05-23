@@ -3,7 +3,7 @@ import { Card, Row, Col, Typography, Input, Table, Button, Divider, message } fr
 import type { ColumnType } from "antd/es/table";
 import { useNavigate, useParams } from "react-router-dom";
 import { DownloadOutlined, SaveOutlined } from "@ant-design/icons";
-import PageLayout from '../../../components/ui/PageLayout';
+import PageLayout from '../../../../components/ui/PageLayout';
 import { inspectionService } from '../../services/inspectionService';
 
 type AlignType = "left" | "right" | "center" | undefined;
@@ -108,7 +108,7 @@ export default function CementRegisterForm() {
         await inspectionService.createCementRegisterForm(formData);
         message.success('Form created successfully');
       }
-      navigate('/inspection/cement-register-forms');
+      navigate('/dashboard/inspection/forms/cement-register/list');
     } catch (error) {
       message.error('Failed to save form');
     } finally {

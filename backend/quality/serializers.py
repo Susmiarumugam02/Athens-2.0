@@ -1,7 +1,9 @@
 from rest_framework import serializers
 from django.utils import timezone
-from .models import (QualityStandard, QualityTemplate, QualityInspection, 
-                    QualityDefect, SupplierQuality, QualityMetrics, QualityAlert)
+from .models import (QualityStandard, QualityTemplate, QualityInspection,
+                    QualityDefect, QualityObservation, QualityObservationImage,
+                    QualityFixing, QualityActivityLog, SupplierQuality,
+                    QualityMetrics, QualityAlert)
 
 class QualityStandardSerializer(serializers.ModelSerializer):
     class Meta:
@@ -46,6 +48,157 @@ class QualityDefectSerializer(serializers.ModelSerializer):
                  'resolved_by', 'verification_notes', 'cost_impact', 'schedule_impact',
                  'customer_impact', 'photos', 'attachments', 'created_at', 'updated_at']
         read_only_fields = ['defect_id', 'created_at', 'updated_at']
+
+
+class QualityObservationImageSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = QualityObservationImage
+        fields = ['id', 'image', 'image_url', 'caption', 'ai_findings', 'uploaded_at']
+        read_only_fields = ['id', 'image_url', 'uploaded_at']
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.image and request:
+            return request.build_absolute_uri(obj.image.url)
+        if obj.image:
+            return obj.image.url
+        return ''
+
+
+class QualityObservationSerializer(serializers.ModelSerializer):
+    images = QualityObservationImageSerializer(many=True, read_only=True)
+    fixings = serializers.SerializerMethodField()
+    reporter_name = serializers.SerializerMethodField()
+    assigned_to_name = serializers.SerializerMethodField()
+    capa_owner_name = serializers.SerializerMethodField()
+    image_uploads = serializers.ListField(
+        child=serializers.ImageField(),
+        write_only=True,
+        required=False,
+    )
+
+    class Meta:
+        model = QualityObservation
+        fields = [
+            'id', 'observation_id', 'defect_title', 'product_asset', 'department',
+            'observation_type', 'inspection_area', 'observation_datetime',
+            'reporter', 'reporter_name', 'assigned_to', 'assigned_to_name',
+            'severity', 'priority', 'defect_category', 'defect_description',
+            'root_cause', 'immediate_action', 'recommended_fix',
+            'corrective_action', 'preventive_action', 'ncr_required', 'ncr_number',
+            'capa_owner', 'capa_owner_name', 'target_completion_date', 'status',
+            'verification_notes', 'quality_risk_score', 'ai_recommendations',
+            'ai_analysis', 'voice_transcript', 'translated_text', 'language_detected',
+            'media_evidence', 'attachments', 'project', 'images', 'image_uploads',
+            'fixings', 'created_at', 'updated_at', 'closed_at', 'closed_by',
+        ]
+        read_only_fields = [
+            'id', 'observation_id', 'reporter', 'reporter_name', 'project',
+            'created_at', 'updated_at', 'closed_at', 'closed_by',
+        ]
+
+    def get_reporter_name(self, obj):
+        if not obj.reporter:
+            return ''
+        return ' '.join(part for part in [obj.reporter.name, obj.reporter.surname] if part) or obj.reporter.username or obj.reporter.email
+
+    def get_assigned_to_name(self, obj):
+        if not obj.assigned_to:
+            return ''
+        return ' '.join(part for part in [obj.assigned_to.name, obj.assigned_to.surname] if part) or obj.assigned_to.username or obj.assigned_to.email
+
+    def get_capa_owner_name(self, obj):
+        if not obj.capa_owner:
+            return ''
+        return ' '.join(part for part in [obj.capa_owner.name, obj.capa_owner.surname] if part) or obj.capa_owner.username or obj.capa_owner.email
+
+    def get_fixings(self, obj):
+        return [{
+            'id': fixing.id,
+            'fixing_id': fixing.fixing_id,
+            'approval_status': fixing.approval_status,
+            'assigned_engineer_name': self.get_user_display(fixing.assigned_engineer),
+            'due_date': fixing.due_date,
+            'completion_date': fixing.completion_date,
+        } for fixing in obj.fixings.all()[:5]]
+
+    def get_user_display(self, user):
+        if not user:
+            return ''
+        return ' '.join(part for part in [user.name, user.surname] if part) or user.username or user.email
+
+    def create(self, validated_data):
+        image_uploads = validated_data.pop('image_uploads', [])
+        observation = super().create(validated_data)
+        for image in image_uploads:
+            QualityObservationImage.objects.create(observation=observation, image=image)
+        return observation
+
+    def update(self, instance, validated_data):
+        image_uploads = validated_data.pop('image_uploads', [])
+        observation = super().update(instance, validated_data)
+        for image in image_uploads:
+            QualityObservationImage.objects.create(observation=observation, image=image)
+        return observation
+
+
+class QualityFixingSerializer(serializers.ModelSerializer):
+    finding_title = serializers.CharField(source='finding.defect_title', read_only=True)
+    finding_code = serializers.CharField(source='finding.observation_id', read_only=True)
+    assigned_engineer_name = serializers.SerializerMethodField()
+    created_by_name = serializers.SerializerMethodField()
+    verified_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = QualityFixing
+        fields = [
+            'id', 'fixing_id', 'finding', 'finding_code', 'finding_title',
+            'assigned_engineer', 'assigned_engineer_name', 'corrective_action',
+            'preventive_action', 'due_date', 'completion_date', 'verification_notes',
+            'approval_status', 'closure_remarks', 'before_evidence', 'after_evidence',
+            'escalation_count', 'project', 'created_by', 'created_by_name',
+            'verified_by', 'verified_by_name', 'created_at', 'updated_at',
+        ]
+        read_only_fields = [
+            'id', 'fixing_id', 'project', 'created_by', 'created_by_name',
+            'verified_by', 'verified_by_name', 'created_at', 'updated_at',
+        ]
+
+    def get_user_display(self, user):
+        if not user:
+            return ''
+        return ' '.join(part for part in [user.name, user.surname] if part) or user.username or user.email
+
+    def get_assigned_engineer_name(self, obj):
+        return self.get_user_display(obj.assigned_engineer)
+
+    def get_created_by_name(self, obj):
+        return self.get_user_display(obj.created_by)
+
+    def get_verified_by_name(self, obj):
+        return self.get_user_display(obj.verified_by)
+
+
+class QualityActivityLogSerializer(serializers.ModelSerializer):
+    actor_name = serializers.SerializerMethodField()
+    finding_code = serializers.CharField(source='finding.observation_id', read_only=True)
+    fixing_code = serializers.CharField(source='fixing.fixing_id', read_only=True)
+
+    class Meta:
+        model = QualityActivityLog
+        fields = [
+            'id', 'finding', 'finding_code', 'fixing', 'fixing_code', 'action',
+            'from_status', 'to_status', 'notes', 'metadata', 'actor',
+            'actor_name', 'project', 'created_at',
+        ]
+        read_only_fields = ['id', 'actor', 'actor_name', 'project', 'created_at']
+
+    def get_actor_name(self, obj):
+        if not obj.actor:
+            return ''
+        return ' '.join(part for part in [obj.actor.name, obj.actor.surname] if part) or obj.actor.username or obj.actor.email
 
 class QualityInspectionSerializer(serializers.ModelSerializer):
     defects = QualityDefectSerializer(many=True, read_only=True)

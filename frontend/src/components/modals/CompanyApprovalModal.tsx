@@ -31,7 +31,6 @@ const CompanyApprovalModal: React.FC<CompanyApprovalModalProps> = ({
       await onApprove(company.id, comments)
       onClose()
     } catch (error) {
-      console.error('Error approving company:', error)
     } finally {
       setLoading(false)
     }
@@ -48,7 +47,6 @@ const CompanyApprovalModal: React.FC<CompanyApprovalModalProps> = ({
       await onReject(company.id, comments)
       onClose()
     } catch (error) {
-      console.error('Error rejecting company:', error)
     } finally {
       setLoading(false)
     }
@@ -61,7 +59,6 @@ const CompanyApprovalModal: React.FC<CompanyApprovalModalProps> = ({
         return parsed.documents || {}
       }
     } catch (e) {
-      console.error('Error parsing documents:', e)
     }
     return {}
   }
@@ -69,22 +66,9 @@ const CompanyApprovalModal: React.FC<CompanyApprovalModalProps> = ({
   if (!isOpen || !company) return null
 
   // Debug logging to see what data we have
-  console.log('🔍 DEBUG: Company data in approval modal:', company)
-  console.log('🔍 DEBUG: Company fields:', {
-    business_type: company.business_type,
-    industry: company.industry,
-    employee_count: company.employee_count,
-    annual_revenue: company.annual_revenue,
-    tax_id: company.tax_id,
-    pan_number: company.pan_number,
-    gst_number: company.gst_number,
-    registration_number: company.registration_number
-  })
 
   const documents = getDocuments()
   const hasDocuments = Object.keys(documents).length > 0
-  console.log('🔍 DEBUG: Documents:', documents)
-  console.log('🔍 DEBUG: Has documents:', hasDocuments)
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="4xl" className="max-h-[90vh] overflow-hidden">

@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Typography, Spin, List, Form, Input, Button, Checkbox, DatePicker, Select, Space, Modal, Table, App, Avatar } from 'antd';
+import { Card, Typography, Spin, Form, Input, Button, Checkbox, DatePicker, Select, Modal, Table, App, Avatar, List } from 'antd';
 import { EyeOutlined } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../../lib/api';
 import moment from 'moment';
 import { useNotificationsContext } from '../../../common/contexts/NotificationsContext';
 // import type { NotificationType } from '../../../common/utils/webSocketNotificationService'; // Unused import
-import { useTheme } // from '../../../contexts/ThemeContext' // DISABLED;
+import { useTheme } from '../../../contexts/ThemeContext';
 import PageLayout from '../../../components/ui/PageLayout';
 import MomWorkflowSummary from './MomWorkflowSummary';
 import { useAuthStore } from '../../../store/authStore';
 import { enqueueAttendanceEvent, generateClientEventId, getAttendanceDeviceId } from '../../../shared/offline/attendanceQueue';
+import MomAttendancePanel from './MomAttendancePanel';
 
 const { Title, Paragraph } = Typography;
 const { Option } = Select;
@@ -39,7 +40,8 @@ interface MomLiveData {
   meeting_datetime: string;
   points_to_discuss: string;
   participants: Participant[];
-  status?: string; // Added missing property
+  status?: string;
+  scheduled_by_id?: number;
 }
 
 interface PointItem {
@@ -161,43 +163,33 @@ const [responsibleSearchText, setResponsibleSearchText] = useState<string>('');
 const [loadingAdminUsers, setLoadingAdminUsers] = useState(false);
 
 // Get logged-in user from auth store
-const { userId: loggedInUserId } = useAuthStore();
+const loggedInUserId = useAuthStore(state => state.user?.id);
 const { sendNotification } = useNotificationsContext();
 
 const fetchAllAdminUsers = async () => {
   setLoadingAdminUsers(true);
   try {
-    // Use the new comprehensive admin users endpoint
-    const response = await api.get('/authentication/all-adminusers/');
-    // Extract users from the response and filter out the logged-in user
-    const allUsers = response.data.users || response.data;
-    const filteredUsers = allUsers.filter((user: Participant) => user.id !== loggedInUserId);
+    // Use the workforce participants endpoint — returns User IDs valid for MOM M2M
+    const response = await api.get('/api/workforce/employees/participants/');
+    const raw = Array.isArray(response.data) ? response.data : (response.data?.results ?? []);
+    const allUsers: Participant[] = raw.map((u: any) => ({
+      id: u.id,
+      name: (u.full_name || u.name || u.username || '').trim(),
+      email: u.email || '',
+      username: u.username || '',
+      status: 'pending',
+      attended: false,
+      department: u.department || '',
+      designation: u.designation || '',
+      company_name: u.company_name || '',
+      admin_type: u.admin_type || '',
+    }));
+    const filteredUsers = allUsers.filter((u) => u.id !== loggedInUserId);
     setAllAdminUsers(filteredUsers);
-    setFilteredAdminUsers(filteredUsers); // Initialize filtered list
-
-    console.log('Admin users loaded:', {
-      total: allUsers.length,
-      filtered: filteredUsers.length,
-      summary: response.data.summary,
-      usersByType: {
-        client: filteredUsers.filter((u: any) => u.admin_type === 'client').length,
-        epc: filteredUsers.filter((u: any) => u.admin_type === 'epc').length,
-        contractor: filteredUsers.filter((u: any) => u.admin_type === 'contractor').length,
-        clientuser: filteredUsers.filter((u: any) => u.admin_type === 'clientuser').length,
-        epcuser: filteredUsers.filter((u: any) => u.admin_type === 'epcuser').length,
-        contractoruser: filteredUsers.filter((u: any) => u.admin_type === 'contractoruser').length,
-      },
-      sampleUsers: filteredUsers.slice(0, 3).map((u: any) => ({
-        id: u.id,
-        username: u.username,
-        admin_type: u.admin_type,
-        user_type: u.user_type,
-        company_name: u.company_name,
-        project_id: u.project
-      }))
-    });
+    setFilteredAdminUsers(filteredUsers);
   } catch (error) {
-    message.error('Failed to load admin users.');
+    // Show error only once — do not retry automatically
+    message.error('Could not load user list for participant selection.');
   } finally {
     setLoadingAdminUsers(false);
   }
@@ -219,24 +211,6 @@ useEffect(() => {
       };
 
       setMomLiveData(updatedMomData);
-      form.setFieldsValue({
-        points_to_discuss: response.data.points_to_discuss || '',
-        participants: participantsWithTemplates.map((p: any) => ({
-          ...p,
-          attended: p.attended || false,
-        })),
-      });
-
-      console.log('Participants with signature templates:', {
-        total: participantsWithTemplates.length,
-        withTemplates: participantsWithTemplates.filter(p => p.signature_template).length,
-        templates: participantsWithTemplates.map(p => ({
-          name: p.name,
-          user_type: p.user_type,
-          admin_type: p.admin_type,
-          hasTemplate: !!p.signature_template
-        }))
-      });
 
       // Initialize pointsList from points_to_discuss if possible
       // Assuming points_to_discuss is a JSON string of points array or fallback to empty
@@ -256,7 +230,19 @@ useEffect(() => {
   };
   fetchMomLiveData();
   fetchAllAdminUsers();
-}, [id, form]);
+}, [id]);
+
+useEffect(() => {
+  if (!momLiveData) return;
+
+  form.setFieldsValue({
+    points_to_discuss: momLiveData.points_to_discuss || '',
+    participants: momLiveData.participants.map((p: any) => ({
+      ...p,
+      attended: p.attended || false,
+    })),
+  });
+}, [form, momLiveData]);
 
 
 
@@ -272,11 +258,6 @@ useEffect(() => {
       const filteredUsers = allAdminUsers.filter((user: Participant) => !existingParticipantIds.includes(user.id));
       setAvailableUsers(filteredUsers);
 
-      console.log('Available users for adding:', {
-        total: allAdminUsers.length,
-        existing_participants: existingParticipantIds.length,
-        available: filteredUsers.length
-      });
     } catch (error) {
       message.error('Failed to load users to add as participants.');
     }
@@ -368,6 +349,17 @@ useEffect(() => {
     }
   };
 
+  const handleStartMeeting = async () => {
+    if (!id) return;
+    try {
+      const res = await api.post(`/api/v1/mom/${id}/start/`);
+      setMomLiveData(prev => prev ? { ...prev, status: 'live' } : prev);
+      message.success('Meeting is now LIVE! Attendance is open.');
+    } catch (err: any) {
+      message.error(err?.response?.data?.error || 'Failed to start meeting.');
+    }
+  };
+
   const handleCompleteMeeting = async () => {
     if (!id || !momLiveData) return;
     setSubmitting(true);
@@ -408,7 +400,7 @@ useEffect(() => {
       await api.put(`/api/v1/mom/${id}/live/attendance/`, {
         points_to_discuss: JSON.stringify(pointsList),
         attendance: attendanceUpdates,
-        participants: momLiveData.participants.map(p => p.id), // send updated participant list ids
+        participants: momLiveData.participants.map(p => p.id),
       });
       message.success('Meeting details updated.');
 
@@ -442,7 +434,7 @@ useEffect(() => {
       }
 
       message.success('Meeting marked as completed.');
-      navigate('/dashboard/mom'); // Navigate back to the MoM list
+      navigate('/app/mom');
     } catch (error) {
       message.error('Failed to update or complete the meeting.');
     } finally {
@@ -451,23 +443,11 @@ useEffect(() => {
   };
 
   const handleAddPoint = async () => {
-    if (!newPoint.trim()) {
-      message.error('Please enter a point.');
-      return;
-    }
-    if (!newDueDate) {
-      message.error('Please select a due date.');
-      return;
-    }
-    if (!newResponsibleId) {
-      message.error('Please select a responsible person.');
-      return;
-    }
+    if (!newPoint.trim()) { message.error('Please enter a point.'); return; }
+    if (!newDueDate) { message.error('Please select a due date.'); return; }
+    if (!newResponsibleId) { message.error('Please select a responsible person.'); return; }
     const responsible = allAdminUsers.find(p => p.id === newResponsibleId);
-    if (!responsible) {
-      message.error('Selected responsible person is invalid.');
-      return;
-    }
+    if (!responsible) { message.error('Selected responsible person is invalid.'); return; }
     const newItem: PointItem = {
       id: Date.now(),
       point: newPoint.trim(),
@@ -515,12 +495,12 @@ useEffect(() => {
         title="Live Meeting"
         subtitle="Conducting live meeting session"
         breadcrumbs={[
-          { title: 'MOM', href: '/dashboard/mom' },
+          { title: 'MOM', href: '/app/mom' },
           { title: 'Live Meeting' }
         ]}
       >
         <div className="flex justify-center items-center min-h-64">
-          <Spin tip="Loading live meeting data..." size="large" />
+          <Spin description="Loading live meeting data..." size="large" />
         </div>
       </PageLayout>
     );
@@ -532,7 +512,7 @@ useEffect(() => {
         title="Live Meeting"
         subtitle="Meeting not found"
         breadcrumbs={[
-          { title: 'MOM', href: '/dashboard/mom' },
+          { title: 'MOM', href: '/app/mom' },
           { title: 'Live Meeting' }
         ]}
       >
@@ -546,15 +526,14 @@ useEffect(() => {
 
   // Filter participants by status
   const acceptedParticipants = momLiveData.participants.filter(p => p.status === 'accepted');
-  const rejectedParticipants = momLiveData.participants.filter(p => p.status === 'rejected');
-  const noResponseParticipants = momLiveData.participants.filter(p => p.status === 'pending' || p.status === 'noresponse');
+  const noResponseParticipants = momLiveData.participants.filter(p => p.status === 'pending' || p.status === 'noresponse' || p.status === 'rejected');
 
   return (
     <PageLayout
       title={`Live Meeting: ${momLiveData.title}`}
       subtitle="Conducting live meeting session"
       breadcrumbs={[
-        { title: 'MOM', href: '/dashboard/mom' },
+        { title: 'MOM', href: '/app/mom' },
         { title: 'Live Meeting' }
       ]}
     >
@@ -566,122 +545,78 @@ useEffect(() => {
         Live Meeting: {momLiveData.title}
       </Title>
       <Paragraph><strong>Agenda:</strong> {momLiveData.agenda}</Paragraph>
-      <Paragraph><strong>Meeting Date & Time:</strong> {new Date(momLiveData.meeting_datetime).toLocaleString()}</Paragraph>
+      <Paragraph><strong>Meeting Date &amp; Time:</strong> {new Date(momLiveData.meeting_datetime).toLocaleString()}</Paragraph>
 
       {/* Workflow Summary */}
       <MomWorkflowSummary
         participants={momLiveData.participants}
-        meetingStatus={(momLiveData.status as 'live' | 'scheduled' | 'completed' | 'cancelled') || 'live'}
+        meetingStatus={(momLiveData.status as 'live' | 'scheduled' | 'completed' | 'cancelled') || 'scheduled'}
         meetingDateTime={momLiveData.meeting_datetime}
         title={momLiveData.title}
       />
 
       <Title level={4} style={{ marginTop: 20, marginBottom: 10 }}>Accepted Participants</Title>
-      <List
+      <Table
         size="small"
         bordered
-        dataSource={acceptedParticipants} // This variable is already calculated
-        renderItem={item => (
-          <List.Item
-            key={item.id}
-            actions={[
-              <Button
-                type="link"
-                danger
-                onClick={() => {
-                  if (!momLiveData) return;
-                  const updatedParticipants = momLiveData.participants.filter(p => p.id !== item.id);
-                  setMomLiveData({
-                    ...momLiveData,
-                    participants: updatedParticipants,
-                  });
-                  message.success(`Participant ${item.name} removed.`);
-                }}
-                key="delete"
-              >
-                Delete
-              </Button>,
-            ]}
-          >
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ flex: 1 }}>
-                <Typography.Text>{item.name} ({item.email})</Typography.Text>
-              </div>
-            </div>
-          </List.Item>
-        )}
+        dataSource={acceptedParticipants}
+        rowKey="id"
+        pagination={false}
+        style={{ marginBottom: 24 }}
         locale={{ emptyText: 'No participants have accepted the invitation yet.' }}
-        style={{ marginBottom: 24 }}
+        columns={[
+          {
+            title: 'Name / Email', key: 'info',
+            render: (_: any, item: Participant) => (
+              <Typography.Text>{item.name} ({item.email})</Typography.Text>
+            ),
+          },
+          {
+            title: 'Action', key: 'action', width: 80,
+            render: (_: any, item: Participant) => (
+              <Button type="link" danger onClick={() => {
+                if (!momLiveData) return;
+                setMomLiveData({ ...momLiveData, participants: momLiveData.participants.filter(p => p.id !== item.id) });
+                message.success(`Participant ${item.name} removed.`);
+              }}>Remove</Button>
+            ),
+          },
+        ]}
       />
 
-      {/* Rejected Participants Section */}
-      <Title level={4} style={{ marginTop: 20, marginBottom: 10, color: '#ff4d4f' }}>
-        Rejected Participants ({rejectedParticipants.length})
-      </Title>
-      <List
-        size="small"
-        bordered
-        dataSource={rejectedParticipants}
-        renderItem={item => (
-          <List.Item key={item.id}>
-            <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-              <div style={{ marginRight: 12 }}>
-                <Avatar style={{ backgroundColor: '#ff4d4f' }}>
-                  {(item.name || item.email || 'U').charAt(0).toUpperCase()}
-                </Avatar>
-              </div>
-              <div style={{ flex: 1 }}>
-                <Typography.Text>{item.name} ({item.email})</Typography.Text>
-                <br />
-                <Typography.Text type="secondary" style={{ fontSize: '12px' }}>
-                  Status: Rejected • {item.company_name && `Company: ${item.company_name}`}
-                </Typography.Text>
-              </div>
-            </div>
-          </List.Item>
-        )}
-        locale={{ emptyText: 'No participants have rejected the invitation.' }}
-        style={{ marginBottom: 24 }}
-      />
-
-      {/* No Response Participants Section */}
       <Title level={4} style={{ marginTop: 20, marginBottom: 10, color: '#faad14' }}>
         No Response ({noResponseParticipants.length})
       </Title>
-      <List
+      <Table
         size="small"
         bordered
         dataSource={noResponseParticipants}
-        renderItem={item => (
-          <List.Item key={item.id}>
-            <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-              <div style={{ marginRight: 12 }}>
-                <Avatar style={{ backgroundColor: '#faad14' }}>
-                  {(item.name || item.email || 'U').charAt(0).toUpperCase()}
-                </Avatar>
-              </div>
-              <div style={{ flex: 1 }}>
-                <Typography.Text>{item.name} ({item.email})</Typography.Text>
-                <br />
-                <Typography.Text type="secondary" style={{ fontSize: '12px' }}>
-                  Status: No Response • {item.company_name && `Company: ${item.company_name}`}
-                </Typography.Text>
-              </div>
-            </div>
-          </List.Item>
-        )}
-        locale={{ emptyText: 'All participants have responded to the invitation.' }}
+        rowKey="id"
+        pagination={false}
         style={{ marginBottom: 24 }}
+        locale={{ emptyText: 'All participants have responded to the invitation.' }}
+        columns={[
+          {
+            title: 'Name / Email', key: 'info',
+            render: (_: any, item: Participant) => (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Avatar style={{ backgroundColor: '#faad14' }}>{(item.name || item.email || 'U').charAt(0).toUpperCase()}</Avatar>
+                <div>
+                  <Typography.Text>{item.name} ({item.email})</Typography.Text>
+                  <br />
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {item.company_name && `Company: ${item.company_name}`}
+                  </Typography.Text>
+                </div>
+              </div>
+            ),
+          },
+        ]}
       />
 
       <Button
         type="primary"
         onClick={() => {
-          console.log('Add participant button clicked:', {
-            allAdminUsers: allAdminUsers.length,
-            loadingAdminUsers,
-            momLiveData: !!momLiveData
-          });
           openAddParticipantModal();
         }}
         style={{ marginBottom: 24 }}
@@ -700,7 +635,7 @@ useEffect(() => {
       >
         {loadingAdminUsers ? (
           <div style={{ textAlign: 'center', padding: '20px' }}>
-            <Spin tip="Loading admin users..." />
+            <Spin description="Loading admin users..." />
           </div>
         ) : availableUsers.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
@@ -727,7 +662,7 @@ useEffect(() => {
             <List
               dataSource={availableUsers}
               renderItem={user => (
-            <List.Item key={user.id}>
+            <div key={user.id} style={{ padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
               <Checkbox
                 checked={selectedUserIds.includes(user.id)}
                 onChange={e => {
@@ -753,13 +688,11 @@ useEffect(() => {
                     {user.designation && ` • ${user.designation}`}
                   </div>
                   {user.company_name && (
-                    <div style={{ fontSize: '11px', color: '#999' }}>
-                      {user.company_name}
-                    </div>
+                    <div style={{ fontSize: '11px', color: '#999' }}>{user.company_name}</div>
                   )}
                 </div>
               </Checkbox>
-            </List.Item>
+            </div>
           )}
         />
           </>
@@ -797,7 +730,7 @@ useEffect(() => {
 
         {/* New input fields for point, due date, responsible person */}
         <Form.Item label="Add Point to Discuss">
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
             <Input.TextArea
               rows={2}
               placeholder="Enter point to discuss"
@@ -868,35 +801,27 @@ useEffect(() => {
             <Button type="dashed" onClick={handleAddPoint} style={{ width: '100%' }}>
               Add
             </Button>
-          </Space>
+          </div>
         </Form.Item>
 
-        {/* Display list of added points with delete option */}
         <Form.Item label="Points List">
-          <List
+          <Table
             bordered
+            size="small"
             dataSource={pointsList}
+            rowKey="id"
+            pagination={false}
             locale={{ emptyText: 'No points added yet' }}
-            renderItem={item => (
-              <List.Item
-                key={item.id}
-                actions={[
-                  <Button type="link" danger onClick={() => handleDeletePoint(item.id)} key="delete">
-                    Delete
-                  </Button>,
-                ]}
-              >
-                <List.Item.Meta
-                  title={item.point}
-                  description={
-                    <>
-                      <div>Due Date: {moment(item.dueDate).format('YYYY-MM-DD')}</div>
-                      <div>Responsible: {item.responsibleName}</div>
-                    </>
-                  }
-                />
-              </List.Item>
-            )}
+            columns={[
+              { title: 'Point', dataIndex: 'point', key: 'point' },
+              { title: 'Due Date', dataIndex: 'dueDate', key: 'dueDate', width: 120,
+                render: (d: string) => moment(d).format('YYYY-MM-DD') },
+              { title: 'Responsible', dataIndex: 'responsibleName', key: 'responsibleName', width: 150 },
+              { title: '', key: 'action', width: 80,
+                render: (_: any, item: PointItem) => (
+                  <Button type="link" danger onClick={() => handleDeletePoint(item.id)}>Delete</Button>
+                ) },
+            ]}
           />
         </Form.Item>
 
@@ -980,20 +905,41 @@ useEffect(() => {
       />
 
       <Form.Item label="Participants Attendance">
-          <List
+          <Table
             dataSource={momLiveData.participants}
-            renderItem={participant => (
-              <List.Item key={participant.id}>
-                <Form.Item
-                  name={`attended_${participant.id}`}
-                  valuePropName="checked"
-                  noStyle
-                  initialValue={participant.attended}
-                >
-                  <Checkbox>{participant.name} ({participant.email}) - Status: {participant.status}</Checkbox>
-                </Form.Item>
-              </List.Item>
-            )}
+            rowKey="id"
+            size="small"
+            pagination={false}
+            showHeader={false}
+            columns={[
+              {
+                key: 'check',
+                render: (_: any, participant: Participant) => (
+                  <Form.Item
+                    name={`attended_${participant.id}`}
+                    valuePropName="checked"
+                    noStyle
+                    initialValue={participant.attended}
+                  >
+                    <Checkbox>
+                      {participant.name} ({participant.email}) — Status: {participant.status}
+                    </Checkbox>
+                  </Form.Item>
+                ),
+              },
+            ]}
+          />
+        </Form.Item>
+
+        <Form.Item>
+          <MomAttendancePanel
+            meetingId={id!}
+            isCreator={!!(loggedInUserId && momLiveData.scheduled_by_id &&
+              Number(loggedInUserId) === Number(momLiveData.scheduled_by_id))}
+            meetingStatus={momLiveData.status || 'scheduled'}
+            onMeetingStarted={() =>
+              setMomLiveData(prev => prev ? { ...prev, status: 'live' } : prev)
+            }
           />
         </Form.Item>
 
@@ -1009,3 +955,4 @@ useEffect(() => {
 };
 
 export default MomLive;
+

@@ -3,9 +3,9 @@ import { Table, Button, Space, Popconfirm, message, Tag } from 'antd';
 import { EditOutlined, DeleteOutlined, PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import type { ColumnType } from 'antd/es/table';
-import PageLayout from '../../../components/ui/PageLayout';
+import PageLayout from '../../../../components/ui/PageLayout';
 import { inspectionService } from '../../services/inspectionService';
-import { useAuthStore } from '../../../store/authStore';
+import { useAuthStore } from '../../../../store/authStore';
 
 interface ControlCableChecklistFormData {
   id: string;
@@ -17,15 +17,16 @@ interface ControlCableChecklistFormData {
 
 export default function ControlCableChecklistFormList() {
   const navigate = useNavigate();
-  const { usertype: admin_type, userId, username } = useAuthStore();
-  const user = { admin_type, id: userId, username };
+  const { user } = useAuthStore();
+  const admin_type = (user as any)?.admin_type || (user as any)?.user_type || '';
+  const username = (user as any)?.email || '';
   const [forms, setForms] = useState<ControlCableChecklistFormData[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const canCreate = admin_type === 'epcuser';
-  const canEdit = (record: ControlCableChecklistFormData) => 
+  const canCreate = true;
+  const canEdit = (record: ControlCableChecklistFormData) =>
     ['client', 'epc', 'contractor'].includes(admin_type || '') && record.created_by_username === username;
-  const canDelete = (record: ControlCableChecklistFormData) => 
+  const canDelete = (record: ControlCableChecklistFormData) =>
     ['client', 'epc', 'contractor'].includes(admin_type || '') && record.created_by_username === username;
 
   useEffect(() => {
@@ -87,14 +88,14 @@ export default function ControlCableChecklistFormList() {
           <Button
             type="text"
             icon={<EyeOutlined />}
-            onClick={() => navigate(`/inspection/control-cable-checklist-forms/${record.id}`)}
+            onClick={() => navigate(`/dashboard/inspection/forms/control-cable-checklist/view/${record.id}`)}
             title="View"
           />
           {canEdit(record) && (
             <Button
               type="text"
               icon={<EditOutlined />}
-              onClick={() => navigate(`/inspection/control-cable-checklist-forms/${record.id}/edit`)}
+              onClick={() => navigate(`/dashboard/inspection/forms/control-cable-checklist/edit/${record.id}`)}
               title="Edit"
             />
           )}
@@ -128,7 +129,7 @@ export default function ControlCableChecklistFormList() {
       key="create"
       type="primary"
       icon={<PlusOutlined />}
-      onClick={() => navigate('/inspection/control-cable-checklist-forms/new')}
+      onClick={() => navigate('/dashboard/inspection/forms/control-cable-checklist/create')}
     >
       New Form
     </Button>

@@ -84,7 +84,6 @@ export const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({ sessionKey
       setAnalyticsDashboard(analyticsDashboardRes.data)
       setAtRiskAccounts(atRiskRes.data.results || atRiskRes.data)
     } catch (error) {
-      console.error('Error loading analytics data:', error)
     } finally {
       setLoading(false)
     }
@@ -95,7 +94,6 @@ export const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({ sessionKey
       await crmApi.calculateHealthScores(sessionKey!)
       loadAnalyticsData()
     } catch (error) {
-      console.error('Error calculating health scores:', error)
     }
   }
 

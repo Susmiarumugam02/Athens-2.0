@@ -62,10 +62,8 @@ const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({ sessionKey })
       if (response.ok) {
         setComplianceData(data)
       } else {
-        console.error('Error fetching compliance data:', data.error)
       }
     } catch (error) {
-      console.error('Error fetching compliance data:', error)
     } finally {
       setLoading(false)
     }
@@ -102,10 +100,8 @@ const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({ sessionKey })
         document.body.removeChild(a)
         URL.revokeObjectURL(url)
       } else {
-        console.error('Error generating GSTR-1:', data.error)
       }
     } catch (error) {
-      console.error('Error generating GSTR-1:', error)
     }
   }
 

@@ -37,7 +37,6 @@ const ProformaTemplateSettings: React.FC = () => {
         throw new Error('Invalid response format');
       }
     } catch (error) {
-      console.error('Error fetching template info:', error);
       setTemplates([
         {
           code: 'AS',
@@ -73,7 +72,6 @@ const ProformaTemplateSettings: React.FC = () => {
         setCurrentSettings({ selected_proforma_template: 'AS' });
       }
     } catch (error) {
-      console.error('Error fetching proforma template settings:', error);
       setCurrentSettings({ selected_proforma_template: 'AS' });
     } finally {
       setLoading(false);
@@ -94,7 +92,6 @@ const ProformaTemplateSettings: React.FC = () => {
         throw new Error(response.data.message || 'Failed to update proforma template');
       }
     } catch (error: any) {
-      console.error('Error updating proforma template:', error);
       const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Error updating proforma template';
       toast.error(errorMessage);
     }
@@ -111,7 +108,6 @@ const ProformaTemplateSettings: React.FC = () => {
         newWindow.document.close();
       }
     } catch (error: any) {
-      console.error('Error loading proforma template preview:', error);
       const errorMessage = error.response?.data?.message || 'Error loading proforma template preview';
       toast.error(errorMessage);
     }

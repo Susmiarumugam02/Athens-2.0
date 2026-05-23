@@ -41,7 +41,6 @@ const AthensLayout: React.FC<AthensLayoutProps> = ({ children, currentPage = 'ov
         setCompanyData(response.data)
       }
     } catch (error: any) {
-      console.error('Error fetching company logo:', error)
     }
   }
 

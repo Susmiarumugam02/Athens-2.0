@@ -50,7 +50,6 @@ const BiometricAttendance: React.FC = () => {
       })
       setDevices(response.data.results || [])
     } catch (error) {
-      console.error('Error fetching devices:', error)
     }
   }
 
@@ -64,7 +63,6 @@ const BiometricAttendance: React.FC = () => {
       })
       setSystemConfig(response.data.results?.[0] || null)
     } catch (error) {
-      console.error('Error fetching system config:', error)
     }
   }
 
@@ -87,7 +85,6 @@ const BiometricAttendance: React.FC = () => {
       setLastScan(response.data)
       toast.success(response.data.message || `${action} successful`)
     } catch (error: any) {
-      console.error('Biometric scan error:', error)
       toast.error(error.response?.data?.error || 'Biometric scan failed')
     } finally {
       setScanning(false)

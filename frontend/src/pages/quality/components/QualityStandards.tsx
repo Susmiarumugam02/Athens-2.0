@@ -37,7 +37,6 @@ const QualityStandards: React.FC = () => {
       const response = await getQualityStandards();
       setStandards(response.data.results || response.data);
     } catch (error) {
-      console.error('Failed to load quality standards:', error);
       message.error('UpatePro: Failed to load quality standards');
     } finally {
       setLoading(false);
@@ -124,7 +123,6 @@ const QualityStandards: React.FC = () => {
       form.resetFields();
       loadStandards();
     } catch (error) {
-      console.error('Failed to create quality standard:', error);
       message.error('UpatePro: Failed to create quality standard');
     }
   };
@@ -188,7 +186,7 @@ const QualityStandards: React.FC = () => {
               title="Active Standards"
               value={activeStandards}
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#3f8600' }}
+              styles={{ content: { color: '#3f8600' } }}
             />
           </Card>
         </Col>
@@ -198,7 +196,7 @@ const QualityStandards: React.FC = () => {
               title="Inactive Standards"
               value={standards.length - activeStandards}
               prefix={<ExclamationCircleOutlined />}
-              valueStyle={{ color: '#cf1322' }}
+              styles={{ content: { color: '#cf1322' } }}
             />
           </Card>
         </Col>

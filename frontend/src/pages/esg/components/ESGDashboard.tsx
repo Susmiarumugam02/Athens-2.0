@@ -48,7 +48,6 @@ const ESGDashboard: React.FC = () => {
           const generationResponse = await getGenerationSummary();
           generationData = generationResponse.data || generationData;
         } catch (genError) {
-          console.warn('Generation data not available:', genError);
         }
         
         try {
@@ -56,7 +55,6 @@ const ESGDashboard: React.FC = () => {
           const emissionsResponse = await getEmissionsSummary();
           emissionsData = emissionsResponse.data || emissionsData;
         } catch (emError) {
-          console.warn('Emissions data not available:', emError);
         }
         
         // Calculate total emissions from scope breakdown
@@ -75,7 +73,6 @@ const ESGDashboard: React.FC = () => {
         
         setError(null);
       } catch (err) {
-        console.error('Error fetching dashboard data:', err);
         // Don't set error for data fetching issues, just use default values
         setStats({
           todayGeneration: 0,
@@ -133,7 +130,7 @@ const ESGDashboard: React.FC = () => {
               precision={1}
               prefix={<ThunderboltOutlined style={{ color: '#52c41a' }} />}
               suffix="MWh"
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -146,7 +143,7 @@ const ESGDashboard: React.FC = () => {
               precision={1}
               prefix={<ThunderboltOutlined style={{ color: '#1890ff' }} />}
               suffix="MWh"
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -159,7 +156,7 @@ const ESGDashboard: React.FC = () => {
               precision={1}
               prefix={<EnvironmentOutlined style={{ color: '#fa8c16' }} />}
               suffix="tCO₂e"
-              valueStyle={{ color: '#fa8c16' }}
+              styles={{ content: { color: '#fa8c16' } }}
             />
           </Card>
         </Col>
@@ -172,7 +169,7 @@ const ESGDashboard: React.FC = () => {
               precision={1}
               prefix={<DeleteOutlined style={{ color: '#722ed1' }} />}
               suffix="%"
-              valueStyle={{ color: '#722ed1' }}
+              styles={{ content: { color: '#722ed1' } }}
             />
           </Card>
         </Col>

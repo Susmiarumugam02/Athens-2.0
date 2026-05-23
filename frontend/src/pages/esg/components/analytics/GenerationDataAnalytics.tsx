@@ -57,7 +57,7 @@ const GenerationDataAnalytics: React.FC<GenerationDataAnalyticsProps> = ({ data 
               precision={0}
               suffix="kWh"
               prefix={<ThunderboltOutlined style={{ color: '#52c41a' }} />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -69,7 +69,7 @@ const GenerationDataAnalytics: React.FC<GenerationDataAnalyticsProps> = ({ data 
               precision={0}
               suffix="kWh"
               prefix={<SunOutlined style={{ color: '#fa8c16' }} />}
-              valueStyle={{ color: '#fa8c16' }}
+              styles={{ content: { color: '#fa8c16' } }}
             />
           </Card>
         </Col>
@@ -81,7 +81,7 @@ const GenerationDataAnalytics: React.FC<GenerationDataAnalyticsProps> = ({ data 
               precision={0}
               suffix="kWh"
               prefix={<RiseOutlined style={{ color: '#1890ff' }} />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -93,7 +93,7 @@ const GenerationDataAnalytics: React.FC<GenerationDataAnalyticsProps> = ({ data 
               precision={1}
               suffix="%"
               prefix={<ThunderboltOutlined style={{ color: '#722ed1' }} />}
-              valueStyle={{ color: '#722ed1' }}
+              styles={{ content: { color: '#722ed1' } }}
             />
           </Card>
         </Col>

@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from .considering_parameters import get_parameter_options, derive_autofill, get_smart_recommendations
 
 from authentication.permissions import IsServiceAdmin
 from authentication.rbac_permissions import RequireTenantPermission
@@ -33,26 +34,27 @@ def list_services(request):
 @permission_classes([IsAuthenticated])
 def list_tenant_services(request):
     """List enabled services for current tenant or specific tenant (Superadmin)"""
-    # Superadmin can query services for any tenant
-    if request.user.user_type == 'superadmin':
+    user = request.user
+
+    # Superadmin: return all or filter by tenant_id
+    if user.user_type == 'superadmin':
         tenant_id = request.query_params.get('tenant_id')
         if not tenant_id:
-            # Return all tenant services for all tenants
             from control_plane.models import TenantService
             tenant_services = TenantService.objects.filter(is_enabled=True).select_related('service', 'tenant')
             serializer = TenantServiceSerializer(tenant_services, many=True)
             return ok(data=serializer.data, request=request)
-        
         from control_plane.models import Tenant
         try:
             tenant = Tenant.objects.get(id=tenant_id)
         except Tenant.DoesNotExist:
             return fail('NOT_FOUND', 'Tenant not found', status=404, request=request)
     else:
-        tenant, error = get_current_tenant(request.user)
-        if error:
-            return error
-    
+        tenant, error = get_current_tenant(user)
+        # Any error or missing tenant: return empty list gracefully
+        if error or tenant is None:
+            return ok(data=[], request=request)
+
     tenant_services = ServiceManager.get_tenant_services(tenant, enabled_only=True)
     serializer = TenantServiceSerializer(tenant_services, many=True)
     return ok(data=serializer.data, request=request)
@@ -302,3 +304,33 @@ def list_audit_logs(request):
         },
         request=request
     )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def considering_parameters(request):
+    """Return available parameter options, optionally narrowed by module."""
+    module = request.query_params.get('module', 'general')
+    options = get_parameter_options(request.user, module)
+    return ok(data={'options': options}, request=request)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def considering_parameters_autofill(request):
+    """Derive auto-fill values from selected parameters."""
+    module = request.data.get('module', 'general')
+    parameters = request.data.get('parameters', {})
+    result = derive_autofill(parameters, module, request.user)
+    return ok(data=result, request=request)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def smart_recommendations(request):
+    """Return smart recommendations based on parameters and context text."""
+    module = request.data.get('module', 'general')
+    parameters = request.data.get('parameters', {})
+    context_text = request.data.get('context_text', '')
+    result = get_smart_recommendations(module, parameters, context_text, request.user)
+    return ok(data=result, request=request)

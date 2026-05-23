@@ -75,7 +75,6 @@ const StatutoryDashboard: React.FC = () => {
       })
       setData(response.data)
     } catch (error) {
-      console.error('Error fetching statutory dashboard data:', error)
       toast.error('Failed to load dashboard data')
     } finally {
       setLoading(false)

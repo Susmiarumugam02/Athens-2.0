@@ -14,8 +14,12 @@ class PermissionSerializer(serializers.ModelSerializer):
 
 
 class RoleSerializer(serializers.ModelSerializer):
-    permissions = PermissionSerializer(source='role_permissions.permission', many=True, read_only=True)
+    permissions = serializers.SerializerMethodField()
     permission_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
+
+    def get_permissions(self, obj):
+        perms = Permission.objects.filter(rolepermission__role=obj)
+        return PermissionSerializer(perms, many=True).data
     
     class Meta:
         model = Role
@@ -70,9 +74,15 @@ class SuperAdminUserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'email', 'user_type', 'is_active', 'requires_2fa', 
-            'last_login', 'created_at', 'updated_at', 'roles', 'role_ids'
+            'last_login', 'created_at', 'updated_at', 'roles', 'role_ids',
+            'company_name', 'phone_number'
         ]
         read_only_fields = ['user_type', 'last_login', 'created_at', 'updated_at']
+        extra_kwargs = {
+            'password': {'write_only': True, 'required': False},
+            'company_name': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'phone_number': {'required': False, 'allow_null': True, 'allow_blank': True},
+        }
     
     def create(self, validated_data):
         role_ids = validated_data.pop('role_ids', [])

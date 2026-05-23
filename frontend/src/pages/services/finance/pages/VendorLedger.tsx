@@ -60,7 +60,6 @@ const VendorLedger: React.FC = () => {
       })
       setVendors(response.data || [])
     } catch (error: any) {
-      console.error('Error fetching vendors:', error)
       toast.error('Failed to fetch vendors')
     }
   }
@@ -83,7 +82,6 @@ const VendorLedger: React.FC = () => {
       })
       setLedgerData(response.data)
     } catch (error: any) {
-      console.error('Error fetching vendor ledger:', error)
       toast.error('Failed to fetch vendor ledger')
       setLedgerData(null)
     } finally {

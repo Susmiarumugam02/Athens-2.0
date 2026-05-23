@@ -8,7 +8,7 @@ export default function TasksPage() {
   useEffect(() => {
     workforceApi.getTasks()
       .then(res => setTasks(res.data))
-      .catch(err => console.error(err))
+      .catch(() => setTasks([]))
       .finally(() => setLoading(false))
   }, [])
 

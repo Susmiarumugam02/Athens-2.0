@@ -3,8 +3,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from authentication.models import CustomUser
 from .models import Message
-from .serializers import MessageSerializer
-from authentication.serializers import CustomUserSerializer
+from .serializers import MessageSerializer, CustomUserSerializer
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
@@ -19,48 +18,101 @@ from authentication.tenant_scoped_utils import ensure_tenant_context, ensure_pro
 
 logger = logging.getLogger(__name__)
 
+# ─── Role helpers ────────────────────────────────────────────────────────────
+
+EPC_TYPES        = {'epc', 'epcuser'}
+CLIENT_TYPES     = {'client', 'clientuser', 'client_admin'}
+CONTRACTOR_TYPES = {'contractor', 'contractoruser'}
+MASTERADMIN_TYPES = {'masteradmin', 'master_admin'}
+
+
+def _normalize(admin_type: str | None) -> str:
+    """Collapse legacy aliases to canonical role names."""
+    if not admin_type:
+        return ''
+    t = admin_type.lower()
+    if t in EPC_TYPES:        return 'epc'
+    if t in CLIENT_TYPES:     return 'client'
+    if t in CONTRACTOR_TYPES: return 'contractor'
+    if t in MASTERADMIN_TYPES: return 'master_admin'
+    return t
+
+
+def _can_chat(sender_role: str, receiver_role: str) -> bool:
+    """Return True if sender is allowed to message receiver."""
+    if sender_role == 'master_admin':
+        return True
+    if sender_role == 'epc':
+        return receiver_role in ('client', 'contractor')
+    if sender_role in ('client', 'contractor'):
+        return receiver_role == 'epc'
+    return False
+
+
 class UserListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        ensure_tenant_context(request)
+        try:
+            ensure_tenant_context(request)
+        except Exception:
+            pass
         current_user = request.user
-        admin_type = getattr(current_user, 'admin_type', None) or getattr(current_user, 'usertype', None)
-        user_project = ensure_project(request)
+        raw_type  = getattr(current_user, 'admin_type', None) or getattr(current_user, 'usertype', None)
+        my_role   = _normalize(raw_type)
 
-        # Ensure user has a project assigned
+        try:
+            user_project = ensure_project(request)
+        except Exception:
+            user_project = getattr(current_user, 'project', None)
+
+        logger.info(
+            f"[CHAT users] user={current_user.email} "
+            f"admin_type={raw_type!r} role={my_role!r} "
+            f"project_id={getattr(user_project, 'id', None)}"
+        )
+
         if not user_project:
-            return Response({
-                'error': 'No project assigned',
-                'message': 'User must be assigned to a project to access chat.'
-            }, status=status.HTTP_403_FORBIDDEN)
+            logger.warning(
+                f"[CHAT users] {current_user.email} has no project — filtering by admin_type only"
+            )
 
-        # Enhanced communication matrix based on requirements:
-        # EPC can communicate within their company and with client and contractor company users
-        # Client and contractor users can only communicate with their own users and EPC users
-        if admin_type in ['clientuser', 'client']:
-            # Client users can communicate with EPC users and other client users
-            users = CustomUser.objects.filter(
-                Q(admin_type__in=['epcuser', 'epc']) | Q(admin_type__in=['clientuser', 'client']),
-                project=user_project,
-                is_active=True
+        # ── Build queryset based on strict communication rules ──
+        def _base(types):
+            """Filter by admin_type + is_active, then narrow by project if available."""
+            qs = CustomUser.objects.filter(
+                admin_type__in=types,
+                is_active=True,
             ).exclude(id=current_user.id)
-        elif admin_type in ['epcuser', 'epc']:
-            # EPC users can communicate with all users (client, contractor, and other EPC)
-            users = CustomUser.objects.filter(
-                admin_type__in=['clientuser', 'client', 'contractoruser', 'contractor', 'epcuser', 'epc'],
-                project=user_project,
-                is_active=True
-            ).exclude(id=current_user.id)
-        elif admin_type in ['contractoruser', 'contractor']:
-            # Contractor users can communicate with EPC users and other contractor users
-            users = CustomUser.objects.filter(
-                Q(admin_type__in=['epcuser', 'epc']) | Q(admin_type__in=['contractoruser', 'contractor']),
-                project=user_project,
-                is_active=True
-            ).exclude(id=current_user.id)
+            if user_project:
+                qs = qs.filter(project=user_project)
+            return qs
+
+        if my_role == 'epc':
+            contact_type = request.query_params.get('type', '').lower()
+            if contact_type == 'client':
+                users = _base(list(CLIENT_TYPES))
+            elif contact_type == 'contractor':
+                users = _base(list(CONTRACTOR_TYPES))
+            else:
+                return Response([], status=status.HTTP_200_OK)
+
+        elif my_role in ('client', 'contractor'):
+            users = _base(list(EPC_TYPES))
+
+        elif my_role == 'master_admin':
+            qs = CustomUser.objects.filter(is_active=True).exclude(id=current_user.id)
+            if user_project:
+                qs = qs.filter(project=user_project)
+            users = qs
+
         else:
             users = CustomUser.objects.none()
+
+        logger.info(
+            f"[CHAT users] query returned {users.count()} user(s) "
+            f"for role={my_role!r} project_id={getattr(user_project, 'id', None)}"
+        )
 
         # Ensure users have proper details for display
         users_data = []
@@ -117,7 +169,11 @@ class MessageListCreateView(APIView):
         other_user_id = request.query_params.get('userId')
         if not other_user_id:
             return Response({"error": "userId query parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
-        other_user = get_object_or_404(CustomUser, pk=other_user_id, project=user_project)
+        # Fetch other_user scoped by project only when project is available
+        lookup = {'pk': other_user_id}
+        if user_project:
+            lookup['project'] = user_project
+        other_user = get_object_or_404(CustomUser, **lookup)
         current_user = request.user
 
         messages = Message.objects.filter(
@@ -148,7 +204,19 @@ class MessageListCreateView(APIView):
         serializer = MessageSerializer(data=data, context={'request': request})
         if serializer.is_valid():
             receiver_id = serializer.validated_data.get('receiver').id
-            receiver = get_object_or_404(CustomUser, pk=receiver_id, project=user_project)
+            recv_lookup = {'pk': receiver_id}
+            if user_project:
+                recv_lookup['project'] = user_project
+            receiver = get_object_or_404(CustomUser, **recv_lookup)
+
+            # ── Authorization: enforce role-based communication rules ──
+            sender_role   = _normalize(getattr(current_user, 'admin_type', None))
+            receiver_role = _normalize(getattr(receiver, 'admin_type', None))
+            if not _can_chat(sender_role, receiver_role):
+                return Response(
+                    {"error": f"You are not allowed to send messages to {receiver_role} users."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             # Save the message
             message_instance = serializer.save(sender=current_user, receiver=receiver)
 
@@ -188,13 +256,12 @@ class ReadReceiptView(APIView):
         if not message_ids:
             return Response({"error": "message_ids is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Mark messages as read
-        messages = Message.objects.filter(
-            id__in=message_ids,
-            receiver=request.user,
-            receiver__project=user_project,
-            sender__project=user_project,
-        )
+        # Mark messages as read — project filter only when project is available
+        msg_filter = {'id__in': message_ids, 'receiver': request.user}
+        if user_project:
+            msg_filter['receiver__project'] = user_project
+            msg_filter['sender__project'] = user_project
+        messages = Message.objects.filter(**msg_filter)
 
         # Update message status
         updated_count = messages.update(status='read')
@@ -244,7 +311,10 @@ class TypingIndicatorView(APIView):
             return Response({"error": "other_user_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            other_user = get_object_or_404(CustomUser, pk=other_user_id, project=user_project)
+            ti_lookup = {'pk': other_user_id}
+            if user_project:
+                ti_lookup['project'] = user_project
+            other_user = get_object_or_404(CustomUser, **ti_lookup)
             result = notify_typing_status(
                 user_id=request.user.id,
                 other_user_id=other_user.id,
@@ -295,7 +365,11 @@ class FileDownloadView(APIView):
             ensure_tenant_context(request)
             user_project = ensure_project(request)
             # Get the message and verify user has access to it
-            message = get_object_or_404(Message, id=message_id, sender__project=user_project, receiver__project=user_project)
+            file_lookup = {'id': message_id}
+            if user_project:
+                file_lookup['sender__project'] = user_project
+                file_lookup['receiver__project'] = user_project
+            message = get_object_or_404(Message, **file_lookup)
 
             # Check if user is sender or receiver of the message
             if request.user != message.sender and request.user != message.receiver:
@@ -406,7 +480,11 @@ class FileViewView(APIView):
             ensure_tenant_context(request)
             user_project = ensure_project(request)
             # Get the message and verify user has access to it
-            message = get_object_or_404(Message, id=message_id, sender__project=user_project, receiver__project=user_project)
+            view_lookup = {'id': message_id}
+            if user_project:
+                view_lookup['sender__project'] = user_project
+                view_lookup['receiver__project'] = user_project
+            message = get_object_or_404(Message, **view_lookup)
 
             # Check if user is sender or receiver of the message
             if request.user != message.sender and request.user != message.receiver:

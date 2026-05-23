@@ -49,7 +49,6 @@ const ServiceUserLogin: React.FC = () => {
         
         setAvailableServices(mappedServices)
       } catch (error) {
-        console.error('Failed to fetch services:', error)
         toast.error('Failed to load services')
       } finally {
         setServicesLoading(false)

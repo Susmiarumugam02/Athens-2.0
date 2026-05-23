@@ -16,6 +16,47 @@ class ACCableInspectionForm(models.Model):
     cable_size = models.CharField(max_length=100, blank=True)
     from_to = models.CharField(max_length=200, blank=True)
     
+    # ── Enhanced fields ──────────────────────────────────────────────────────
+    cable_id = models.CharField(max_length=100, blank=True, help_text='Cable tag / ID number')
+    voltage_rating = models.CharField(
+        max_length=20, blank=True,
+        choices=[('230V','230V'),('415V','415V'),('11kV','11kV'),('33kV','33kV'),('66kV','66kV'),('132kV','132kV')]
+    )
+    cable_type = models.CharField(
+        max_length=20, blank=True,
+        choices=[('XLPE','XLPE'),('PVC','PVC'),('Armoured','Armoured'),('Other','Other')]
+    )
+    status = models.CharField(
+        max_length=20, default='draft',
+        choices=[('draft','Draft'),('in_progress','In Progress'),('completed','Completed')]
+    )
+
+    # Visual inspection checklist (JSON: {key: 'ok'|'not_ok'|'na'})
+    visual_checklist = models.JSONField(default=dict, blank=True)
+
+    # IR Test
+    ir_phase_phase = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
+    ir_phase_earth = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
+
+    # Continuity / Earth / HV / Phase
+    continuity_test = models.CharField(max_length=10, blank=True, choices=[('pass','Pass'),('fail','Fail')])
+    earth_continuity_ohms = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
+    hv_test_value = models.CharField(max_length=100, blank=True)
+    phase_sequence = models.CharField(max_length=15, blank=True, choices=[('correct','Correct'),('incorrect','Incorrect')])
+
+    # Observations / Risk / Corrective / Safety
+    observations = models.TextField(blank=True)
+    risk_level = models.CharField(
+        max_length=10, blank=True,
+        choices=[('low','Low'),('medium','Medium'),('high','High')]
+    )
+    corrective_action = models.TextField(blank=True)
+    is_safe = models.BooleanField(null=True, blank=True, help_text='Safe for energization')
+
+    # Computed
+    score = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    # ─────────────────────────────────────────────────────────────────────────
+    
     # Instrument Details (3 instruments)
     instrument_make_0 = models.CharField(max_length=100, blank=True)
     instrument_range_0 = models.CharField(max_length=100, blank=True)

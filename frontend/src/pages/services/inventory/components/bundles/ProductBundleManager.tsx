@@ -48,7 +48,6 @@ export const ProductBundleManager: React.FC = () => {
       const response = await inventoryApi.getProducts();
       setProducts(response.results || []);
     } catch (error: any) {
-      console.error('Failed to load products:', error);
     }
   };
 

@@ -18,11 +18,9 @@ const GrievanceList: React.FC = () => {
     setLoading(true);
     try {
       const response = await getGrievances();
-      console.log('Grievances response:', response.data);
       const data = response.data.results || response.data || [];
       setGrievances(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('Error fetching grievances:', error);
       message.error('Failed to fetch grievances');
       setGrievances([]);
     } finally {

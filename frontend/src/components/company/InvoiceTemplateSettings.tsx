@@ -37,7 +37,6 @@ const InvoiceTemplateSettings: React.FC = () => {
         throw new Error('Invalid response format');
       }
     } catch (error) {
-      console.error('Error fetching template info:', error);
       setTemplates([
         {
           code: 'AS',
@@ -73,7 +72,6 @@ const InvoiceTemplateSettings: React.FC = () => {
         setCurrentSettings({ selected_invoice_template: 'AS' });
       }
     } catch (error) {
-      console.error('Error fetching invoice template settings:', error);
       setCurrentSettings({ selected_invoice_template: 'AS' });
     } finally {
       setLoading(false);
@@ -94,7 +92,6 @@ const InvoiceTemplateSettings: React.FC = () => {
         throw new Error(response.data.message || 'Failed to update invoice template');
       }
     } catch (error: any) {
-      console.error('Error updating invoice template:', error);
       const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Error updating invoice template';
       toast.error(errorMessage);
     }
@@ -111,7 +108,6 @@ const InvoiceTemplateSettings: React.FC = () => {
         newWindow.document.close();
       }
     } catch (error: any) {
-      console.error('Error loading invoice template preview:', error);
       const errorMessage = error.response?.data?.message || 'Error loading invoice template preview';
       toast.error(errorMessage);
     }

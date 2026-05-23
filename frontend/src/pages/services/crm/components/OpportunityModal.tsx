@@ -56,7 +56,6 @@ export const OpportunityModal: React.FC<OpportunityModalProps> = ({ isOpen, onCl
       const response = await crmApi.getAccounts(sessionKey!)
       setAccounts(response.data.results || response.data)
     } catch (error) {
-      console.error('Error fetching accounts:', error)
     }
   }
 
@@ -65,7 +64,6 @@ export const OpportunityModal: React.FC<OpportunityModalProps> = ({ isOpen, onCl
       const response = await crmApi.getContacts(sessionKey!)
       setContacts(response.data.results || response.data)
     } catch (error) {
-      console.error('Error fetching contacts:', error)
     }
   }
 
@@ -91,7 +89,6 @@ export const OpportunityModal: React.FC<OpportunityModalProps> = ({ isOpen, onCl
       }
       
     } catch (error) {
-      console.error('Error setting up users:', error)
       // Fallback user
       const fallbackUser = {
         id: 'auto',

@@ -3,13 +3,35 @@ export interface User {
   id: number
   email: string
   user_type?: string
+  role_type?: 'admin' | 'user'
   company_id?: number
   company_name?: string
   company_logo?: string
   admin_type?: 'client' | 'epc' | 'contractor'
+  company_type?: 'client' | 'epc' | 'contractor'
   athens_tenant_id?: string
   is_master_admin?: boolean
   is_company_user?: boolean
+  project_id?: number
+  // Onboarding workflow
+  status?: 'pending_profile' | 'pending_approval' | 'approved_pending_induction' | 'active'
+  approval_status?: 'pending' | 'approved' | 'rejected' | 'waiting_admin_approval'
+  profile_status?: 'incomplete' | 'draft' | 'submitted' | 'correction_requested' | 'verified'
+  workflow_approval_status?: 'pending_profile_submission' | 'waiting_admin_approval' | 'approved' | 'rejected' | 'correction_requested'
+  training_status?: 'not_started' | 'pending_induction' | 'in_progress' | 'completed'
+  access_level?: 'restricted' | 'verification_pending' | 'training_only' | 'full_access'
+  attendance_status?: 'not_required' | 'pending' | 'verified'
+  profile_completed?: boolean
+  is_first_login?: boolean
+  induction_attended?: boolean
+  induction_completed?: boolean
+  module_access_enabled?: boolean
+  attendance_verified?: boolean
+  modules_unlocked?: boolean
+  access_status?: 'active' | 'restricted' | string
+  onboarding_completed?: boolean
+  induction_status?: 'completed' | 'pending' | 'not_assigned' | string
+  onboarding_status?: string
 }
 
 export interface LoginResponse {

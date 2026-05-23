@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Input, Checkbox, Button, message } from 'antd';
 import { useNavigate, useParams } from "react-router-dom";
 import { SaveOutlined, DownloadOutlined } from "@ant-design/icons";
-import PageLayout from '../../../components/ui/PageLayout';
+import PageLayout from '../../../../components/ui/PageLayout';
 import { inspectionService } from '../../services/inspectionService';
 
 const checkPoints = [
@@ -81,7 +81,7 @@ export default function ControlCableChecklistForm() {
         await inspectionService.createControlCableChecklistForm(formData);
         message.success('Form created successfully');
       }
-      navigate('/inspection/control-cable-checklist-forms');
+      navigate('/dashboard/inspection/forms/control-cable-checklist/list');
     } catch (error) {
       message.error('Failed to save form');
     } finally {
@@ -95,7 +95,7 @@ export default function ControlCableChecklistForm() {
 
   const breadcrumbs = [
     { title: 'Inspection', href: '/inspection' },
-    { title: 'Control Cable Checklist Forms', href: '/inspection/control-cable-checklist-forms' },
+    { title: 'Control Cable Checklist Forms', href: '/dashboard/inspection/forms/control-cable-checklist/list' },
     { title: isEdit ? 'Edit Form' : 'New Form' }
   ];
 

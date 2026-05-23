@@ -55,7 +55,6 @@ export const SalesPipeline: React.FC<SalesPipelineProps> = ({ sessionKey }) => {
         stageProgression: totalDeals > 10 ? 'Good' : totalDeals > 5 ? 'Average' : 'Poor'
       })
     } catch (error) {
-      console.error('Error loading pipeline data:', error)
     } finally {
       setLoading(false)
     }
@@ -78,7 +77,6 @@ export const SalesPipeline: React.FC<SalesPipelineProps> = ({ sessionKey }) => {
       toast.success(`Deal moved ${direction} successfully`)
       loadPipelineData()
     } catch (error) {
-      console.error('Error moving deal:', error)
       toast.error('Failed to move deal')
     }
   }

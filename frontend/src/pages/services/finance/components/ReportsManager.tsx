@@ -42,7 +42,6 @@ export const ReportsManager: React.FC<ReportsManagerProps> = ({ sessionKey }) =>
       const data = await analyticsApiService.generateGSTR1Report(dateRange.startDate, dateRange.endDate)
       setReportData(data)
     } catch (error) {
-      console.error('Failed to generate GSTR-1 report:', error)
     } finally {
       setLoading(false)
     }
@@ -54,7 +53,6 @@ export const ReportsManager: React.FC<ReportsManagerProps> = ({ sessionKey }) =>
       const data = await analyticsApiService.generateCompleteGSTR3BReport(dateRange.startDate, dateRange.endDate)
       setReportData(data)
     } catch (error) {
-      console.error('Failed to generate GSTR-3B report:', error)
     } finally {
       setLoading(false)
     }
@@ -66,7 +64,6 @@ export const ReportsManager: React.FC<ReportsManagerProps> = ({ sessionKey }) =>
       const data = await analyticsApiService.generateQuarterlyTDSReport(quarter, financialYear)
       setReportData(data)
     } catch (error) {
-      console.error('Failed to generate TDS report:', error)
     } finally {
       setLoading(false)
     }
@@ -78,7 +75,6 @@ export const ReportsManager: React.FC<ReportsManagerProps> = ({ sessionKey }) =>
       const data = await analyticsApiService.generateQuarterlyTDSReport(quarter, financialYear)
       setReportData(data)
     } catch (error) {
-      console.error('Failed to generate TDS certificates:', error)
     } finally {
       setLoading(false)
     }
@@ -100,7 +96,6 @@ export const ReportsManager: React.FC<ReportsManagerProps> = ({ sessionKey }) =>
         cashFlow: cfData
       })
     } catch (error) {
-      console.error('Failed to generate financial reports:', error)
     } finally {
       setLoading(false)
     }
@@ -116,7 +111,6 @@ export const ReportsManager: React.FC<ReportsManagerProps> = ({ sessionKey }) =>
         analyticsApiService.downloadFile(blob, `TDS_${quarter}_${financialYear}.csv`)
       }
     } catch (error) {
-      console.error('Export failed:', error)
     }
   }
 

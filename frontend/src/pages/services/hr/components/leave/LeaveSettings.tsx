@@ -47,7 +47,6 @@ const LeaveSettings: React.FC = () => {
       })
       setLeaveTypes(response.data.results || [])
     } catch (error: any) {
-      console.error('Error fetching leave types:', error)
       toast.error('Failed to fetch leave types')
     } finally {
       setLoading(false)

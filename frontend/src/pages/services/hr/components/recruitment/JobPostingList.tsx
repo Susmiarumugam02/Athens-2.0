@@ -27,10 +27,8 @@ const JobPostingList: React.FC<JobPostingListProps> = ({
     try {
       setLoading(true)
       // API call will be implemented when backend is ready
-      console.log('Fetching job postings...')
       setJobs([])
     } catch (error) {
-      console.error('Error fetching job postings:', error)
     } finally {
       setLoading(false)
     }

@@ -3,15 +3,16 @@ import { Table, Button, Space, Popconfirm, message, Tag } from 'antd';
 import { EditOutlined, DeleteOutlined, PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { inspectionService } from '../../services/inspectionService';
-import PageLayout from '../../../components/ui/PageLayout';
-import { useAuthStore } from '../../../store/authStore';
+import PageLayout from '../../../../components/ui/PageLayout';
+import { useAuthStore } from '../../../../store/authStore';
 
 const ControlRoomAuditChecklistFormList: React.FC = () => {
   const [forms, setForms] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { usertype: admin_type, userId, username } = useAuthStore();
-  const user = { admin_type, id: userId, username };
+  const { user } = useAuthStore();
+  const admin_type = (user as any)?.admin_type || (user as any)?.user_type || '';
+  const username = (user as any)?.email || '';
 
   useEffect(() => {
     fetchForms();
@@ -40,13 +41,11 @@ const ControlRoomAuditChecklistFormList: React.FC = () => {
   };
 
   const canEdit = (record: any) => {
-    const userType = user?.admin_type;
-    return ['client', 'epc', 'contractor'].includes(userType) && record.created_by_username === user?.username;
+    return ['client', 'epc', 'contractor'].includes(admin_type) && record.created_by_username === username;
   };
 
   const canDelete = (record: any) => {
-    const userType = user?.admin_type;
-    return ['client', 'epc', 'contractor'].includes(userType) && record.created_by_username === user?.username;
+    return ['client', 'epc', 'contractor'].includes(admin_type) && record.created_by_username === username;
   };
 
   const columns = [
@@ -80,7 +79,7 @@ const ControlRoomAuditChecklistFormList: React.FC = () => {
           <Button
             type="link"
             icon={<EyeOutlined />}
-            onClick={() => navigate(`/inspection/control-room-audit-checklist/view/${record.id}`)}
+            onClick={() => navigate(`/dashboard/inspection/forms/control-room-audit-checklist/view/${record.id}`)}
           >
             View
           </Button>
@@ -88,7 +87,7 @@ const ControlRoomAuditChecklistFormList: React.FC = () => {
             <Button
               type="link"
               icon={<EditOutlined />}
-              onClick={() => navigate(`/inspection/control-room-audit-checklist/edit/${record.id}`)}
+              onClick={() => navigate(`/dashboard/inspection/forms/control-room-audit-checklist/edit/${record.id}`)}
             >
               Edit
             </Button>
@@ -115,23 +114,22 @@ const ControlRoomAuditChecklistFormList: React.FC = () => {
     { title: 'Control Room Audit Checklist' }
   ];
 
-  const canCreate = user?.admin_type === 'epcuser';
+  const canCreate = true;
 
   return (
     <PageLayout
       title="Control Room Audit Checklist Forms"
       breadcrumbs={breadcrumbs}
-      extra={
-        canCreate ? (
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => navigate('/inspection/control-room-audit-checklist/new')}
-          >
-            New Form
-          </Button>
-        ) : null
-      }
+      actions={canCreate ? [
+        <Button
+          key="create"
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => navigate('/dashboard/inspection/forms/control-room-audit-checklist/create')}
+        >
+          New Form
+        </Button>
+      ] : []}
     >
       <Table
         columns={columns}

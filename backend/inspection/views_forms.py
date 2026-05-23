@@ -72,8 +72,43 @@ class ACCableInspectionFormViewSet(BaseInspectionFormViewSet):
     serializer_class = ACCableInspectionFormSerializer
     queryset = ACCableInspectionForm.objects.all()
     model = ACCableInspectionForm  # Required for permission decorator
-    
+
+    # IR threshold below which cable is flagged not-safe (MΩ)
+    IR_THRESHOLD_MOhm = 1.0
+
+    def _calculate_score(self, visual_checklist: dict) -> float:
+        """Score = (OK count / total items) * 100. NA items excluded from denominator."""
+        if not visual_checklist:
+            return 0.0
+        ok = sum(1 for v in visual_checklist.values() if v == 'ok')
+        scoreable = sum(1 for v in visual_checklist.values() if v != 'na')
+        return round((ok / scoreable * 100), 2) if scoreable else 0.0
+
+    def _evaluate_safety(self, validated_data: dict) -> bool:
+        """Safe = IR values above threshold AND continuity passed AND no critical checklist failures."""
+        ir_pp = validated_data.get('ir_phase_phase')
+        ir_pe = validated_data.get('ir_phase_earth')
+        continuity = validated_data.get('continuity_test', '')
+        checklist = validated_data.get('visual_checklist', {})
+
+        if ir_pp is not None and float(ir_pp) < self.IR_THRESHOLD_MOhm:
+            return False
+        if ir_pe is not None and float(ir_pe) < self.IR_THRESHOLD_MOhm:
+            return False
+        if continuity == 'fail':
+            return False
+        # Any critical checklist item marked not_ok → not safe
+        critical_keys = {'insulation_condition', 'earthing_availability', 'moisture_exposure'}
+        for key in critical_keys:
+            if checklist.get(key) == 'not_ok':
+                return False
+        return True
+
     def perform_create(self, serializer):
+        data = serializer.validated_data
+        score = self._calculate_score(data.get('visual_checklist', {}))
+        is_safe = self._evaluate_safety(data)
+
         inspection = self.create_inspection(
             serializer,
             inspection_type='electrical',
@@ -82,7 +117,18 @@ class ACCableInspectionFormViewSet(BaseInspectionFormViewSet):
             location_field='block_no',
             date_field='date'
         )
-        serializer.save(inspection=inspection, created_by_user=self.request.user)
+        serializer.save(
+            inspection=inspection,
+            created_by_user=self.request.user,
+            score=score,
+            is_safe=is_safe,
+        )
+
+    def perform_update(self, serializer):
+        data = serializer.validated_data
+        score = self._calculate_score(data.get('visual_checklist', {}))
+        is_safe = self._evaluate_safety(data)
+        serializer.save(score=score, is_safe=is_safe)
 class ACDBChecklistFormViewSet(InspectionFormViewSet):
     serializer_class = ACDBChecklistFormSerializer
     permission_classes = [IsAuthenticated]

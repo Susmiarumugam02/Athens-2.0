@@ -5,6 +5,8 @@ import { FileTextOutlined, ExperimentOutlined, EyeOutlined, EditOutlined, Delete
 import PageLayout from '../../../components/ui/PageLayout';
 import { TableErrorBoundary } from '../../../components/ui/ErrorBoundary';
 import { inspectionService } from '../services/inspectionService';
+import { useConsideringParameters } from '../../../hooks/useConsideringParameters';
+import ConsideringParametersPanel from '../../../components/ConsideringParametersPanel';
 
 const { Search } = Input;
 const { Option } = Select;
@@ -126,6 +128,43 @@ const InspectionFormSelector: React.FC = () => {
     sortOrder: 'desc'
   });
 
+  // ─── Considering Parameters ───────────────────────────────────────────────
+  const {
+    parameters: cpParams,
+    setParameters: setCpParams,
+    resetParameters: resetCpParams,
+    saveAsDefaults: saveCpDefaults,
+    options: cpOptions,
+    autoFillResult,
+    autoFillLoading,
+  } = useConsideringParameters('inspection');
+
+  // When department parameter changes, auto-filter the form list by matching category
+  useEffect(() => {
+    const dept = cpParams.department;
+    const inspType = cpParams.inspection_type;
+    let filtered = inspectionForms;
+    if (dept) {
+      // Map department to form category
+      const catMap: Record<string, string> = {
+        Electrical: 'Electrical',
+        Civil: 'Civil',
+        Quality: 'Quality',
+        Mechanical: 'Quality',
+      };
+      const cat = catMap[dept];
+      if (cat) filtered = filtered.filter(f => f.category === cat);
+    }
+    if (inspType) {
+      filtered = filtered.filter(f =>
+        f.title.toLowerCase().includes(inspType.toLowerCase()) ||
+        f.description.toLowerCase().includes(inspType.toLowerCase())
+      );
+    }
+    setFilteredForms(filtered);
+    if (dept) setFilters(prev => ({ ...prev, category: dept }));
+  }, [cpParams.department, cpParams.inspection_type]);
+
   const handleFormSelect = (form: any) => {
     setSelectedForm(form);
     fetchCreatedForms(form.id);
@@ -176,7 +215,15 @@ const InspectionFormSelector: React.FC = () => {
 
   const handleCreateNew = () => {
     if (selectedForm) {
-      navigate(`/dashboard/inspection/forms/${selectedForm.id}/create`);
+      if (selectedForm.id === 'ac-cable-testing') {
+        navigate('/dashboard/inspection/forms/ac-cable-testing/create');
+      } else if (selectedForm.id === 'ht-cable') {
+        navigate('/dashboard/inspection/forms/ht-cable/create');
+      } else if (selectedForm.id === 'acdb-checklist') {
+        navigate('/dashboard/inspection/forms/acdb-checklist/create');
+      } else {
+        navigate(`/dashboard/inspection/forms/${selectedForm.id}/create`);
+      }
     }
   };
 
@@ -353,6 +400,18 @@ const InspectionFormSelector: React.FC = () => {
     >
       {!selectedForm ? (
         <Card>
+          {/* ── Considering Parameters ── */}
+          <ConsideringParametersPanel
+            parameters={cpParams}
+            options={cpOptions}
+            autoFillResult={autoFillResult}
+            autoFillLoading={autoFillLoading}
+            onChange={setCpParams}
+            onReset={() => { resetCpParams(); setFilteredForms(inspectionForms); }}
+            onSaveDefaults={saveCpDefaults}
+            smartVisibility
+            visibleParams={['department', 'work_area', 'site', 'zone', 'asset', 'inspection_type', 'process_type', 'risk_category', 'work_type']}
+          />
           <div className="mb-4 flex gap-4 flex-wrap">
             <Search
               placeholder="Search forms..."

@@ -2,7 +2,7 @@ import React from 'react'
 import { AppDialog, AppDialogHeader, AppDialogTitle, AppDialogBody, AppDialogFooter, AppDialogCloseButton } from '@/ui/sap/components/AppDialog'
 import { Badge } from '../ui/Badge'
 import { Building, CreditCard, Calendar, Clock } from 'lucide-react'
-import { Subscription } from '../../services/controlPlaneService'
+import type { Subscription } from '../../services/controlPlaneService'
 
 interface ViewSubscriptionModalProps {
   open: boolean
@@ -56,7 +56,7 @@ export const ViewSubscriptionModal: React.FC<ViewSubscriptionModalProps> = ({ op
             <Calendar className="w-4 h-4 text-gray-400 mt-0.5" />
             <div>
               <p className="text-xs text-gray-500 dark:text-gray-400">Start Date</p>
-              <p className="text-sm text-gray-900 dark:text-white">{new Date(subscription.start_date).toLocaleDateString()}</p>
+              <p className="text-sm text-gray-900 dark:text-white">{new Date(subscription.valid_from).toLocaleDateString()}</p>
             </div>
           </div>
           <div className="flex items-start gap-2">
@@ -64,7 +64,7 @@ export const ViewSubscriptionModal: React.FC<ViewSubscriptionModalProps> = ({ op
             <div>
               <p className="text-xs text-gray-500 dark:text-gray-400">End Date</p>
               <p className="text-sm text-gray-900 dark:text-white">
-                {subscription.end_date ? new Date(subscription.end_date).toLocaleDateString() : 'N/A'}
+                {subscription.valid_until ? new Date(subscription.valid_until).toLocaleDateString() : 'N/A'}
               </p>
             </div>
           </div>

@@ -107,7 +107,6 @@ const PaymentGatewayTab: React.FC = () => {
       });
       setDashboardData(response.data);
     } catch (error: any) {
-      console.error('Failed to load dashboard data');
     }
   };
 
@@ -120,7 +119,6 @@ const PaymentGatewayTab: React.FC = () => {
       });
       setInvoices(response.data.invoices || []);
     } catch (error: any) {
-      console.error('Failed to load invoices');
     }
   };
 

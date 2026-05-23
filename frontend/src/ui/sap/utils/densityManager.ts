@@ -14,7 +14,6 @@ export const densityManager = {
       localStorage.setItem('app_density', density)
       document.documentElement.setAttribute('data-density', density)
     } catch (e) {
-      console.warn('Failed to set density:', e)
     }
   },
 

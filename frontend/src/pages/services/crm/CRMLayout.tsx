@@ -43,7 +43,6 @@ const CRMLayout: React.FC<CRMLayoutProps> = ({ children, currentPage = 'overview
         setCompanyData(response.data)
       }
     } catch (error: any) {
-      console.error('Error fetching company logo:', error)
     }
   }
 

@@ -84,7 +84,6 @@ export default function GovernmentPortalIntegration() {
         setReturns(response.data.results || [])
       }
     } catch (error) {
-      console.error('Error loading data:', error)
       toast.error('Failed to load data')
     } finally {
       setLoading(false)

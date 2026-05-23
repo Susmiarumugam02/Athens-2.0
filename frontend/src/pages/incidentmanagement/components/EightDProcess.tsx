@@ -292,7 +292,7 @@ const EightDProcess: React.FC<EightDProcessProps> = ({
               <Statistic
                 value={process.days_since_initiated}
                 suffix="days"
-                valueStyle={{ fontSize: 16 }}
+                styles={{ content: { fontSize: 16 } }}
                 prefix={process.is_overdue ? <WarningOutlined style={{ color: '#ff4d4f' }} /> : <ClockCircleOutlined />}
               />
             </Space>

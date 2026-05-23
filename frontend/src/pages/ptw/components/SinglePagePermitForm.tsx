@@ -1,40 +1,35 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Form, Input, InputNumber, Button, Select, DatePicker, Switch, Card, Row, Col, App, Spin, Space, Checkbox, Alert, Divider, Typography, Tag } from 'antd';
-import { EnvironmentOutlined, QrcodeOutlined, SaveOutlined, CloseOutlined, PlusOutlined, SyncOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Select, DatePicker, Switch, Card, Row, Col, App, Spin, Space, Checkbox, Divider, Typography, Tag, Tabs, Upload } from 'antd';
+import { EnvironmentOutlined, QrcodeOutlined, SaveOutlined, CloseOutlined, PlusOutlined, SyncOutlined, UploadOutlined, CameraOutlined, RobotOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import TextArea from 'antd/es/input/TextArea';
 import { useAuthStore } from '../../../store/authStore';
 import { createPermit, updatePermit, getPermitTypes, getPermit, getPermitTypeResolvedTemplate, generatePermitQrCode } from '../api';
-import PersonnelSelect from './PersonnelSelect';
+import { apiClient } from '../../../lib/api';
+import RiskAssessmentSection from './RiskAssessmentSection';
+import type { RiskAssessmentData } from './RiskAssessmentSection';
+import { usePTWAI } from '../hooks/usePTWAI';
+import { AIAnalysisPanel, AIValidationPanel, VoiceButton } from './AIAssistPanel';
 
 const { Option } = Select;
 const { Text } = Typography;
+const { TabPane } = Tabs;
 
 type ChecklistItem = { key: string; label: string; required: boolean; default_checked: boolean };
 
-const RISK_MATRIX = {
-  probability: [
-    { value: 1, label: 'Rare', description: 'May occur in exceptional circumstances' },
-    { value: 2, label: 'Unlikely', description: 'Could occur at some time' },
-    { value: 3, label: 'Possible', description: 'Might occur at some time' },
-    { value: 4, label: 'Likely', description: 'Will probably occur' },
-    { value: 5, label: 'Almost Certain', description: 'Expected to occur' }
-  ],
-  severity: [
-    { value: 1, label: 'Insignificant', description: 'No injury, minimal impact' },
-    { value: 2, label: 'Minor', description: 'First aid treatment' },
-    { value: 3, label: 'Moderate', description: 'Medical treatment required' },
-    { value: 4, label: 'Major', description: 'Extensive injuries' },
-    { value: 5, label: 'Catastrophic', description: 'Death or permanent disability' }
-  ]
-};
+interface SinglePagePermitFormProps {
+  permitId?: number | null;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
 
-const SinglePagePermitForm: React.FC = () => {
+const SinglePagePermitForm: React.FC<SinglePagePermitFormProps> = ({ permitId: propPermitId, onSuccess, onCancel }) => {
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
+  const { id: routeId } = useParams<{ id: string }>();
+  const id = propPermitId != null ? String(propPermitId) : routeId;
   const isEditing = !!id;
   const { projectId } = useAuthStore();
 
@@ -43,12 +38,37 @@ const SinglePagePermitForm: React.FC = () => {
   const [autoSaving, setAutoSaving] = useState(false);
   const [riskScore, setRiskScore] = useState(0);
   const [riskLevel, setRiskLevel] = useState('');
+  const [riskData, setRiskData] = useState<RiskAssessmentData | null>(null);
   const [qrImage, setQrImage] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
   const [permitTypes, setPermitTypes] = useState<any[]>([]);
   const [resolvedTemplate, setResolvedTemplate] = useState<any>(null);
   const [templateLoading, setTemplateLoading] = useState(false);
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
+  const [gpsCoordinates, setGpsCoordinates] = useState('');
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [verifierType, setVerifierType] = useState<string | null>(null);
+  const [verifierUsers, setVerifierUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [activeVoiceField, setActiveVoiceField] = useState<string | null>(null);
+
+  const ai = usePTWAI();
+
+  useEffect(() => {
+    if (!verifierType) {
+      setVerifierUsers([]);
+      return;
+    }
+    setLoadingUsers(true);
+    apiClient.get('/api/auth/users/', { params: { admin_type: verifierType } })
+      .then(res => {
+        const users = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+        setVerifierUsers(users);
+      })
+      .catch(() => setVerifierUsers([]))
+      .finally(() => setLoadingUsers(false));
+  }, [verifierType]);
 
   useEffect(() => {
     loadPermitTypes();
@@ -59,6 +79,32 @@ const SinglePagePermitForm: React.FC = () => {
       form.setFieldsValue({ permit_number: permitNumber, work_nature: 'day' });
     }
   }, [id]);
+
+  useEffect(() => {
+    if (!gpsCoordinates) return;
+    const parts = gpsCoordinates.split(',');
+    if (parts.length !== 2) return;
+    const lat = parseFloat(parts[0]);
+    const lng = parseFloat(parts[1]);
+    if (isNaN(lat) || isNaN(lng)) return;
+    setGeoLoading(true);
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
+      headers: { 'Accept-Language': 'en' }
+    })
+      .then(res => res.json())
+      .then(data => {
+        const a = data.address || {};
+        const address = [
+          a.suburb || a.neighbourhood,
+          a.city || a.town || a.village || a.county,
+          a.state,
+          a.country
+        ].filter(Boolean).join(', ') || data.display_name || '';
+        if (address) form.setFieldsValue({ location: address });
+      })
+      .catch(() => {})
+      .finally(() => setGeoLoading(false));
+  }, [gpsCoordinates]);
 
   const loadPermitTypes = async () => {
     try {
@@ -90,7 +136,9 @@ const SinglePagePermitForm: React.FC = () => {
         safety_checklist: permit.safety_checklist || {}
       });
       if (permit.probability && permit.severity) {
-        calculateRisk(Number(permit.probability), Number(permit.severity));
+        const s = Number(permit.probability) * Number(permit.severity);
+        setRiskScore(s);
+        setRiskLevel(s <= 4 ? 'Low' : s <= 9 ? 'Medium' : s <= 16 ? 'High' : 'Extreme');
       }
     } catch (error) {
       message.error('Failed to load permit');
@@ -99,15 +147,7 @@ const SinglePagePermitForm: React.FC = () => {
     }
   };
 
-  const calculateRisk = (probability: number, severity: number) => {
-    const score = probability * severity;
-    setRiskScore(score);
-    const level = score <= 4 ? 'Low' : score <= 9 ? 'Medium' : score <= 16 ? 'High' : 'Extreme';
-    setRiskLevel(level);
-    return { score, level };
-  };
-
-  const handlePermitTypeChange = async (value: number) => {
+const handlePermitTypeChange = async (value: number) => {
     form.setFieldValue('permit_type', value);
     if (!value) return;
     
@@ -137,8 +177,8 @@ const SinglePagePermitForm: React.FC = () => {
         form.setFieldValue('safety_checklist', checklistValues);
       }
       message.success('Template loaded');
-    } catch (error) {
-      console.warn('Template load failed, using defaults');
+    } catch {
+      // Template load failed, using defaults
     } finally {
       setTemplateLoading(false);
     }
@@ -162,6 +202,23 @@ const SinglePagePermitForm: React.FC = () => {
   };
 
   const handleSubmit = async (values: any) => {
+    // AI pre-submission validation
+    const permitTypeCategory = permitTypes.find((t: any) => t.id === values.permit_type)?.category || '';
+    const aiVal = await ai.validate({
+      description: values.description || '',
+      ppe_requirements: values.ppe_requirements || [],
+      safety_checklist: values.safety_checklist || {},
+      probability: riskData?.probability ?? values.probability ?? 1,
+      severity: riskData?.severity ?? values.severity ?? 1,
+      hazards: riskData?.hazards?.join(', ') ?? '',
+      control_measures: riskData?.control_measures ?? values.control_measures ?? '',
+      planned_start_time: values.planned_start_time?.toISOString() ?? '',
+      planned_end_time: values.planned_end_time?.toISOString() ?? '',
+    });
+    if (aiVal && aiVal.errors.length > 0) {
+      message.error(`AI Validation: ${aiVal.errors[0]}`);
+      return;
+    }
     setSubmitting(true);
     try {
       const submitData = {
@@ -169,8 +226,13 @@ const SinglePagePermitForm: React.FC = () => {
         permit_type: Number(values.permit_type),
         planned_start_time: values.planned_start_time?.toISOString(),
         planned_end_time: values.planned_end_time?.toISOString(),
-        probability: Number(values.probability) || 1,
-        severity: Number(values.severity) || 1,
+        probability: riskData?.probability ?? Number(values.probability) ?? 1,
+        severity: riskData?.severity ?? Number(values.severity) ?? 1,
+        control_measures: riskData?.control_measures ?? values.control_measures ?? '',
+        hazards: riskData?.hazards ?? [],
+        other_hazards: riskData?.other_hazards ?? '',
+        risk_factors: riskData?.risk_factors ?? [],
+        emergency_procedures: riskData?.emergency_procedures ?? '',
         ppe_requirements: values.ppe_requirements || [],
         safety_checklist: values.safety_checklist || {},
         permit_parameters: values.permit_parameters || {}
@@ -179,15 +241,38 @@ const SinglePagePermitForm: React.FC = () => {
       let response;
       if (isEditing) {
         response = await updatePermit(parseInt(id!), submitData);
-        message.success('Permit updated');
+        message.success('Permit updated successfully');
       } else {
         response = await createPermit(submitData);
-        message.success('Permit created');
+        console.log('[PTW] Permit created:', response.data?.id, response.data?.permit_number);
+        message.success(`Permit ${response.data?.permit_number || ''} created successfully`);
       }
-      
-      setTimeout(() => navigate('/app/ptw'), 1000);
+
+      // Reset form state
+      form.resetFields();
+      setRiskData(null);
+      setRiskScore(0);
+      setRiskLevel('');
+      setChecklistItems([]);
+      setGpsCoordinates('');
+      setQrImage(null);
+      setVerifierType(null);
+      setVerifierUsers([]);
+      // Re-seed permit number for next creation
+      const newPermitNumber = `PTW-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+      form.setFieldsValue({ permit_number: newPermitNumber, work_nature: 'day' });
+
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate('/app/ptw');
+      }
     } catch (error: any) {
-      message.error(error?.response?.data?.detail || 'Failed to save permit');
+      const errDetail = error?.response?.data?.detail
+        || (typeof error?.response?.data === 'object' ? JSON.stringify(error.response.data) : null)
+        || 'Failed to save permit';
+      console.error('[PTW] Save error:', error?.response?.data);
+      message.error(errDetail);
     } finally {
       setSubmitting(false);
     }
@@ -214,6 +299,47 @@ const SinglePagePermitForm: React.FC = () => {
     form.setFieldValue('safety_checklist', checklistValues);
   };
 
+  const handleSmartAutofill = async () => {
+    const values = form.getFieldsValue();
+    const permitType = permitTypes.find((t: any) => t.id === values.permit_type);
+    const result = await ai.autofill({
+      permit_type: permitType?.category || permitType?.name || '',
+      location: values.location || '',
+      contractor: values.contractor || '',
+      department: values.department || '',
+      project: projectId ? String(projectId) : '',
+      work_nature: values.work_nature || '',
+      description: values.description || '',
+    });
+    if (!result) {
+      message.error('AI smart auto-fill is unavailable right now');
+      return;
+    }
+
+    if (result.ppe_requirements?.length) form.setFieldValue('ppe_requirements', result.ppe_requirements);
+    if (result.risk_controls?.length) {
+      const current = form.getFieldValue('control_measures') || '';
+      form.setFieldValue('control_measures', current ? `${current}\n${result.risk_controls.join('\n')}` : result.risk_controls.join('\n'));
+    }
+    if (result.checklist?.length) {
+      const items = result.checklist.map((label, index) => ({
+        key: `ai_${index}_${label.replace(/\s+/g, '_').toLowerCase()}`,
+        label,
+        required: false,
+        default_checked: true,
+      }));
+      setChecklistItems(items);
+      const vals: Record<string, boolean> = {};
+      items.forEach(item => { vals[item.key] = true; });
+      form.setFieldValue('safety_checklist', vals);
+    }
+    if (result.emergency_contacts?.length) {
+      form.setFieldValue('emergency_contacts', result.emergency_contacts.join('\n'));
+    }
+    setAiPanelOpen(true);
+    message.success('AI smart auto-fill applied');
+  };
+
   if (loading) return <div className="flex justify-center items-center min-h-screen"><Spin size="large" /></div>;
 
   return (
@@ -233,7 +359,14 @@ const SinglePagePermitForm: React.FC = () => {
         </Space>
       </div>
 
-      <Form form={form} layout="vertical" onFinish={handleSubmit}>
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleSubmit}
+        onValuesChange={(changed) => {
+          if ('gps_coordinates' in changed) setGpsCoordinates(changed.gps_coordinates || '');
+        }}
+      >
         {/* Basic Information */}
         <Card title="1. Basic Information" className="mb-4">
           <Row gutter={16}>
@@ -252,13 +385,110 @@ const SinglePagePermitForm: React.FC = () => {
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item name="description" label="Work Description" rules={[{ required: true, min: 10 }]}>
-            <TextArea rows={3} placeholder="Detailed work description (minimum 10 characters)" showCount maxLength={1000} />
+          <Form.Item name="description" label={
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              Work Description
+              <VoiceButton
+                fieldLabel="Work Description"
+                voiceActive={activeVoiceField === 'description' && ai.voiceActive}
+                voiceProcessing={activeVoiceField === 'description' && ai.voiceProcessing}
+                conversionNote={activeVoiceField === 'description' ? ai.voiceConversionNote : ''}
+                voiceError={ai.voiceError}
+                onStart={() => {
+                  setActiveVoiceField('description');
+                  ai.startVoice((professional) => {
+                    const current = form.getFieldValue('description') || '';
+                    form.setFieldValue('description', current ? `${current} ${professional}` : professional);
+                    message.success('Voice converted to professional English');
+                  }, 'description');
+                }}
+                onStop={ai.stopVoice}
+              />
+            </span>
+          } rules={[{ required: true, min: 10 }]}>
+            <TextArea
+              rows={3}
+              placeholder="Describe the work activity (speak in Tamil/Hindi/English using Voice button)"
+              showCount
+              maxLength={1000}
+              onBlur={(e) => {
+                const val = e.target.value;
+                if (val && val.length >= 5) {
+                  const permitTypeCategory = permitTypes.find((t: any) => t.id === form.getFieldValue('permit_type'))?.category || '';
+                  ai.analyze(val, permitTypeCategory).then(result => {
+                    if (result) setAiPanelOpen(true);
+                  });
+                }
+              }}
+            />
           </Form.Item>
+
+          {/* AI Analysis Panel */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <Button
+                size="small"
+                icon={<RobotOutlined />}
+                type={aiPanelOpen ? 'primary' : 'default'}
+                onClick={() => setAiPanelOpen(v => !v)}
+              >
+                {ai.analyzing ? 'Analyzing...' : aiPanelOpen ? 'Hide AI Suggestions' : 'Show AI Suggestions'}
+              </Button>
+              <Button
+                size="small"
+                icon={<SyncOutlined />}
+                loading={ai.autofilling}
+                onClick={handleSmartAutofill}
+              >
+                Smart Auto-Fill
+              </Button>
+              {ai.analysis && (
+                <Tag color={ai.analysis.risk.level === 'Low' ? 'green' : ai.analysis.risk.level === 'Medium' ? 'orange' : 'red'}>
+                  AI Risk: {ai.analysis.risk.level}
+                </Tag>
+              )}
+            </div>
+            {aiPanelOpen && (
+              <AIAnalysisPanel
+                analysis={ai.analysis}
+                analyzing={ai.analyzing}
+                onApplyHazards={(hazards) => {
+                  const current = form.getFieldValue('hazards') || '';
+                  form.setFieldValue('hazards', current ? `${current}\n${hazards.join('\n')}` : hazards.join('\n'));
+                  message.success(`Applied ${hazards.length} hazards`);
+                }}
+                onApplyControls={(controls) => {
+                  const current = form.getFieldValue('control_measures') || '';
+                  form.setFieldValue('control_measures', current ? `${current}\n${controls.join('\n')}` : controls.join('\n'));
+                  message.success(`Applied ${controls.length} controls`);
+                }}
+                onApplyPPE={(ppe) => {
+                  form.setFieldValue('ppe_requirements', ppe);
+                  message.success(`Applied ${ppe.length} PPE items`);
+                }}
+                onApplyChecklist={(items) => {
+                  const newItems = items.map(label => ({ key: label.replace(/\s+/g, '_').toLowerCase(), label, required: false, default_checked: true }));
+                  setChecklistItems(newItems);
+                  const vals: Record<string, boolean> = {};
+                  newItems.forEach(i => { vals[i.key] = true; });
+                  form.setFieldValue('safety_checklist', vals);
+                  message.success(`Applied ${items.length} checklist items`);
+                }}
+                onApplyRisk={(probability, severity) => {
+                  form.setFieldsValue({ probability, severity });
+                  const score = probability * severity;
+                  setRiskScore(score);
+                  setRiskLevel(score <= 4 ? 'Low' : score <= 9 ? 'Medium' : score <= 16 ? 'High' : 'Extreme');
+                  message.success('Risk score applied');
+                }}
+              />
+            )}
+            <AIValidationPanel validation={ai.validation} validating={ai.validating} />
+          </div>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="location" label="Location" rules={[{ required: true, min: 3 }]}>
-                <Input placeholder="Work location" />
+              <Form.Item name="location" label={<span>Location {geoLoading && <Spin size="small" style={{ marginLeft: 6 }} />}</span>} rules={[{ required: true, min: 3 }]}>
+                <Input placeholder={geoLoading ? 'Fetching address...' : 'Work location'} disabled={geoLoading} />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -269,17 +499,26 @@ const SinglePagePermitForm: React.FC = () => {
                     <Button 
                       type="primary" 
                       icon={<EnvironmentOutlined />}
+                      loading={geoLoading}
                       onClick={() => {
-                        if (navigator.geolocation) {
-                          navigator.geolocation.getCurrentPosition(
-                            (position) => {
-                              const coords = `${position.coords.latitude.toFixed(6)},${position.coords.longitude.toFixed(6)}`;
-                              form.setFieldValue('gps_coordinates', coords);
-                              message.success('Location captured');
-                            },
-                            () => message.error('Failed to get location')
-                          );
+                        if (!navigator.geolocation) {
+                          message.error('Geolocation not supported');
+                          return;
                         }
+                        setGeoLoading(true);
+                        navigator.geolocation.getCurrentPosition(
+                          (position) => {
+                            const coords = `${position.coords.latitude.toFixed(6)},${position.coords.longitude.toFixed(6)}`;
+                            form.setFieldsValue({ gps_coordinates: coords });
+                            setGpsCoordinates(coords);
+                            setGeoLoading(false);
+                          },
+                          () => {
+                            setGeoLoading(false);
+                            message.error('Failed to get location');
+                          },
+                          { enableHighAccuracy: true, timeout: 10000 }
+                        );
                       }}
                     >
                       Get Location
@@ -313,56 +552,14 @@ const SinglePagePermitForm: React.FC = () => {
         </Card>
 
         {/* Risk Assessment */}
-        <Card title="2. Risk Assessment" className="mb-4">
-          {riskScore > 0 && (
-            <Alert
-              message={`Risk Level: ${riskLevel}`}
-              description={`Risk Score: ${riskScore}/25 (Probability × Severity)`}
-              type={riskLevel === 'Low' ? 'success' : riskLevel === 'Medium' ? 'warning' : 'error'}
-              showIcon
-              style={{ marginBottom: 16 }}
-            />
-          )}
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="probability" label="Probability (Likelihood)" rules={[{ required: true }]}>
-                <Select 
-                  placeholder="Select probability"
-                  onChange={(value) => {
-                    const severity = form.getFieldValue('severity') || 1;
-                    calculateRisk(value, severity);
-                  }}
-                >
-                  {RISK_MATRIX.probability.map(item => (
-                    <Option key={item.value} value={item.value}>
-                      {item.value} - {item.label}: {item.description}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="severity" label="Severity (Consequence)" rules={[{ required: true }]}>
-                <Select 
-                  placeholder="Select severity"
-                  onChange={(value) => {
-                    const probability = form.getFieldValue('probability') || 1;
-                    calculateRisk(probability, value);
-                  }}
-                >
-                  {RISK_MATRIX.severity.map(item => (
-                    <Option key={item.value} value={item.value}>
-                      {item.value} - {item.label}: {item.description}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="control_measures" label="Control Measures" rules={[{ required: true, min: 10 }]}>
-            <TextArea rows={4} placeholder="Describe control measures (minimum 10 characters)" showCount maxLength={1000} />
-          </Form.Item>
-        </Card>
+        <RiskAssessmentSection
+          permitType={permitTypes.find(t => t.id === form.getFieldValue('permit_type')) || null}
+          onChange={(data) => {
+            setRiskData(data);
+            setRiskScore(data.risk_score);
+            setRiskLevel(data.risk_level);
+          }}
+        />
 
         {/* Safety Measures */}
         <Card title="3. Safety Measures" className="mb-4">
@@ -380,7 +577,30 @@ const SinglePagePermitForm: React.FC = () => {
 
           <Form.Item label="Safety Checklist">
             {checklistItems.length === 0 ? (
-              <Text type="secondary">No checklist items. Select a permit type or add custom items.</Text>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 12, color: '#888', marginBottom: 6 }}>
+                  No checklist items loaded. Apply the permit type template or add items.
+                </div>
+                <Button
+                  type="link"
+                  style={{ padding: 0 }}
+                  onClick={() => {
+                    const defaults = [
+                      'Check PPE', 'Inspect tools', 'Ensure isolation',
+                      'Verify permits', 'Emergency readiness', 'Supervisor approval'
+                    ];
+                    const items: ChecklistItem[] = defaults.map(label => ({
+                      key: label, label, required: false, default_checked: true
+                    }));
+                    setChecklistItems(items);
+                    const vals: Record<string, boolean> = {};
+                    items.forEach(i => { vals[i.key] = true; });
+                    form.setFieldValue('safety_checklist', vals);
+                  }}
+                >
+                  Load suggested checklist (6 items)
+                </Button>
+              </div>
             ) : (
               checklistItems.map(item => (
                 <Row key={item.key} gutter={8} align="middle" style={{ marginBottom: 8 }}>
@@ -405,54 +625,209 @@ const SinglePagePermitForm: React.FC = () => {
           </Form.Item>
 
           <Row gutter={16}>
-            <Col span={12}>
+            <Col span={8}>
               <Form.Item name="requires_isolation" valuePropName="checked" label="LOTO Required">
                 <Switch />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col span={8}>
               <Form.Item name="risk_assessment_completed" valuePropName="checked" label="Risk Assessment Done">
+                <Switch />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="training_verified" valuePropName="checked" label="Training Verified">
                 <Switch />
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item name="special_instructions" label="Special Instructions">
-            <TextArea rows={3} placeholder="Any special safety instructions or precautions" />
+          <Form.Item name="special_instructions" label={
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              Special Instructions
+              <VoiceButton
+                fieldLabel="Special Instructions"
+                voiceActive={activeVoiceField === 'special_instructions' && ai.voiceActive}
+                voiceProcessing={activeVoiceField === 'special_instructions' && ai.voiceProcessing}
+                conversionNote={activeVoiceField === 'special_instructions' ? ai.voiceConversionNote : ''}
+                voiceError={ai.voiceError}
+                onStart={() => {
+                  setActiveVoiceField('special_instructions');
+                  ai.startVoice((professional) => {
+                    const current = form.getFieldValue('special_instructions') || '';
+                    form.setFieldValue('special_instructions', current ? `${current} ${professional}` : professional);
+                    message.success('Voice converted to professional English');
+                  }, 'special_instructions');
+                }}
+                onStop={ai.stopVoice}
+              />
+            </span>
+          }>
+            <TextArea rows={3} placeholder="Any special safety instructions or precautions (voice input supported)" />
           </Form.Item>
-        </Card>
 
-        {/* Personnel */}
-        <Card title="4. Personnel & Documentation" className="mb-4">
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="Requestor/Receiver">
-                <Input value={useAuthStore.getState().name || 'Current User'} disabled style={{ backgroundColor: '#f5f5f5' }} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="verifier" label="Verifier" rules={[{ required: true }]}>
-                <PersonnelSelect placeholder="Select verifier" userType="epcuser,clientuser" grade="B,C" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="emergency_contacts" label="Emergency Contacts">
-            <TextArea rows={2} placeholder="Emergency contact numbers and procedures" />
+          <Form.Item name="emergency_contacts" label={
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              Emergency Contacts
+              <VoiceButton
+                fieldLabel="Emergency Contacts"
+                voiceActive={activeVoiceField === 'emergency_contacts' && ai.voiceActive}
+                voiceProcessing={activeVoiceField === 'emergency_contacts' && ai.voiceProcessing}
+                conversionNote={activeVoiceField === 'emergency_contacts' ? ai.voiceConversionNote : ''}
+                voiceError={ai.voiceError}
+                onStart={() => {
+                  setActiveVoiceField('emergency_contacts');
+                  ai.startVoice((professional) => {
+                    const current = form.getFieldValue('emergency_contacts') || '';
+                    form.setFieldValue('emergency_contacts', current ? `${current} ${professional}` : professional);
+                    message.success('Voice converted to professional English');
+                  }, 'emergency_contacts');
+                }}
+                onStop={ai.stopVoice}
+              />
+            </span>
+          }>
+            <TextArea rows={3} placeholder="Emergency contact numbers and procedures (voice input supported)" />
           </Form.Item>
-        </Card>
 
-        {/* QR Code */}
-        {qrImage && (
-          <Card title="QR Code" className="mb-4">
-            <div style={{ textAlign: 'center' }}>
-              <img src={qrImage} alt="Permit QR Code" style={{ maxWidth: 220, border: '1px solid #d9d9d9', padding: 12 }} />
+          <div style={{ marginTop: 16, padding: '12px 16px', background: '#fafafa', borderRadius: 6, border: '1px solid #f0f0f0' }}>
+            <strong style={{ fontSize: 13 }}>
+              Standard Parameters for {permitTypes.find(t => t.id === form.getFieldValue('permit_type'))?.name || 'Permit Type'}
+            </strong>
+            <div style={{ fontSize: 12, color: '#666', marginTop: 6 }}>
+              {form.getFieldValue('permit_type')
+                ? templateLoading ? 'Loading template parameters...' : 'Template parameters applied from selected permit type.'
+                : 'Select a permit type to view standard parameters.'}
             </div>
-          </Card>
-        )}
+          </div>
+        </Card>
+
+        {/* Personnel & Documentation */}
+        <Card title="4. Personnel & Documentation" className="mb-4">
+          <Tabs defaultActiveKey="documentation">
+            <TabPane tab="Documentation" key="documentation">
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item name="work_photos" label="Work Area Photos">
+                    <Upload listType="picture-card" multiple beforeUpload={() => false}>
+                      <div><CameraOutlined /><div style={{ marginTop: 4 }}>Upload Photos</div></div>
+                    </Upload>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="site_layout" label="Site Layout / Drawing">
+                    <Upload beforeUpload={() => false}>
+                      <Button icon={<UploadOutlined />}>Upload Site Layout</Button>
+                    </Upload>
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Row gutter={16}>
+                <Col span={8}>
+                  <Form.Item name="method_statement" label="Method Statement">
+                    <Upload beforeUpload={() => false}>
+                      <Button icon={<UploadOutlined />}>Upload Method Statement</Button>
+                    </Upload>
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="risk_assessment_doc" label="Risk Assessment">
+                    <Upload beforeUpload={() => false}>
+                      <Button icon={<UploadOutlined />}>Upload Risk Assessment</Button>
+                    </Upload>
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="work_procedure" label="Work Procedure">
+                    <Upload beforeUpload={() => false}>
+                      <Button icon={<UploadOutlined />}>Upload Work Procedure</Button>
+                    </Upload>
+                  </Form.Item>
+                </Col>
+              </Row>
+            </TabPane>
+
+            <TabPane tab="Personnel" key="personnel">
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item label="Requestor / Receiver">
+                    <Input
+                      value={useAuthStore.getState().name || 'Current User'}
+                      disabled
+                      style={{ backgroundColor: '#f5f5f5' }}
+                    />
+                    <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                      Requestor and Receiver are automatically set to the permit creator.
+                    </div>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Verifier Type" required>
+                    <Select
+                      placeholder="Select verifier type"
+                      value={verifierType}
+                      onChange={(val) => {
+                        setVerifierType(val);
+                        form.setFieldValue('verifier', null);
+                      }}
+                      options={[
+                        { label: 'EPC', value: 'epc' },
+                        { label: 'Client', value: 'client' }
+                      ]}
+                    />
+                  </Form.Item>
+                  <Form.Item
+                    name="verifier"
+                    label="Select Verifier"
+                    rules={[{ required: true, message: 'Please select a verifier' }]}
+                  >
+                    <Select
+                      placeholder={verifierType ? 'Select verifier' : 'Select verifier type first'}
+                      disabled={!verifierType}
+                      loading={loadingUsers}
+                      options={verifierUsers.map(user => ({
+                        label: `${user.name || user.username} — ${user.designation || 'No Designation'} (${user.admin_type || verifierType})`,
+                        value: user.id
+                      }))}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <div style={{ background: '#1f1f1f', color: '#fff', padding: '10px 14px', borderRadius: 6, fontSize: 13, marginTop: 8 }}>
+                You select the verifier. The verifier will then select the approver during the verification process.
+              </div>
+            </TabPane>
+
+            <TabPane tab="QR & Mobile" key="qr_mobile">
+              <Card size="small" title="QR Code Generation" style={{ marginBottom: 16 }}>
+                <Button type="primary" icon={<QrcodeOutlined />} onClick={generateQRCode} loading={qrLoading}>
+                  Generate QR Code
+                </Button>
+                {qrImage && (
+                  <div style={{ marginTop: 16, textAlign: 'center' }}>
+                    <img src={qrImage} alt="Permit QR Code" style={{ maxWidth: 220, border: '1px solid #d9d9d9', padding: 12 }} />
+                  </div>
+                )}
+              </Card>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item name="mobile_created" valuePropName="checked" label="Created on Mobile">
+                    <Switch />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="offline_id" label="Offline ID">
+                    <Input placeholder="Offline sync ID" />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </TabPane>
+          </Tabs>
+        </Card>
 
         {/* Actions */}
         <div className="flex justify-end gap-2">
-          <Button onClick={() => navigate('/app/ptw')}>Cancel</Button>
+          <Button onClick={() => onCancel ? onCancel() : navigate('/app/ptw')}>Cancel</Button>
           <Button type="primary" htmlType="submit" loading={submitting} icon={<SaveOutlined />}>
             {isEditing ? 'Update' : 'Create'} Permit
           </Button>

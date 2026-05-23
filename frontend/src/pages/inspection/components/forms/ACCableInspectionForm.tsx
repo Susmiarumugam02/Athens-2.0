@@ -41,7 +41,7 @@ const ACCableInspectionForm: React.FC = () => {
   useEffect(() => {
     const fetchUserDetails = async () => {
       try {
-        const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000').replace(/\/$/, '');
+        const backendBaseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
         // Fetch user details and company data
         const [userResponse, companyResponse] = await Promise.all([
           api.get('/authentication/userdetail/'),
@@ -57,7 +57,6 @@ const ACCableInspectionForm: React.FC = () => {
         try {
           signatureTemplate = await fetchSignaturePreviewUrl();
         } catch (error) {
-          console.warn('Failed to load signature template preview:', error);
         }
         
         

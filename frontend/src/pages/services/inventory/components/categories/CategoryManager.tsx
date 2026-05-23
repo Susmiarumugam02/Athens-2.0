@@ -81,7 +81,6 @@ const CategoryManager: React.FC = () => {
       const response = await inventoryApi.getCategories(params);
       setCategories(response.results || response);
     } catch (error) {
-      console.error('Failed to load categories:', error);
       toast.error('Failed to load categories');
     } finally {
       setLoading(false);
@@ -124,7 +123,6 @@ const CategoryManager: React.FC = () => {
       resetForm();
       loadCategories();
     } catch (error: any) {
-      console.error('Error saving category:', error);
       const message = error.response?.data?.error || 'Failed to save category';
       toast.error(message);
     } finally {
@@ -173,7 +171,6 @@ const CategoryManager: React.FC = () => {
         toast.success('Category deleted successfully!');
         loadCategories();
       } catch (error) {
-        console.error('Failed to delete category:', error);
         toast.error('Failed to delete category');
       }
     }

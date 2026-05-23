@@ -55,7 +55,6 @@ const PublicJobDetail: React.FC<PublicJobDetailProps> = () => {
           share_id: shareId
         })
       } catch (error) {
-        console.error('Error tracking click:', error)
       }
     }
   }
@@ -65,7 +64,6 @@ const PublicJobDetail: React.FC<PublicJobDetailProps> = () => {
       const response = await api.get(`/api/hr/public/jobs/${jobId}/`)
       setJob(response.data)
     } catch (error) {
-      console.error('Error fetching job details:', error)
       toast.error('Job not found or no longer available')
     } finally {
       setLoading(false)
@@ -147,7 +145,6 @@ const PublicJobDetail: React.FC<PublicJobDetailProps> = () => {
             application_id: response.data.application_id
           })
         } catch (trackError) {
-          console.error('Error tracking application from share:', trackError)
         }
       }
       
@@ -181,7 +178,6 @@ const PublicJobDetail: React.FC<PublicJobDetailProps> = () => {
       setCurrentStep(1)
       setResume(null)
     } catch (error: any) {
-      console.error('Error submitting application:', error)
       toast.error(error.response?.data?.message || 'Failed to submit application')
     }
   }
@@ -216,7 +212,7 @@ const PublicJobDetail: React.FC<PublicJobDetailProps> = () => {
             <div className="flex items-center space-x-4">
               {job.company_logo ? (
                 <img 
-                  src={`http://localhost:8000${job.company_logo}`}
+                  src={`${import.meta.env.VITE_API_URL || ""}${job.company_logo}`}
                   alt={job.company_name || 'Company Logo'}
                   className="h-16 w-16 rounded-xl object-cover shadow-lg"
                   onError={(e) => {
@@ -432,7 +428,7 @@ const PublicJobDetail: React.FC<PublicJobDetailProps> = () => {
                   <div className="flex items-center space-x-3">
                     {job.company_logo ? (
                       <img 
-                        src={`http://localhost:8000${job.company_logo}`}
+                        src={`${import.meta.env.VITE_API_URL || ""}${job.company_logo}`}
                         alt={job.company_name || 'Company Logo'}
                         className="h-12 w-12 rounded-lg object-cover"
                         onError={(e) => {

@@ -67,7 +67,6 @@ const BiodiversityEventList: React.FC = () => {
       message.success('Biodiversity event deleted successfully');
       fetchEvents();
     } catch (error) {
-      console.error('Delete error:', error);
       message.error('Failed to delete biodiversity event');
     }
   };

@@ -181,7 +181,6 @@ export const EnhancedCustomerForm: React.FC<EnhancedCustomerFormProps> = ({
 
       onSubmit(formData)
     } catch (error: any) {
-      console.error('Form submission error:', error)
       alert(error.message)
     } finally {
       setLoading(false)

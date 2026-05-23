@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Form, Input, Button, Select, Typography, Card, Spin, App } from 'antd';
 import { useParams, useNavigate } from 'react-router-dom';
-import api from '../../../lib/api';
+import { apiClient } from '../../../lib/api';
 import { useAuthStore } from '../../../store/authStore';
 //import { sendNotification, type NotificationType } from '../../../common/utils/notificationService';
 import { DatePicker } from 'antd';
@@ -19,6 +19,13 @@ interface User {
   name?: string; // Full name
   email: string;
   department?: { id: number; name: string; } | string | number; // Can be object, string, or ID
+}
+
+interface Employee {
+  id: number;
+  name: string;
+  employee_code: string;
+  department?: string;
 }
 
 interface MomFormValues {
@@ -40,48 +47,53 @@ const MomEdit: React.FC = () => {
   const [form] = Form.useForm();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { username: schedulerUsername, userId: schedulerUserId, django_user_type } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
+  const schedulerUsername = user?.username || user?.email || '';
+  const schedulerUserId = user?.id;
+  const schedulerUserType = user?.user_type;
+  const schedulerAdminType = user?.admin_type;
+  const canEditMom = Boolean(
+    user && (
+      schedulerUserType === 'adminuser' ||
+      (schedulerUserType === 'companyuser' && ['client', 'epc', 'clientuser', 'epcuser'].includes(schedulerAdminType || '')) ||
+      ['client', 'epc', 'clientuser', 'epcuser'].includes(schedulerAdminType || '')
+    )
+  );
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [employeesList, setEmployeesList] = useState<Employee[]>([]);
+  const [users, setUsers] = useState<Employee[]>([]);
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [employeesLoaded, setEmployeesLoaded] = useState(false);
+  const [participantsSearch, setParticipantsSearch] = useState('');
   const [selectedDateTime, setSelectedDateTime] = useState<moment.Moment | null>(null);
   const effectiveTheme = 'light'; // Default theme
 
   const { message } = App.useApp();
+  const messageRef = useRef(message);
+  useEffect(() => { messageRef.current = message; }, [message]);
 
   useEffect(() => {
-    if (django_user_type !== 'adminuser') {
+    if (!canEditMom) {
+      messageRef.current.error('You do not have permission to edit this meeting.');
     }
-  }, [django_user_type]);
+  }, [canEditMom]);
 
   useEffect(() => {
     const fetchMom = async () => {
       if (!id) return;
       setLoading(true);
       try {
-        const response = await api.get(`/api/v1/mom/${id}/`);
+        const response = await apiClient.get(`/api/v1/mom/${id}/`);
         const momData = response.data;
 
-        // Check if user has permission to edit
         if (!momData.can_edit) {
-          message.error('You do not have permission to edit this meeting.');
-          navigate('/dashboard/mom');
+          messageRef.current.error('You do not have permission to edit this meeting.');
+          navigate('/app/mom');
           return;
         }
 
-        console.log('MOM data loaded:', {
-          id: momData.id,
-          title: momData.title,
-          participants: momData.participants,
-          participants_ids: momData.participants_ids,
-          department: momData.department,
-          can_edit: momData.can_edit
-        });
-
-        // Set form values
         const meetingDateTime = momData.meeting_datetime ? moment(momData.meeting_datetime) : null;
         form.setFieldsValue({
           title: momData.title,
@@ -89,140 +101,106 @@ const MomEdit: React.FC = () => {
           meeting_datetime: meetingDateTime,
           participants_ids: momData.participants_ids || [],
         });
-
-        // Set the selected date time for help text
         setSelectedDateTime(meetingDateTime);
 
-        // If there are participants, extract their departments
+        // Resolve participants — prefer embedded details, fall back to parallel batch fetch
+        let participants: User[] = [];
         if (momData.participants && momData.participants.length > 0) {
-          try {
-            // Extract unique departments from participants (participants should include department info)
-            const participantDepartments = momData.participants
-              .map((participant: any) => participant.department?.name || participant.department)
-              .filter((dept: string, index: number, self: string[]) => dept && self.indexOf(dept) === index); // Remove duplicates and nulls
-
-            console.log('Participant departments extracted:', {
-              participants: momData.participants.map((p: any) => ({
-                id: p.id,
-                name: p.name,
-                department: p.department
-              })),
-              extractedDepartments: participantDepartments
-            });
-
-            if (participantDepartments.length > 0) {
-              setSelectedDepartments(participantDepartments);
-              form.setFieldsValue({
-                departments: participantDepartments
-              });
-            }
-
-            // Also set the users list with current participants
-            setUsers(momData.participants);
-
-          } catch (participantError) {
-            // Fallback: try to use the meeting's department if available
-            if (momData.department) {
-              const deptName = momData.department?.name || momData.department;
-              setSelectedDepartments([deptName]);
-              form.setFieldsValue({
-                departments: [deptName]
-              });
-            }
-          }
+          participants = momData.participants;
         } else if (momData.participants_ids && momData.participants_ids.length > 0) {
-          // Fallback: if participants_ids exist but no participant details, fetch them
-          try {
-            const participantPromises = momData.participants_ids.map((participantId: number) =>
-              api.get(`/api/v1/users/${participantId}/`)
-            );
-
-            const participantResponses = await Promise.all(participantPromises);
-            const participants = participantResponses.map(res => res.data);
-
-            // Extract unique departments from participants
-            const participantDepartments = participants
-              .map(participant => participant.department?.name || participant.department)
-              .filter((dept, index, self) => dept && self.indexOf(dept) === index); // Remove duplicates and nulls
-
-            if (participantDepartments.length > 0) {
-              setSelectedDepartments(participantDepartments);
-              form.setFieldsValue({
-                departments: participantDepartments
-              });
-            }
-
-            // Also set the users list with current participants
-            setUsers(participants);
-
-          } catch (participantError) {
-          }
+          // Parallel fetch — all requests fire at once instead of sequentially
+          const results = await Promise.allSettled(
+            momData.participants_ids.map((uid: number) => apiClient.get(`/api/v1/users/${uid}/`))
+          );
+          participants = results
+            .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+            .map(r => r.value.data);
         }
 
-      } catch (error) {
-        message.error('Failed to load meeting data.');
+          if (participants.length > 0) {
+          const depts = participants
+            .map((p: any) => p.department?.name || p.department)
+            .filter((d: string, i: number, arr: string[]) => d && arr.indexOf(d) === i);
+          if (depts.length > 0) {
+            setSelectedDepartments(depts);
+            form.setFieldsValue({ departments: depts });
+          }
+        }
+      } catch {
+        messageRef.current.error('Failed to load meeting data.');
       } finally {
         setLoading(false);
-        setIsInitialLoad(false); // Mark initial load as complete
       }
     };
     fetchMom();
-  }, [id, form, message]);
+  }, [id]); // ← only re-run when id changes, not on every render
 
-  useEffect(() => {
-    // Only fetch users if this is not the initial load (to avoid overriding loaded participants)
-    if (selectedDepartments.length > 0 && !isInitialLoad) {
-      const fetchUsersByDepartments = async () => {
-        setLoadingUsers(true);
-        setUsers([]);
-        // Only clear participants_ids if this is a manual department change, not on initial load
-        // We can track this with a ref or a flag, but for simplicity, do not clear participants_ids here
-        // form.setFieldsValue({ participants_ids: [] });
-        try {
-          // Fetch users from all selected departments
-          const allUsers: User[] = [];
+  const applyEmployeeFilters = (
+    list: Employee[],
+    departments: string[] = selectedDepartments,
+    search = participantsSearch
+  ) => {
+    const searchText = search?.trim().toLowerCase() ?? '';
+    const departmentFilters = departments.map((dept) => dept.toLowerCase());
 
-          for (const department of selectedDepartments) {
-            try {
-              const response = await api.get<User[] | { results?: User[] }>(`/api/v1/users/?department_name=${encodeURIComponent(department)}`);
-              if (response.data) {
-                // Handle different response formats
-                let userData: User[];
-                if (Array.isArray(response.data)) {
-                  userData = response.data;
-                } else if (response.data && typeof response.data === 'object' && 'results' in response.data && Array.isArray(response.data.results)) {
-                  userData = response.data.results;
-                } else {
-                  userData = [];
-                }
-                allUsers.push(...userData);
-              }
-            } catch (error) {
-              message.error(`Failed to load users for department ${department}.`);
-            }
-          }
+    return list.filter((employee) => {
+      const matchesDepartment =
+        departmentFilters.length === 0 ||
+        departmentFilters.some((filter) =>
+          (employee.department || '').toLowerCase().includes(filter)
+        );
+      const matchesSearch =
+        !searchText ||
+        employee.name.toLowerCase().includes(searchText) ||
+        employee.employee_code.toLowerCase().includes(searchText);
+      return matchesDepartment && matchesSearch;
+    });
+  };
 
-          // Remove duplicates based on user ID
-          const uniqueUsers = allUsers.filter((user, index, self) =>
-            index === self.findIndex(u => u.id === user.id)
-          );
-
-          setUsers(uniqueUsers);
-        } catch (error) {
-          message.error('Failed to load users from selected departments.');
-        } finally {
-          setLoadingUsers(false);
-        }
-      };
-      fetchUsersByDepartments();
-    } else if (!isInitialLoad) {
-      setUsers([]);
+  const loadEmployees = async () => {
+    if (employeesLoaded) return;
+    setLoadingEmployees(true);
+    try {
+      const response = await apiClient.get('/employees', {
+        params: {
+          company_type: 'client',
+          status: 'active',
+        },
+      });
+      const raw = Array.isArray(response.data) ? response.data : response.data?.results ?? [];
+      const mapped: Employee[] = raw.map((e: any) => ({
+        id: e.id,
+        name: (e.name || e.full_name || '').trim(),
+        employee_code: String(e.employee_code || e.id).padStart(2, '0'),
+        department:
+          typeof e.department === 'object'
+            ? e.department?.name
+            : e.department || '',
+      }));
+      setEmployeesList(mapped);
+      setUsers(applyEmployeeFilters(mapped, selectedDepartments, participantsSearch));
+      setEmployeesLoaded(true);
+    } catch {
+      messageRef.current.error('Failed to load participant employees.');
+    } finally {
+      setLoadingEmployees(false);
     }
-  }, [selectedDepartments, form, message, isInitialLoad]);
+  };
+
+  const handleParticipantsDropdownVisibleChange = (open: boolean) => {
+    if (open) {
+      loadEmployees();
+    }
+  };
+
+  const handleParticipantsSearch = (value: string) => {
+    setParticipantsSearch(value);
+    setUsers(applyEmployeeFilters(employeesList, selectedDepartments, value));
+  };
 
   const handleDepartmentChange = (values: string[]) => {
     setSelectedDepartments(values);
-    setIsInitialLoad(false); // Mark as manual change
+    setUsers(applyEmployeeFilters(employeesList, values, participantsSearch));
 
     // Clear current participants when departments change manually
     form.setFieldsValue({ participants_ids: [] });
@@ -262,8 +240,8 @@ const MomEdit: React.FC = () => {
   };
 
   const onFinish = async (values: MomFormValues) => {
-    if (django_user_type !== 'adminuser') {
-      message.error("You do not have permission to edit meetings.");
+    if (!canEditMom) {
+      messageRef.current.error('You do not have permission to edit meetings.');
       return;
     }
     if (!id) {
@@ -277,27 +255,18 @@ const MomEdit: React.FC = () => {
         meeting_datetime: values.meeting_datetime ? values.meeting_datetime.toISOString() : null,
         scheduled_by: schedulerUserId,
       };
-      await api.put(`/api/v1/mom/${id}/`, payload);
-      message.success('Meeting updated successfully!');
-
-      // Optionally send notifications to participants here if needed
-
-      navigate('/dashboard/mom');
+      await apiClient.put(`/api/v1/mom/${id}/`, payload);
+      messageRef.current.success('Meeting updated successfully!');
+      navigate('/app/mom');
     } catch (error: any) {
-      if (error.response && error.response.data) {
-        let errorMsg = 'Failed to update meeting.';
-        const errors = error.response.data;
-        if (typeof errors === 'object' && errors !== null) {
-          Object.keys(errors).forEach(key => {
-            errorMsg += ` ${key}: ${Array.isArray(errors[key]) ? errors[key].join(', ') : errors[key]}`;
-          });
-        } else if (typeof errors === 'string') {
-          errorMsg = errors;
-        }
-        message.error(errorMsg);
-      } else {
-        message.error('Failed to update meeting. An unexpected error occurred.');
+      const errors = error?.response?.data;
+      let errorMsg = 'Failed to update meeting.';
+      if (errors && typeof errors === 'object') {
+        errorMsg += ' ' + Object.entries(errors).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' ');
+      } else if (typeof errors === 'string') {
+        errorMsg = errors;
       }
+      messageRef.current.error(errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -309,24 +278,24 @@ const MomEdit: React.FC = () => {
         title="Edit Meeting"
         subtitle="Modify meeting details"
         breadcrumbs={[
-          { title: 'MOM', href: '/dashboard/mom' },
+          { title: 'MOM', href: '/app/mom' },
           { title: 'Edit Meeting' }
         ]}
       >
         <div className="flex justify-center items-center min-h-64">
-          <Spin tip="Loading meeting data..." size="large" />
+          <Spin description="Loading meeting data..." size="large" />
         </div>
       </PageLayout>
     );
   }
 
-  if (django_user_type !== 'adminuser') {
+  if (!canEditMom) {
     return (
       <PageLayout
         title="Edit Meeting"
         subtitle="Access denied"
         breadcrumbs={[
-          { title: 'MOM', href: '/dashboard/mom' },
+          { title: 'MOM', href: '/app/mom' },
           { title: 'Edit Meeting' }
         ]}
       >
@@ -343,7 +312,7 @@ const MomEdit: React.FC = () => {
       title="Edit Meeting"
       subtitle="Modify meeting details and participants"
       breadcrumbs={[
-        { title: 'MOM', href: '/dashboard/mom' },
+        { title: 'MOM', href: '/app/mom' },
         { title: 'Edit Meeting' }
       ]}
     >
@@ -460,11 +429,11 @@ const MomEdit: React.FC = () => {
         <Form.Item
           label="Select Departments for Participants"
           name="departments"
-          help="Select one or more departments to load participants from"
+          help="Select one or more departments to filter the employee list"
         >
           <Select
             mode="multiple"
-            placeholder="Select departments (you can select multiple)"
+            placeholder="Select departments (optional)"
             onChange={handleDepartmentChange}
             allowClear
             maxTagCount="responsive"
@@ -484,17 +453,44 @@ const MomEdit: React.FC = () => {
         >
           <Select
             mode="multiple"
-            placeholder="Select participants"
-            loading={loadingUsers}
-            disabled={selectedDepartments.length === 0 || loadingUsers}
-            filterOption={(input, option) =>
-              (option?.children?.toString() ?? '').toLowerCase().includes(input.toLowerCase()) ||
-              (option?.title?.toString() ?? '').toLowerCase().includes(input.toLowerCase())
+            showSearch
+            placeholder={
+              loadingEmployees
+                ? 'Loading employees...'
+                : 'Search by name or employee code'
+            }
+            loading={loadingEmployees}
+            disabled={loadingEmployees}
+            filterOption={false}
+            onDropdownVisibleChange={handleParticipantsDropdownVisibleChange}
+            onSearch={handleParticipantsSearch}
+            optionLabelProp="label"
+            maxTagCount="responsive"
+            notFoundContent={
+              loadingEmployees ? (
+                <Spin size="small" />
+              ) : employeesList.length === 0 ? (
+                <span style={{ padding: '8px 12px', display: 'block', color: '#999' }}>
+                  No employees found
+                </span>
+              ) : (
+                <span style={{ padding: '8px 12px', display: 'block', color: '#999' }}>
+                  No matching employees
+                </span>
+              )
             }
           >
             {users.map((user) => (
-              <Option key={user.id} value={user.id} title={user.email}>
-                {user.name || user.username} ({user.email})
+              <Option
+                key={user.id}
+                value={user.id}
+                label={`${user.name} (${user.employee_code})`}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 500 }}>
+                    {user.name} ({user.employee_code})
+                  </span>
+                </div>
               </Option>
             ))}
           </Select>
@@ -507,12 +503,12 @@ const MomEdit: React.FC = () => {
               <strong>Selected Departments:</strong> {selectedDepartments.join(', ')}
               <br />
               <strong>Available Participants:</strong> {users.length} users loaded
-              {loadingUsers && ' (Loading...)'}
+              {loadingEmployees && ' (Loading...)'}
             </Typography.Text>
           </div>
         )}
 
-        {loadingUsers && <Spin tip="Loading users from selected departments..." />}
+        {loadingEmployees && <Spin description="Loading employees..." />}
 
         <Form.Item style={{ marginTop: 24 }}>
           <Button type="primary" htmlType="submit" loading={submitting} style={{ width: '100%' }}>

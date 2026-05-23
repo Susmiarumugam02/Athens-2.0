@@ -36,7 +36,6 @@ export const CampaignsPage: React.FC = () => {
       const response = await crmApi.getCampaigns(sessionKey!)
       setCampaigns(response.data.results || response.data)
     } catch (error) {
-      console.error('Error fetching campaigns:', error)
       toast.error('Failed to fetch campaigns')
     } finally {
       setLoading(false)
@@ -80,7 +79,6 @@ export const CampaignsPage: React.FC = () => {
       toast.success('Campaign deleted successfully!')
       fetchCampaigns()
     } catch (error) {
-      console.error('Error deleting campaign:', error)
       toast.error('Failed to delete campaign')
     }
   }

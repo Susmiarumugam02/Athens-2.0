@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from django.utils import timezone
 from django.db.models import Q, Count, Avg, Sum, F
 from django.db import transaction
@@ -9,10 +10,14 @@ from datetime import datetime, timedelta
 from authentication.tenant_scoped import TenantScopedViewSet, TenantScopedReadOnlyViewSet
 import json
 
-from .models import (QualityTemplate, QualityInspection, QualityDefect, 
-                    SupplierQuality, QualityStandard, QualityMetrics, QualityAlert)
+from .models import (QualityTemplate, QualityInspection, QualityDefect, QualityObservation,
+                    QualityFixing, QualityActivityLog, SupplierQuality, QualityStandard,
+                    QualityMetrics, QualityAlert)
 from .serializers import (QualityStandardSerializer, QualityTemplateSerializer, QualityInspectionSerializer, 
-                         QualityDefectSerializer, SupplierQualitySerializer, QualityMetricsSerializer, QualityAlertSerializer)
+                         QualityDefectSerializer, QualityObservationSerializer,
+                         QualityFixingSerializer, QualityActivityLogSerializer,
+                         SupplierQualitySerializer, QualityMetricsSerializer,
+                         QualityAlertSerializer)
 from .permissions import QualityManagerPermission, QualityInspectorPermission
 
 
@@ -443,6 +448,422 @@ class QualityDefectViewSet(QualityBaseViewSet):
             }
         
         return Response(analytics)
+
+QUALITY_RULES = [
+    {
+        'keys': ['surface', 'crack', 'scratch', 'dent', 'contamination', 'uneven'],
+        'category': 'surface_defect',
+        'severity': 'high',
+        'risk': 9,
+        'root_causes': ['Handling damage', 'Improper surface preparation', 'Inadequate process control'],
+        'corrective': 'Segregate affected item, inspect adjacent parts, repair or reject as per acceptance criteria.',
+        'preventive': 'Improve handling method, update visual inspection checklist, and brief operators on defect prevention.',
+        'recommendations': ['Perform 100% visual inspection for the batch', 'Record defect photographs', 'Verify acceptance criteria before release'],
+    },
+    {
+        'keys': ['paint', 'peeling', 'bubble', 'thickness', 'mismatch', 'coating'],
+        'category': 'paint_defect',
+        'severity': 'medium',
+        'risk': 6,
+        'root_causes': ['Poor surface preparation', 'Incorrect paint mix ratio', 'Inadequate curing time'],
+        'corrective': 'Hold affected material, measure coating thickness, rework paint defect, and verify finish after curing.',
+        'preventive': 'Check paint batch, verify surface preparation, and monitor coating thickness during application.',
+        'recommendations': ['Use DFT gauge verification', 'Check humidity and curing conditions', 'Review paint process parameters'],
+    },
+    {
+        'keys': ['weld', 'welding', 'joint', 'porosity', 'undercut', 'slag'],
+        'category': 'welding_defect',
+        'severity': 'critical',
+        'risk': 12,
+        'root_causes': ['Improper heat settings', 'Poor welding technique', 'Contaminated weld surface', 'Operator training issue'],
+        'corrective': 'Stop release, mark NCR, conduct weld inspection/NDT, grind and rework under approved WPS.',
+        'preventive': 'Review WPS compliance, calibrate welding parameters, and retrain welders for repeated defects.',
+        'recommendations': ['Escalate to QA manager', 'Perform NDT if structural weld', 'Verify welder qualification'],
+    },
+    {
+        'keys': ['dimension', 'alignment', 'fitment', 'tolerance', 'gap', 'level'],
+        'category': 'dimensional',
+        'severity': 'high',
+        'risk': 9,
+        'root_causes': ['Incorrect fixture setting', 'Measurement error', 'Drawing revision mismatch'],
+        'corrective': 'Measure against latest drawing, quarantine non-conforming item, and rework alignment or dimension deviation.',
+        'preventive': 'Verify fixture calibration, control drawing revision, and add in-process dimensional checkpoints.',
+        'recommendations': ['Attach measurement record', 'Check calibration status', 'Review tolerance stack-up'],
+    },
+    {
+        'keys': ['corrosion', 'rust', 'oxidation'],
+        'category': 'corrosion',
+        'severity': 'high',
+        'risk': 8,
+        'root_causes': ['Improper storage', 'Coating damage', 'Moisture exposure'],
+        'corrective': 'Quarantine affected item, remove corrosion if permitted, restore protection, and re-inspect.',
+        'preventive': 'Improve storage conditions, add protective covering, and inspect coating before dispatch.',
+        'recommendations': ['Check environmental exposure', 'Verify coating protection', 'Inspect nearby inventory'],
+    },
+    {
+        'keys': ['leak', 'leakage', 'seepage', 'pressure'],
+        'category': 'leakage',
+        'severity': 'critical',
+        'risk': 12,
+        'root_causes': ['Seal failure', 'Incorrect torque', 'Material defect', 'Pressure test failure'],
+        'corrective': 'Stop testing/release, depressurize safely, replace seal or defective part, and repeat pressure test.',
+        'preventive': 'Verify torque procedure, inspect seals before assembly, and add pressure hold verification.',
+        'recommendations': ['Escalate to QA and maintenance', 'Document pressure test evidence', 'Inspect all similar joints'],
+    },
+]
+
+
+def _quality_rule_matches(text):
+    source = (text or '').lower()
+    return [rule for rule in QUALITY_RULES if any(key in source for key in rule['keys'])]
+
+
+def _generate_quality_observation_id():
+    return f"QF-{timezone.now().strftime('%Y%m%d-%H%M%S')}"
+
+
+def _generate_quality_fixing_id():
+    return f"QFX-{timezone.now().strftime('%Y%m%d-%H%M%S')}"
+
+
+class QualityObservationViewSet(QualityBaseViewSet):
+    """AI-assisted Quality Observation / NCR workflow."""
+
+    queryset = QualityObservation.objects.all()
+    serializer_class = QualityObservationSerializer
+    permission_classes = [IsAuthenticated, QualityInspectorPermission]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+    model = QualityObservation
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        status_filter = self.request.query_params.get('status')
+        severity = self.request.query_params.get('severity')
+        category = self.request.query_params.get('category')
+        priority = self.request.query_params.get('priority')
+        assigned_to = self.request.query_params.get('assigned_to')
+        ncr_required = self.request.query_params.get('ncr_required')
+        search = self.request.query_params.get('search')
+
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        if severity:
+            queryset = queryset.filter(severity=severity)
+        if category:
+            queryset = queryset.filter(defect_category=category)
+        if priority:
+            queryset = queryset.filter(priority=priority)
+        if assigned_to:
+            queryset = queryset.filter(assigned_to_id=assigned_to)
+        if ncr_required is not None:
+            queryset = queryset.filter(ncr_required=str(ncr_required).lower() == 'true')
+        if search:
+            queryset = queryset.filter(
+                Q(observation_id__icontains=search)
+                | Q(defect_title__icontains=search)
+                | Q(product_asset__icontains=search)
+                | Q(defect_description__icontains=search)
+            )
+
+        return queryset.order_by('-created_at')
+
+    def perform_create(self, serializer):
+        project = self.get_user_project()
+        if not project:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("User must be assigned to a project to create quality observations.")
+
+        description = self.request.data.get('defect_description', '')
+        title = self.request.data.get('defect_title', '')
+        matches = _quality_rule_matches(f"{title} {description}")
+        ai_analysis = self.request.data.get('ai_analysis') or {}
+        ai_recommendations = self.request.data.get('ai_recommendations') or []
+        if isinstance(ai_analysis, str):
+            try:
+                ai_analysis = json.loads(ai_analysis)
+            except Exception:
+                ai_analysis = {}
+        if isinstance(ai_recommendations, str):
+            try:
+                ai_recommendations = json.loads(ai_recommendations)
+            except Exception:
+                ai_recommendations = []
+
+        if matches:
+            ai_analysis = {
+                **ai_analysis,
+                'rule_matches': [rule['category'] for rule in matches],
+                'root_cause_suggestions': matches[0]['root_causes'],
+                'source': ai_analysis.get('source', 'rules'),
+            }
+            ai_recommendations = list(dict.fromkeys(ai_recommendations + matches[0]['recommendations']))
+
+        serializer.validated_data.pop('ai_analysis', None)
+        serializer.validated_data.pop('ai_recommendations', None)
+
+        observation = serializer.save(
+            observation_id=_generate_quality_observation_id(),
+            reporter=self.request.user,
+            project=project,
+            ai_analysis=ai_analysis,
+            ai_recommendations=ai_recommendations,
+        )
+        self._log_activity(observation, 'finding_created', '', observation.status, 'Quality finding created.')
+        self._create_quality_alerts(observation)
+
+    @action(detail=False, methods=['post'], url_path='ai-suggest')
+    def ai_suggest(self, request):
+        text = ' '.join(str(request.data.get(field, '')) for field in [
+            'defect_title', 'product_asset', 'inspection_area', 'defect_description'
+        ])
+        matches = _quality_rule_matches(text)
+        primary = matches[0] if matches else None
+        return Response({
+            'source': 'rules',
+            'defect_category': primary['category'] if primary else '',
+            'severity': primary['severity'] if primary else 'medium',
+            'quality_risk_score': primary['risk'] if primary else 4,
+            'root_causes': primary['root_causes'] if primary else [
+                'Process variation', 'Inspection gap', 'Operator handling issue'
+            ],
+            'corrective_action': primary['corrective'] if primary else 'Contain the affected item, verify acceptance criteria, and assign CAPA owner.',
+            'preventive_action': primary['preventive'] if primary else 'Review process controls and add inspection checkpoint to prevent recurrence.',
+            'recommendations': primary['recommendations'] if primary else [
+                'Attach defect evidence', 'Check repeated defect history', 'Escalate if defect affects fit, form, or function'
+            ],
+        })
+
+    @action(detail=False, methods=['get'], url_path='dashboard-stats')
+    def dashboard_stats(self, request):
+        queryset = self.get_queryset()
+        fixings = QualityFixing.objects.filter(finding__in=queryset)
+        total = queryset.count()
+        closed_count = queryset.filter(status='closed').count()
+        by_status = {status_code: queryset.filter(status=status_code).count() for status_code, _ in QualityObservation.STATUS_CHOICES}
+        by_category = {category: queryset.filter(defect_category=category).count() for category, _ in QualityObservation.CATEGORY_CHOICES}
+        by_department = list(queryset.values('department').annotate(count=Count('id')).order_by('-count')[:8])
+        overdue_fixings = fixings.exclude(approval_status__in=['approved', 'closed']).filter(
+            due_date__lt=timezone.now().date()
+        ).count()
+
+        return Response({
+            'total': total,
+            'open': queryset.exclude(status='closed').count(),
+            'closed': closed_count,
+            'critical': queryset.filter(severity='critical').count(),
+            'ncr_required': queryset.filter(ncr_required=True).count(),
+            'pending_fixings': fixings.exclude(approval_status__in=['approved', 'closed']).count(),
+            'overdue_fixings': overdue_fixings,
+            'closure_rate': round((closed_count / total) * 100, 2) if total else 0,
+            'by_status': by_status,
+            'by_category': by_category,
+            'by_department': by_department,
+            'avg_risk_score': round(queryset.aggregate(Avg('quality_risk_score'))['quality_risk_score__avg'] or 0, 2),
+        })
+
+    @action(detail=True, methods=['post'], url_path='transition')
+    def transition(self, request, pk=None):
+        observation = self.get_object()
+        previous_status = observation.status
+        next_status = request.data.get('status')
+        if next_status not in dict(QualityObservation.STATUS_CHOICES):
+            return Response({'error': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
+        observation.status = next_status
+        observation.verification_notes = request.data.get('verification_notes', observation.verification_notes)
+        if next_status == 'closed':
+            observation.closed_at = timezone.now()
+            observation.closed_by = request.user
+        observation.save()
+        self._log_activity(
+            observation,
+            'finding_status_changed',
+            previous_status,
+            next_status,
+            request.data.get('verification_notes', ''),
+        )
+        return Response(self.get_serializer(observation).data)
+
+    @action(detail=True, methods=['post'], url_path='assign-fixing')
+    def assign_fixing(self, request, pk=None):
+        observation = self.get_object()
+        project = observation.project or self.get_user_project()
+        fixing = QualityFixing.objects.create(
+            fixing_id=_generate_quality_fixing_id(),
+            finding=observation,
+            assigned_engineer_id=request.data.get('assigned_engineer') or observation.assigned_to_id,
+            corrective_action=request.data.get('corrective_action') or observation.corrective_action or observation.recommended_fix,
+            preventive_action=request.data.get('preventive_action') or observation.preventive_action,
+            due_date=request.data.get('due_date') or observation.target_completion_date,
+            project=project,
+            created_by=request.user,
+        )
+        previous_status = observation.status
+        observation.status = 'assigned'
+        observation.save(update_fields=['status', 'updated_at'])
+        self._log_activity(observation, 'fixing_assigned', previous_status, 'assigned', 'Corrective action assigned.', fixing=fixing)
+        return Response(QualityFixingSerializer(fixing, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path='create-defect')
+    def create_defect(self, request, pk=None):
+        observation = self.get_object()
+        inspection = QualityInspection.objects.filter(site_project=observation.project).order_by('-created_at').first()
+        if not inspection:
+            return Response({'error': 'A quality inspection is required before converting to a defect.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        target_completion = None
+        if observation.target_completion_date:
+            target_completion = timezone.make_aware(
+                datetime.combine(observation.target_completion_date, datetime.min.time())
+            )
+
+        defect = QualityDefect.objects.create(
+            defect_id=f"QD-{timezone.now().strftime('%Y%m%d%H%M%S')}",
+            inspection=inspection,
+            defect_code=observation.observation_id,
+            category='visual' if observation.defect_category in ['surface_defect', 'paint_defect'] else 'functional',
+            title=observation.defect_title,
+            description=observation.defect_description,
+            severity='critical' if observation.severity == 'critical' else 'major' if observation.severity == 'high' else 'minor',
+            location_details=observation.inspection_area,
+            root_cause=observation.root_cause,
+            corrective_action=observation.corrective_action,
+            preventive_action=observation.preventive_action,
+            action_owner=observation.capa_owner,
+            target_completion_date=target_completion,
+        )
+        observation.ncr_required = True
+        observation.ncr_number = defect.defect_id
+        observation.save(update_fields=['ncr_required', 'ncr_number', 'updated_at'])
+        self._log_activity(observation, 'ncr_created', observation.status, observation.status, f'NCR created: {defect.defect_id}')
+        return Response(QualityDefectSerializer(defect, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+    def _log_activity(self, observation, action, from_status='', to_status='', notes='', fixing=None, metadata=None):
+        try:
+            QualityActivityLog.objects.create(
+                finding=observation,
+                fixing=fixing,
+                action=action,
+                from_status=from_status or '',
+                to_status=to_status or '',
+                notes=notes or '',
+                metadata=metadata or {},
+                actor=self.request.user,
+                project=observation.project,
+            )
+        except Exception:
+            pass
+
+    def _create_quality_alerts(self, observation):
+        if observation.severity not in ['high', 'critical'] and observation.quality_risk_score < 8:
+            return
+        try:
+            QualityAlert.objects.create(
+                alert_type='defect_threshold',
+                severity='critical' if observation.severity == 'critical' else 'warning',
+                title=f'Quality observation requires review: {observation.observation_id}',
+                description=f'{observation.defect_title} at {observation.inspection_area}',
+            )
+        except Exception:
+            pass
+
+
+class QualityFixingViewSet(QualityBaseViewSet):
+    """Corrective and preventive action tracking for quality findings."""
+
+    queryset = QualityFixing.objects.select_related('finding', 'assigned_engineer', 'created_by', 'verified_by')
+    serializer_class = QualityFixingSerializer
+    permission_classes = [IsAuthenticated, QualityInspectorPermission]
+    model = QualityFixing
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        status_filter = self.request.query_params.get('status')
+        finding = self.request.query_params.get('finding')
+        assigned_engineer = self.request.query_params.get('assigned_engineer')
+        overdue = self.request.query_params.get('overdue')
+
+        if status_filter:
+            queryset = queryset.filter(approval_status=status_filter)
+        if finding:
+            queryset = queryset.filter(finding_id=finding)
+        if assigned_engineer:
+            queryset = queryset.filter(assigned_engineer_id=assigned_engineer)
+        if overdue == 'true':
+            queryset = queryset.exclude(approval_status__in=['approved', 'closed']).filter(due_date__lt=timezone.now().date())
+
+        return queryset.order_by('-created_at')
+
+    def perform_create(self, serializer):
+        project = self.get_user_project()
+        finding = serializer.validated_data.get('finding')
+        serializer.save(
+            fixing_id=_generate_quality_fixing_id(),
+            project=project or getattr(finding, 'project', None),
+            created_by=self.request.user,
+        )
+
+    @action(detail=True, methods=['post'], url_path='transition')
+    def transition(self, request, pk=None):
+        fixing = self.get_object()
+        previous_status = fixing.approval_status
+        next_status = request.data.get('approval_status')
+        if next_status not in dict(QualityFixing.APPROVAL_STATUS_CHOICES):
+            return Response({'error': 'Invalid approval status'}, status=status.HTTP_400_BAD_REQUEST)
+
+        fixing.approval_status = next_status
+        fixing.verification_notes = request.data.get('verification_notes', fixing.verification_notes)
+        fixing.closure_remarks = request.data.get('closure_remarks', fixing.closure_remarks)
+        if next_status in ['submitted', 'approved', 'closed'] and not fixing.completion_date:
+            fixing.completion_date = timezone.now()
+        if next_status in ['approved', 'closed']:
+            fixing.verified_by = request.user
+            finding_previous = fixing.finding.status
+            fixing.finding.status = 'closed' if next_status == 'closed' else 'pending_verification'
+            fixing.finding.save(update_fields=['status', 'updated_at'])
+            self._log_activity(fixing, 'finding_status_synced', finding_previous, fixing.finding.status)
+        fixing.save()
+        self._log_activity(fixing, 'fixing_status_changed', previous_status, next_status)
+        return Response(self.get_serializer(fixing).data)
+
+    def _log_activity(self, fixing, action, from_status='', to_status=''):
+        try:
+            QualityActivityLog.objects.create(
+                finding=fixing.finding,
+                fixing=fixing,
+                action=action,
+                from_status=from_status or '',
+                to_status=to_status or '',
+                notes=fixing.verification_notes or fixing.closure_remarks or '',
+                actor=self.request.user,
+                project=fixing.project or fixing.finding.project,
+            )
+        except Exception:
+            pass
+
+
+class QualityActivityLogViewSet(QualityBaseViewSet):
+    """Read-only audit trail for Quality Findings & Fixings."""
+
+    queryset = QualityActivityLog.objects.select_related('finding', 'fixing', 'actor')
+    serializer_class = QualityActivityLogSerializer
+    permission_classes = [IsAuthenticated, QualityInspectorPermission]
+    model = QualityActivityLog
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        finding = self.request.query_params.get('finding')
+        fixing = self.request.query_params.get('fixing')
+        action_filter = self.request.query_params.get('action')
+
+        if finding:
+            queryset = queryset.filter(finding_id=finding)
+        if fixing:
+            queryset = queryset.filter(fixing_id=fixing)
+        if action_filter:
+            queryset = queryset.filter(action=action_filter)
+
+        return queryset.order_by('-created_at')
+
 
 class SupplierQualityViewSet(QualityBaseViewSet):
     """Enhanced Supplier Quality Management"""

@@ -105,7 +105,6 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({ sessionKey, onCre
       
       setMetrics({ total, draft, confirmed, cancelled, totalValue, avgDealSize })
     } catch (error) {
-      console.error('Error fetching purchase orders:', error)
       toast.error('Failed to fetch purchase orders')
     } finally {
       setLoading(false)
@@ -137,7 +136,6 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({ sessionKey, onCre
         onDelete()
       }
     } catch (error) {
-      console.error('Error deleting purchase order:', error)
       toast.error('Failed to delete purchase order')
     }
   }
@@ -161,7 +159,6 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({ sessionKey, onCre
       toast.success('Purchase order rejected successfully!')
       fetchPurchaseOrders(currentPage)
     } catch (error) {
-      console.error('Error rejecting purchase order:', error)
       toast.error('Failed to reject purchase order')
     }
   }

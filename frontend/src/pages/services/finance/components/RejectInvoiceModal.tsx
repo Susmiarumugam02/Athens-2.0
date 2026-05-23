@@ -71,7 +71,6 @@ const RejectInvoiceModal: React.FC<RejectInvoiceModalProps> = ({
         toast.error(errorData.error || `Failed to reject ${documentType}`)
       }
     } catch (error) {
-      console.error('Error rejecting document:', error)
       const documentType = invoiceType === 'quotation' ? 'quotation' : invoiceType === 'proforma' ? 'proforma invoice' : 'invoice'
       toast.error(`Failed to reject ${documentType}`)
     } finally {

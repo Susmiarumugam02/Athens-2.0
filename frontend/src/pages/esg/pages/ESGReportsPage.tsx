@@ -89,7 +89,6 @@ const ESGReportsPage: React.FC = () => {
       
       setExistingReports(reports);
     } catch (error) {
-      console.error('Error fetching reports:', error);
       // Fallback to mock data on error
       const mockReports = [
         {
@@ -201,11 +200,9 @@ const ESGReportsPage: React.FC = () => {
       const startDate = dateRange[0].format('YYYY-MM-DD');
       const endDate = dateRange[1].format('YYYY-MM-DD');
       
-      console.log('Generating report:', { reportType, startDate, endDate });
       
       const response = await generateESGReport(reportType, startDate, endDate);
       
-      console.log('Report generation response:', response.data);
       
       message.success(`${reportTypes.find(r => r.value === reportType)?.label} generation started. ${response.data.message}`);
       
@@ -214,7 +211,6 @@ const ESGReportsPage: React.FC = () => {
       setDateRange(null);
       fetchExistingReports();
     } catch (error: any) {
-      console.error('Error generating report:', error);
       const errorMsg = error.response?.data?.error || error.message || 'Unknown error';
       message.error(`Failed to generate report: ${errorMsg}`);
     } finally {
@@ -239,7 +235,6 @@ const ESGReportsPage: React.FC = () => {
       
       message.success(`Downloaded ${record.reportType}`);
     } catch (error) {
-      console.error('Error downloading report:', error);
       message.error('Failed to download report');
     }
   };
@@ -311,7 +306,6 @@ const ESGReportsPage: React.FC = () => {
       
       message.success(`Opened ${record.reportType} report`);
     } catch (error) {
-      console.error('Error viewing report:', error);
       message.error('Failed to view report. Please check if the report file exists.');
     }
   };

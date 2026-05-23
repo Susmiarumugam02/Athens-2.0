@@ -12,7 +12,7 @@ const TBTLanding: React.FC = () => {
               title="Total TBTs"
               value={156}
               prefix={<CommentOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -22,7 +22,7 @@ const TBTLanding: React.FC = () => {
               title="Completed"
               value={142}
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -32,7 +32,7 @@ const TBTLanding: React.FC = () => {
               title="Scheduled"
               value={14}
               prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: '#faad14' }}
+              styles={{ content: { color: '#faad14' } }}
             />
           </Card>
         </Col>
@@ -42,7 +42,7 @@ const TBTLanding: React.FC = () => {
               title="Total Attendees"
               value={2847}
               prefix={<TeamOutlined />}
-              valueStyle={{ color: '#722ed1' }}
+              styles={{ content: { color: '#722ed1' } }}
             />
           </Card>
         </Col>
@@ -55,7 +55,7 @@ const TBTLanding: React.FC = () => {
               title="This Month"
               value={23}
               prefix={<CalendarOutlined />}
-              valueStyle={{ color: '#13c2c2' }}
+              styles={{ content: { color: '#13c2c2' } }}
             />
           </Card>
         </Col>
@@ -65,7 +65,7 @@ const TBTLanding: React.FC = () => {
               title="Topics Covered"
               value={87}
               prefix={<FileTextOutlined />}
-              valueStyle={{ color: '#eb2f96' }}
+              styles={{ content: { color: '#eb2f96' } }}
             />
           </Card>
         </Col>

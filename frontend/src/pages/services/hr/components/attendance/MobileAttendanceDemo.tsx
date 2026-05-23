@@ -33,7 +33,6 @@ const MobileAttendanceDemo: React.FC = () => {
       })
       setEmployees(response.data.results || [])
     } catch (error) {
-      console.error('Error fetching employees:', error)
     }
   }
 
@@ -177,7 +176,6 @@ const MobileAttendanceDemo: React.FC = () => {
       setPreviewUrl(null)
       
     } catch (error: any) {
-      console.error('Error submitting attendance:', error)
       toast.error(error.response?.data?.error || 'Failed to submit attendance')
     } finally {
       setLoading(false)

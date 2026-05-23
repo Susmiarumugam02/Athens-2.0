@@ -3,9 +3,9 @@ import { Table, Button, Space, Popconfirm, message, Tag } from 'antd';
 import { EditOutlined, DeleteOutlined, PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import type { ColumnType } from 'antd/es/table';
-import PageLayout from '../../../components/ui/PageLayout';
+import PageLayout from '../../../../components/ui/PageLayout';
 import { inspectionService } from '../../services/inspectionService';
-import { useAuthStore } from '../../../store/authStore';
+import { useAuthStore } from '../../../../store/authStore';
 
 interface BusDuctChecklistFormData {
   id: string;
@@ -20,17 +20,17 @@ interface BusDuctChecklistFormData {
 
 export default function BusDuctChecklistFormList() {
   const navigate = useNavigate();
-  const { usertype: admin_type, username } = useAuthStore();
-  const user = { admin_type, username };
+  const { user } = useAuthStore();
+  const userType = (user as any)?.admin_type || (user as any)?.user_type || '';
+  const username = (user as any)?.email || '';
   const [forms, setForms] = useState<BusDuctChecklistFormData[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const userType = user?.admin_type;
-  const canCreate = userType === 'epcuser';
-  const canEdit = (record: BusDuctChecklistFormData) => 
-    ['client', 'epc', 'contractor'].includes(userType || '') && record.created_by_username === user?.username;
-  const canDelete = (record: BusDuctChecklistFormData) => 
-    ['client', 'epc', 'contractor'].includes(userType || '') && record.created_by_username === user?.username;
+  const canCreate = true;
+  const canEdit = (record: BusDuctChecklistFormData) =>
+    ['client', 'epc', 'contractor'].includes(userType || '') && record.created_by_username === username;
+  const canDelete = (record: BusDuctChecklistFormData) =>
+    ['client', 'epc', 'contractor'].includes(userType || '') && record.created_by_username === username;
 
   useEffect(() => {
     fetchForms();
@@ -103,14 +103,14 @@ export default function BusDuctChecklistFormList() {
           <Button
             type="text"
             icon={<EyeOutlined />}
-            onClick={() => navigate(`/inspection/bus-duct-checklist-forms/${record.id}`)}
+            onClick={() => navigate(`/dashboard/inspection/forms/bus-duct-checklist/view/${record.id}`)}
             title="View"
           />
           {canEdit(record) && (
             <Button
               type="text"
               icon={<EditOutlined />}
-              onClick={() => navigate(`/inspection/bus-duct-checklist-forms/${record.id}/edit`)}
+              onClick={() => navigate(`/dashboard/inspection/forms/bus-duct-checklist/edit/${record.id}`)}
               title="Edit"
             />
           )}
@@ -144,7 +144,7 @@ export default function BusDuctChecklistFormList() {
       key="create"
       type="primary"
       icon={<PlusOutlined />}
-      onClick={() => navigate('/inspection/bus-duct-checklist-forms/new')}
+      onClick={() => navigate('/dashboard/inspection/forms/bus-duct-checklist/create')}
     >
       New Form
     </Button>

@@ -67,7 +67,6 @@ const GenerationDataList: React.FC = () => {
       message.success('Generation data deleted successfully');
       fetchGenerationData();
     } catch (error) {
-      console.error('Delete error:', error);
       message.error('Failed to delete generation data');
     }
   };

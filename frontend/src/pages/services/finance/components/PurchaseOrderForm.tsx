@@ -113,9 +113,6 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, qu
   
   // Debug session state
   useEffect(() => {
-    console.log('🔍 PO Form - Session Key:', !!sessionKey)
-    console.log('🔍 PO Form - Storage Session Key:', !!sessionStorage.getItem('service_session_key'))
-    console.log('🔍 PO Form - Quotation:', !!quotation)
   }, [sessionKey, quotation])
 
   // Click outside handler for product dropdown
@@ -183,7 +180,6 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, qu
   // Populate form when editing existing PO or creating from quotation
   useEffect(() => {
     if (purchaseOrder) {
-      console.log('Editing PO:', purchaseOrder)
       // Convert PO items from detailed format to form format
       const convertedItems = purchaseOrder.po_items ? purchaseOrder.po_items.map((item: any) => ({
         product: item.product,
@@ -218,17 +214,13 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, qu
         }
       }
     } else if (quotation) {
-      console.log('Creating PO from quotation:', quotation)
-      console.log('Full quotation object keys:', Object.keys(quotation))
 
       // Check if we have full quotation details or just basic data
       if (quotation.customer_details) {
         // We have full quotation details, proceed normally
-        console.log('Full quotation details available')
         populateFormFromQuotation(quotation)
       } else {
         // We only have basic quotation data, need to load full details
-        console.log('Loading full quotation details for ID:', quotation.id)
         loadFullQuotationDetails(quotation.id)
       }
     }
@@ -237,11 +229,9 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, qu
   // Load customer details if we have customer ID but no selected customer
   useEffect(() => {
     if (formData.customer && !selectedCustomer && sessionKey && customers.length > 0) {
-      console.log('Loading customer details for ID:', formData.customer)
       // First try to find customer in loaded customers list
       const foundCustomer = customers.find(c => c.id === formData.customer)
       if (foundCustomer) {
-        console.log('Found customer in list:', foundCustomer)
         setSelectedCustomer(foundCustomer)
 
       } else {
@@ -255,26 +245,20 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, qu
     if (!sessionKey) return
 
     try {
-      console.log('Loading full quotation details for ID:', quotationId)
       const response = await apiClient.getFinanceQuotation(quotationId, { session_key: sessionKey })
 
       const fullQuotation = response.data
-      console.log('Loaded full quotation details:', fullQuotation)
       populateFormFromQuotation(fullQuotation)
     } catch (error) {
-      console.error('Error loading full quotation details:', error)
       toast.error('Failed to load quotation details')
     }
   }
 
   // Populate form from quotation data
   const populateFormFromQuotation = (quotationData: any) => {
-    console.log('Populating form from quotation:', quotationData)
-    console.log('Quotation items:', quotationData.quotation_items)
 
     // Convert quotation items from detailed format to form format
     const convertedItems = quotationData.quotation_items ? quotationData.quotation_items.map((item: any) => {
-      console.log('Converting quotation item:', item)
       return {
         product: item.product,
         quantity: parseFloat(item.quantity) || 0,
@@ -284,7 +268,6 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, qu
       }
     }) : []
 
-    console.log('Converted items:', convertedItems)
 
     setFormData(prev => ({
       ...prev,
@@ -304,20 +287,16 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, qu
     }))
 
     // Set selected customer if available - use customer_details for detailed view
-    console.log('Quotation customer data:', quotationData.customer_details, quotationData.customer)
 
     const customerData = quotationData.customer_details || quotationData.customer
     if (customerData && typeof customerData === 'object') {
-      console.log('Setting customer from object:', customerData)
       setSelectedCustomer(customerData)
     } else {
       // Try to get customer ID from the quotation.customer field
       const customerId = quotationData.customer
       if (customerId) {
-        console.log('Loading customer details for ID:', customerId)
         loadCustomerDetails(customerId)
       } else {
-        console.log('No customer ID found in quotation')
       }
     }
   }
@@ -327,7 +306,6 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, qu
       const response = await apiClient.getFinanceCustomers({ session_key: sessionKey })
       setCustomers(response.data.results)
     } catch (error) {
-      console.error('Error loading customers:', error)
     }
   }
 
@@ -336,7 +314,6 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, qu
       const response = await apiClient.getFinanceProducts({ session_key: sessionKey })
       setProducts(response.data.results)
     } catch (error) {
-      console.error('Error loading products:', error)
     }
   }
 
@@ -351,7 +328,6 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, qu
         setCompanyDetails(response.data)
       }
     } catch (error) {
-      console.error('Error loading company details:', error)
     }
   }
 
@@ -359,11 +335,9 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, qu
     if (!sessionKey || !customerId) return
 
     try {
-      console.log('Loading customer details for ID:', customerId)
       const response = await apiClient.getFinanceCustomer(customerId, { session_key: sessionKey })
 
       const fullCustomer = response.data
-      console.log('Loaded customer details:', fullCustomer)
       setSelectedCustomer(fullCustomer)
 
       // Also update form data with customer ID and default shipping address
@@ -373,7 +347,6 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, qu
         shipping_address: fullCustomer.shipping_addresses?.find((addr: any) => addr.is_default)?.id || null
       }))
     } catch (error) {
-      console.error('Error loading customer details:', error)
       toast.error('Failed to load customer details')
     }
   }
@@ -548,7 +521,6 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, qu
         notes: dataToSend.notes.replace(/[\r\n]/g, ' '),
         terms_and_conditions: dataToSend.terms_and_conditions.replace(/[\r\n]/g, ' ')
       }
-      console.log('Form data before sending:', sanitizedFormData)
 
       let response
       // Use apiClient for PO creation/update
@@ -600,19 +572,13 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, qu
         po_number: response.data.po_number?.replace(/[\r\n]/g, '') || '',
         reference: response.data.reference?.replace(/[\r\n]/g, '') || ''
       }
-      console.log('PO saved successfully:', sanitizedResponse)
 
       toast.success(purchaseOrder ? 'Purchase order updated successfully!' : 'Purchase order created successfully!')
       onSuccess()
     } catch (error: any) {
-      console.error('Error saving purchase order:', error)
-      console.error('Error response:', error.response?.data)
-      console.error('Error status:', error.response?.status)
 
       if (error.response?.data) {
         const errorData = error.response.data
-        console.log('Error data type:', typeof errorData)
-        console.log('Error data:', errorData)
 
         if (typeof errorData === 'object') {
           // Handle field-specific errors

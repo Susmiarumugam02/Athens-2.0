@@ -46,7 +46,7 @@ const ParticipantList: React.FC<ParticipantListProps> = ({ momId }) => {
   }, [momId, message]);
 
   if (loading) {
-    return <Spin tip="Loading participants..." style={{ marginTop: 50 }} />;
+    return <Spin description="Loading participants..." style={{ marginTop: 50 }} />;
   }
 
   if (error) {

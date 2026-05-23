@@ -39,7 +39,6 @@ export const QuotaModal: React.FC<QuotaModalProps> = ({ isOpen, onClose, onSave,
       onSave()
       onClose()
     } catch (error) {
-      console.error('Error saving quota:', error)
     } finally {
       setLoading(false)
     }

@@ -32,7 +32,6 @@ const ReadinessPanel: React.FC<ReadinessPanelProps> = ({ permitId, refreshTrigge
         setUnavailable(true);
         return;
       }
-      console.error('Failed to fetch readiness:', error);
     } finally {
       setLoading(false);
     }

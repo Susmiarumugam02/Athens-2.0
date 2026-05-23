@@ -29,7 +29,6 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ onNavigateToTab }) => {
         setStep('enabled')
       }
     } catch (error) {
-      console.error('Error checking 2FA status:', error)
     }
   }
 
@@ -37,11 +36,9 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ onNavigateToTab }) => {
     setLoading(true)
     try {
       const response = await apiClient.post('/api/company-dashboard/security/2fa/setup/')
-      console.log('2FA Setup Response:', response.data)
       setQrCodeUrl(response.data.qr_code)
       toast.success('QR code generated! Scan it with your authenticator app.')
     } catch (error: any) {
-      console.error('2FA Setup Error:', error)
       toast.error(error.response?.data?.error || 'Failed to setup 2FA')
     } finally {
       setLoading(false)

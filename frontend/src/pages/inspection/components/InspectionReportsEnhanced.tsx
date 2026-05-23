@@ -36,18 +36,14 @@ const InspectionReportsEnhanced: React.FC = () => {
       { month: 'Jun', reports: 67, avgScore: 90.2, compliance: 96.3 }
     ],
     typeDistribution: [
-      { name: 'Safety', value: 45, color: '#ff4d4f' },
       { name: 'Quality', value: 32, color: '#52c41a' },
-      { name: 'Environmental', value: 28, color: '#1890ff' },
-      { name: 'Equipment', value: 25, color: '#faad14' },
+      { name: 'Civil', value: 38, color: '#1890ff' },
       { name: 'Electrical', value: 18, color: '#722ed1' },
-      { name: 'Structural', value: 8, color: '#fa8c16' }
     ],
     complianceByType: [
-      { type: 'Safety', compliant: 89, nonCompliant: 11 },
       { type: 'Quality', compliant: 95, nonCompliant: 5 },
-      { type: 'Environmental', compliant: 92, nonCompliant: 8 },
-      { type: 'Equipment', compliant: 88, nonCompliant: 12 }
+      { type: 'Civil', compliant: 91, nonCompliant: 9 },
+      { type: 'Electrical', compliant: 94, nonCompliant: 6 },
     ]
   });
 
@@ -134,7 +130,7 @@ const InspectionReportsEnhanced: React.FC = () => {
       dataIndex: 'type',
       key: 'type',
       render: (type: string) => {
-        const color = type === 'safety' ? 'red' : type === 'quality' ? 'green' : 'blue';
+        const color = type === 'electrical' ? 'purple' : type === 'quality' ? 'green' : 'blue';
         return <Tag color={color}>{type}</Tag>;
       },
       sorter: (a: any, b: any) => (a.type || '').localeCompare(b.type || ''),
@@ -222,7 +218,7 @@ const InspectionReportsEnhanced: React.FC = () => {
                   title="Total Reports"
                   value={analytics.totalReports}
                   prefix={<FileTextOutlined />}
-                  valueStyle={{ color: '#1890ff' }}
+                  styles={{ content: { color: '#1890ff' } }}
                 />
               </Card>
             </Col>
@@ -232,7 +228,7 @@ const InspectionReportsEnhanced: React.FC = () => {
                   title="Completed"
                   value={analytics.completedReports}
                   prefix={<CheckCircleOutlined />}
-                  valueStyle={{ color: '#52c41a' }}
+                  styles={{ content: { color: '#52c41a' } }}
                 />
               </Card>
             </Col>
@@ -244,7 +240,7 @@ const InspectionReportsEnhanced: React.FC = () => {
                   precision={1}
                   suffix="%"
                   prefix={<TrendingUpOutlined />}
-                  valueStyle={{ color: analytics.avgScore >= 85 ? '#52c41a' : '#faad14' }}
+                  styles={{ content: { color: analytics.avgScore >= 85 ? '#52c41a' : '#faad14' } }}
                 />
               </Card>
             </Col>
@@ -256,7 +252,7 @@ const InspectionReportsEnhanced: React.FC = () => {
                   precision={1}
                   suffix="%"
                   prefix={<ExclamationCircleOutlined />}
-                  valueStyle={{ color: analytics.complianceRate >= 90 ? '#52c41a' : '#ff4d4f' }}
+                  styles={{ content: { color: analytics.complianceRate >= 90 ? '#52c41a' : '#ff4d4f' } }}
                 />
               </Card>
             </Col>
@@ -362,10 +358,9 @@ const InspectionReportsEnhanced: React.FC = () => {
                 allowClear
                 onChange={(value) => setFilters(prev => ({ ...prev, type: value || '' }))}
               >
-                <Option value="safety">Safety</Option>
                 <Option value="quality">Quality</Option>
-                <Option value="environmental">Environmental</Option>
-                <Option value="equipment">Equipment</Option>
+                <Option value="civil">Civil</Option>
+                <Option value="electrical">Electrical</Option>
               </Select>
               <RangePicker
                 placeholder={['Start Date', 'End Date']}

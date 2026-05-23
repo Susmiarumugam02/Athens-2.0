@@ -64,7 +64,7 @@ const EmployeeView: React.FC<EmployeeViewProps> = ({ employee, onClose }) => {
               <div className="flex-shrink-0">
                 {employee.profile_picture ? (
                   <img
-                    src={employee.profile_picture.startsWith('http') ? employee.profile_picture : `http://localhost:8000${employee.profile_picture}`}
+                    src={employee.profile_picture.startsWith('http') ? employee.profile_picture : `${import.meta.env.VITE_API_URL || ""}${employee.profile_picture}`}
                     alt="Profile"
                     className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
                   />
@@ -103,7 +103,7 @@ const EmployeeView: React.FC<EmployeeViewProps> = ({ employee, onClose }) => {
                 Face Recognition Photo
               </h4>
               <img
-                src={employee.face_photo.startsWith('http') ? employee.face_photo : `http://localhost:8000${employee.face_photo}`}
+                src={employee.face_photo.startsWith('http') ? employee.face_photo : `${import.meta.env.VITE_API_URL || ""}${employee.face_photo}`}
                 alt="Face Recognition"
                 className="w-32 h-32 rounded-lg object-cover border-2 border-gray-200 dark:border-gray-600"
               />

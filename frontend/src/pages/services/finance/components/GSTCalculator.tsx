@@ -66,7 +66,6 @@ const GSTCalculator: React.FC<GSTCalculatorProps> = ({ sessionKey }) => {
       const data = await response.json()
       setStates(data.states || [])
     } catch (error) {
-      console.error('Error fetching states:', error)
     }
   }
 
@@ -83,7 +82,6 @@ const GSTCalculator: React.FC<GSTCalculatorProps> = ({ sessionKey }) => {
         setCustomerStateCode(data.state_code)
       }
     } catch (error) {
-      console.error('Error validating GSTIN:', error)
       setGstinValid(false)
     }
   }
@@ -108,10 +106,8 @@ const GSTCalculator: React.FC<GSTCalculatorProps> = ({ sessionKey }) => {
       if (response.ok) {
         setCalculation(data)
       } else {
-        console.error('GST calculation error:', data.error)
       }
     } catch (error) {
-      console.error('Error calculating GST:', error)
     } finally {
       setLoading(false)
     }

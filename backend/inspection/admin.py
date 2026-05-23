@@ -1,5 +1,14 @@
 from django.contrib import admin
-from .models import Inspection, InspectionItem, InspectionReport
+from .models import Inspection, InspectionItem, InspectionReport, InspectionTemplate
+
+
+@admin.register(InspectionTemplate)
+class InspectionTemplateAdmin(admin.ModelAdmin):
+    list_display = ['name', 'category', 'is_sample', 'is_active', 'version', 'created_at']
+    list_filter = ['category', 'is_sample', 'is_active']
+    search_fields = ['name', 'description']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+
 
 @admin.register(Inspection)
 class InspectionAdmin(admin.ModelAdmin):

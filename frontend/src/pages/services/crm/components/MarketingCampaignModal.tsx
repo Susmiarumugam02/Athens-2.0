@@ -85,7 +85,6 @@ export const MarketingCampaignModal: React.FC<MarketingCampaignModalProps> = ({
       const response = await crmApi.getEmailTemplates(sessionKey!)
       setTemplates(response.data.results || response.data)
     } catch (error) {
-      console.error('Error loading templates:', error)
     }
   }
 

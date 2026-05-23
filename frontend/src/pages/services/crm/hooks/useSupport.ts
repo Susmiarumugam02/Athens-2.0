@@ -80,7 +80,6 @@ export const useSupport = () => {
       const response = await crmApi.getSLADashboard(sessionKey!)
       setStats(response.data)
     } catch (err: any) {
-      console.error('Failed to fetch support stats:', err)
     }
   }
 
@@ -89,7 +88,6 @@ export const useSupport = () => {
       const response = await crmApi.getTicketCategories(sessionKey!)
       setCategories(response.data.results || response.data || [])
     } catch (err: any) {
-      console.error('Failed to fetch categories:', err)
     }
   }
 
@@ -98,7 +96,6 @@ export const useSupport = () => {
       const response = await crmApi.getKnowledgeBase(sessionKey!, params)
       setKnowledgeBase(response.data.results || response.data || [])
     } catch (err: any) {
-      console.error('Failed to fetch knowledge base:', err)
     }
   }
 

@@ -63,7 +63,6 @@ const InterviewScheduler: React.FC<InterviewSchedulerProps> = ({
         setFormData(prev => ({ ...prev, interviewer: 'service_user' }))
       }
     } catch (error) {
-      console.error('Error fetching interviewers:', error)
       // Fallback: just add current user
       const currentUser = {
         id: 'service_user',
@@ -122,7 +121,6 @@ const InterviewScheduler: React.FC<InterviewSchedulerProps> = ({
       onClose()
       resetForm()
     } catch (error: any) {
-      console.error('Error scheduling interview:', error)
       toast.error(error.response?.data?.detail || 'Failed to schedule interview')
     } finally {
       setLoading(false)

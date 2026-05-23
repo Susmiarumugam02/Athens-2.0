@@ -77,7 +77,6 @@ const WasteManifestList: React.FC = () => {
       message.success('Waste manifest deleted successfully');
       fetchManifests();
     } catch (error) {
-      console.error('Delete error:', error);
       message.error('Failed to delete waste manifest');
     }
   };

@@ -3,7 +3,7 @@ import { Form, Input, Button, DatePicker, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { DownloadOutlined, CloseOutlined } from '@ant-design/icons';
 import { inspectionService } from '../../services/inspectionService';
-import PageLayout from '../../../components/ui/PageLayout';
+import PageLayout from '../../../../components/ui/PageLayout';
 
 const HTPreCommissionTemplateForm: React.FC = () => {
   const [form] = Form.useForm();

@@ -159,7 +159,6 @@ const MobilePermitView: React.FC = () => {
       }
       
     } catch (err: any) {
-      console.error('Error fetching permit:', err);
       if (err?.response?.status === 401) {
         setError('Authentication expired. Please login again.');
       } else if (err?.response?.status === 403) {

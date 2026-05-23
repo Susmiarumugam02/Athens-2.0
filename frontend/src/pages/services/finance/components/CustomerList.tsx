@@ -78,7 +78,6 @@ const CustomerList: React.FC<CustomerListProps> = ({
       setLoading(true)
 
       if (!sessionKey) {
-        console.error('No session key available')
         setCustomers([])
         setTotalCount(0)
         setHasNext(false)
@@ -97,8 +96,6 @@ const CustomerList: React.FC<CustomerListProps> = ({
       params.append('page', currentPage.toString())
       params.append('page_size', pageSize.toString())
 
-      console.log('🔍 DEBUG: Fetching customers with session key:', sessionKey.substring(0, 10) + '...')
-      console.log('🔍 DEBUG: API URL:', `/api/finance/customers/?${params.toString()}`)
 
       const response = await apiClient.getFinanceCustomers(Object.fromEntries(params))
 
@@ -108,7 +105,6 @@ const CustomerList: React.FC<CustomerListProps> = ({
       setHasNext(!!data.next)
       setHasPrevious(!!data.previous)
     } catch (error) {
-      console.error('Error fetching customers:', error)
       setCustomers([])
       setTotalCount(0)
       setHasNext(false)
@@ -125,7 +121,6 @@ const CustomerList: React.FC<CustomerListProps> = ({
       await apiClient.deleteFinanceCustomer(customerId, { session_key: sessionKey })
       fetchCustomers() // Refresh the list
     } catch (error) {
-      console.error('Error deleting customer:', error)
       alert('Failed to delete customer')
     }
   }

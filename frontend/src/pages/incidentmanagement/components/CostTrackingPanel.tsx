@@ -25,7 +25,8 @@ import {
   CheckOutlined,
   WalletOutlined,
 } from '@ant-design/icons';
-import { IncidentCostCenter, COST_CATEGORIES } from '../types';
+import type { IncidentCostCenter } from '../types';
+import { COST_CATEGORIES } from '../types';
 import api from '../services/api';
 
 const { Option } = Select;
@@ -220,7 +221,7 @@ const CostTrackingPanel: React.FC<CostTrackingPanelProps> = ({
             value={totalEstimated}
             prefix="$"
             precision={2}
-            valueStyle={{ color: '#1890ff' }}
+            styles={{ content: { color: '#1890ff' } }}
           />
         </Col>
         <Col xs={24} sm={6}>
@@ -229,7 +230,7 @@ const CostTrackingPanel: React.FC<CostTrackingPanelProps> = ({
             value={totalActual}
             prefix="$"
             precision={2}
-            valueStyle={{ color: totalActual > totalEstimated ? '#ff4d4f' : '#52c41a' }}
+            styles={{ content: { color: totalActual > totalEstimated ? '#ff4d4f' : '#52c41a' } }}
           />
         </Col>
         <Col xs={24} sm={6}>
@@ -237,14 +238,14 @@ const CostTrackingPanel: React.FC<CostTrackingPanelProps> = ({
             title="Approved Costs"
             value={approvedCosts}
             suffix={`/ ${costs.length}`}
-            valueStyle={{ color: '#52c41a' }}
+            styles={{ content: { color: '#52c41a' } }}
           />
         </Col>
         <Col xs={24} sm={6}>
           <Statistic
             title="Pending Approval"
             value={pendingApproval}
-            valueStyle={{ color: pendingApproval > 0 ? '#faad14' : '#52c41a' }}
+            styles={{ content: { color: pendingApproval > 0 ? '#faad14' : '#52c41a' } }}
           />
         </Col>
       </Row>

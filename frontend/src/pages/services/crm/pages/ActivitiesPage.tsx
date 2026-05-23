@@ -34,7 +34,6 @@ export const ActivitiesPage: React.FC = () => {
       const response = await crmApi.getActivities(sessionKey!)
       setActivities(response.data.results || response.data)
     } catch (error) {
-      console.error('Error fetching activities:', error)
       toast.error('Failed to fetch activities')
     } finally {
       setLoading(false)
@@ -90,7 +89,6 @@ export const ActivitiesPage: React.FC = () => {
       toast.success('Activity deleted successfully!')
       fetchActivities()
     } catch (error) {
-      console.error('Error deleting activity:', error)
       toast.error('Failed to delete activity')
     }
   }

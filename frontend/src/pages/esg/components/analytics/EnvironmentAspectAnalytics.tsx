@@ -44,7 +44,7 @@ const EnvironmentAspectAnalytics: React.FC<EnvironmentAspectAnalyticsProps> = ({
               title="Total Aspects"
               value={totalAspects}
               prefix={<EnvironmentOutlined style={{ color: '#52c41a' }} />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -54,7 +54,7 @@ const EnvironmentAspectAnalytics: React.FC<EnvironmentAspectAnalyticsProps> = ({
               title="High Risk Aspects"
               value={highRiskAspects}
               prefix={<ExclamationCircleOutlined style={{ color: '#f5222d' }} />}
-              valueStyle={{ color: '#f5222d' }}
+              styles={{ content: { color: '#f5222d' } }}
             />
           </Card>
         </Col>
@@ -66,7 +66,7 @@ const EnvironmentAspectAnalytics: React.FC<EnvironmentAspectAnalyticsProps> = ({
               precision={1}
               suffix="%"
               prefix={<RiseOutlined style={{ color: '#1890ff' }} />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -78,7 +78,7 @@ const EnvironmentAspectAnalytics: React.FC<EnvironmentAspectAnalyticsProps> = ({
               precision={1}
               suffix="%"
               prefix={<CheckCircleOutlined style={{ color: '#722ed1' }} />}
-              valueStyle={{ color: '#722ed1' }}
+              styles={{ content: { color: '#722ed1' } }}
             />
           </Card>
         </Col>

@@ -82,7 +82,6 @@ const EnvironmentAspectForm: React.FC<EnvironmentAspectFormProps> = ({ onSuccess
       form.resetFields();
       onSuccess?.();
     } catch (error) {
-      console.error('Error saving environment aspect:', error);
       message.error('Failed to save environment aspect');
     } finally {
       setLoading(false);

@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Users, FileText, Settings, Bell, Shield, Lock,
   FolderOpen, Menu, Briefcase, UserCheck, ClipboardList, 
   Calendar, AlertTriangle, BookOpen, HardHat, Eye, 
-  CheckSquare, MessageSquare, Mic, Bot, Package, Zap
+  CheckSquare, MessageSquare, Mic, Bot, Package, Zap, Clock
 } from 'lucide-react'
 
 export type MenuRole = 'superadmin' | 'masteradmin' | 'companyuser'
@@ -57,6 +57,7 @@ const ATHENS_MENU_ITEMS: MenuItem[] = [
   // Administration (MasterAdmin)
   { label: 'Projects', description: 'Manage projects', href: '/projects', icon: FolderOpen, roles: ['masteradmin'] },
   { label: 'Admin Users', description: 'Manage admin users', href: '/admin-users', icon: Users, roles: ['masteradmin'] },
+  { label: 'Admin Attendance', description: 'Monitor admin attendance', href: '/admin-attendance', icon: Clock, roles: ['masteradmin'] },
   { label: 'Menu Management', description: 'Configure modules', href: '/menu-management', icon: Menu, roles: ['masteradmin'] },
   
   // System Administration (SuperAdmin)
@@ -68,11 +69,13 @@ const ATHENS_MENU_ITEMS: MenuItem[] = [
   { label: 'Subscriptions', description: 'Billing and plans', href: '/subscriptions', icon: FileText, roles: ['superadmin'] },
   { label: 'Masters', description: 'Manage master accounts', href: '/masters', icon: Users, roles: ['superadmin'] },
   { label: 'Audit Logs', description: 'Platform activity trail', href: '/audit-logs', icon: FileText, roles: ['superadmin'] },
+  { label: 'Company Approvals', description: 'Approve company registrations', href: '/company-approvals', icon: FileText, roles: ['superadmin'] },
   { label: 'Configuration', description: 'System configuration', href: '/configuration', icon: Settings, roles: ['superadmin'] },
   { label: 'Notifications', description: 'Announcements & alerts', href: '/notifications', icon: Bell, roles: ['superadmin'] },
   
   // Common
   { label: 'Settings', description: 'Account settings', href: '/settings', icon: Settings, roles: ['superadmin', 'masteradmin'] },
+  { label: 'Change Password', description: 'Account security', href: '/settings/change-password', icon: Lock, roles: ['companyuser'] },
 ]
 
 export function getMenuForRole(role: MenuRole, pathPrefix: string = '', enabledModules: string[] = []): MenuItem[] {
@@ -81,16 +84,14 @@ export function getMenuForRole(role: MenuRole, pathPrefix: string = '', enabledM
   // For company users, filter by enabled modules and show category headers
   if (role === 'companyuser' && enabledModules.length > 0) {
     const filtered = items.filter(item => {
-      // Always show Dashboard and Settings
-      if (!item.moduleRequired || item.href === '/dashboard' || item.href === '/settings') {
-        return true
-      }
-      // Show category header if any component is enabled
+      // Always show items with no module requirement (core modules)
+      if (!item.moduleRequired) return true
+      // Show category header if any component in that category is enabled
       if (item.category && !item.moduleRequired) {
         const categoryComponents = items.filter(i => i.category === item.category && i.moduleRequired)
         return categoryComponents.some(c => c.moduleRequired && enabledModules.includes(c.moduleRequired))
       }
-      // Show component if enabled
+      // Show component if its module is enabled
       return enabledModules.includes(item.moduleRequired)
     })
     

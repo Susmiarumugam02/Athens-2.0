@@ -3,8 +3,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from datetime import timedelta
+import datetime
 from system.utils import get_current_tenant
 from system.api_response import ok, fail
 from .models import *
@@ -47,7 +49,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         tenant, error = get_current_tenant(self.request.user)
-        if error:
+        if tenant is None:
             return Project.objects.none()
         return Project.objects.filter(athens_tenant_id=tenant.id)
     
@@ -151,6 +153,78 @@ class TaskCategoryViewSet(viewsets.ModelViewSet):
         tenant, _ = get_current_tenant(self.request.user)
         serializer.save(athens_tenant_id=tenant.id)
 
+def map_task_status_to_daily(status: str) -> str:
+    return {
+        'assigned': 'not_started',
+        'in_progress': 'in_progress',
+        'completed': 'completed',
+        'cancelled': 'completed',
+        'suspended': 'not_started'
+    }.get(status, 'not_started')
+
+
+def sync_task_to_daily(task: Task, tenant_id: int):
+    if not task.assigned_to:
+        return
+
+    scheduled_date = task.due_date or task.planned_date
+    if not scheduled_date:
+        return
+
+    if task.status == 'cancelled':
+        DailyTask.objects.filter(task=task).exclude(status__in=['rolled_over', 'postponed']).update(status='completed')
+        return
+
+    daily_status = map_task_status_to_daily(task.status)
+    daily_task = DailyTask.objects.filter(
+        task=task,
+        scheduled_date=scheduled_date
+    ).exclude(status__in=['rolled_over', 'postponed']).first()
+
+    if not daily_task:
+        daily_task = DailyTask.objects.filter(task=task).exclude(status__in=['rolled_over', 'postponed']).first()
+
+    if daily_task:
+        daily_task.user = task.assigned_to
+        daily_task.title = task.title
+        daily_task.description = task.description
+        daily_task.priority = task.priority
+        daily_task.progress = task.progress
+        daily_task.status = daily_status
+        daily_task.scheduled_date = scheduled_date
+        daily_task.save()
+        return
+
+    DailyTask.objects.create(
+        athens_tenant_id=tenant_id,
+        task=task,
+        user=task.assigned_to,
+        title=task.title,
+        description=task.description,
+        scheduled_date=scheduled_date,
+        priority=task.priority,
+        status=daily_status,
+        progress=task.progress,
+        source_field='task_management'
+    )
+
+
+def sync_user_tasks_for_date(user, scheduled_date: datetime.date, tenant_id: int):
+    if not user or not tenant_id:
+        return
+
+    task_date_filter = (
+        Q(due_date=scheduled_date) | Q(planned_date=scheduled_date)
+    )
+    tasks = Task.objects.filter(
+        athens_tenant_id=tenant_id,
+        assigned_to=user,
+    ).filter(task_date_filter)
+
+    for task in tasks:
+        sync_task_to_daily(task, tenant_id)
+
+
 class TaskViewSet(viewsets.ModelViewSet):
     serializer_class = TaskSerializer
     permission_classes = [IsAuthenticated, ErgonServiceEnabled]
@@ -186,37 +260,99 @@ class TaskViewSet(viewsets.ModelViewSet):
         return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
 
     def get_queryset(self):
-        tenant, error = get_current_tenant(self.request.user)
-        if error:
-            return Task.objects.none()
-        return Task.objects.filter(athens_tenant_id=tenant.id).select_related(
-            'assigned_by', 'assigned_to', 'project', 'department'
-        )
+        user = self.request.user
+        tenant, error = get_current_tenant(user)
+        from django.db.models import Q
+
+        # Scope: always only tasks created by OR assigned to the current user
+        user_scope = Q(assigned_by=user) | Q(assigned_to=user)
+
+        if user.user_type == 'superadmin':
+            # Superadmin sees everything
+            qs = Task.objects.all()
+        elif user.user_type == 'masteradmin':
+            # MasterAdmin sees all tasks in their tenant
+            if tenant is not None:
+                qs = Task.objects.filter(athens_tenant_id=tenant.id)
+            else:
+                qs = Task.objects.filter(user_scope)
+        else:
+            # All other roles (companyuser / client / epc / contractor admins / regular users)
+            # ONLY see tasks they created or were assigned to them
+            if tenant is not None:
+                qs = Task.objects.filter(user_scope, athens_tenant_id=tenant.id)
+            else:
+                qs = Task.objects.filter(user_scope)
+
+        qs = qs.select_related('assigned_by', 'assigned_to', 'project', 'department')
+        params = self.request.query_params
+        search = params.get('search', '').strip()
+        if search:
+            qs = qs.filter(
+                Q(title__icontains=search) |
+                Q(description__icontains=search) |
+                Q(assigned_to__email__icontains=search) |
+                Q(assigned_to__name__icontains=search) |
+                Q(project__name__icontains=search)
+            )
+        status_filter = params.get('status', '').strip()
+        if status_filter and status_filter != 'all':
+            if status_filter == 'overdue':
+                from django.utils import timezone as tz
+                qs = qs.filter(due_date__lt=tz.now().date()).exclude(status='completed')
+            else:
+                qs = qs.filter(status=status_filter)
+        priority_filter = params.get('priority', '').strip()
+        if priority_filter and priority_filter != 'all':
+            qs = qs.filter(priority=priority_filter)
+        project_filter = params.get('project_id', '').strip()
+        if project_filter:
+            qs = qs.filter(project_id=project_filter)
+        return qs
     
     def perform_create(self, serializer):
         tenant, _ = get_current_tenant(self.request.user)
+        user = self.request.user
+
+        # Resolve tenant_id: use tenant.id if available, else fall back to company_id
+        tenant_id = tenant.id if tenant else (getattr(user, 'company_id', None) or user.id)
+
+        # Auto-resolve project when not provided
+        project = serializer.validated_data.get('project')
+        if project is None:
+            project = Project.objects.filter(
+                athens_tenant_id=tenant_id,
+                status='active',
+            ).first() or Project.objects.filter(athens_tenant_id=tenant_id).first()
+
         with transaction.atomic():
-            task = serializer.save(
-                athens_tenant_id=tenant.id,
-                assigned_by=self.request.user
+            save_kwargs = dict(
+                athens_tenant_id=tenant_id,
+                assigned_by=user,
             )
-            # Create history
+            if project is not None:
+                save_kwargs['project'] = project
+            task = serializer.save(**save_kwargs)
             TaskHistory.objects.create(
                 task=task,
-                user=self.request.user,
+                user=user,
                 action='created',
                 new_value=f'Task created: {task.title}'
             )
-            # Sync with daily planner if planned_date exists
-            if task.planned_date:
-                DailyTask.objects.create(
-                    athens_tenant_id=tenant.id,
-                    task=task,
-                    user=task.assigned_to,
-                    planned_date=task.planned_date,
-                    status=task.status,
-                    progress=task.progress
-                )
+            sync_task_to_daily(task, tenant_id)
+    
+    def perform_update(self, serializer):
+        with transaction.atomic():
+            task = serializer.save()
+            TaskHistory.objects.create(
+                task=task,
+                user=self.request.user,
+                action='updated',
+                new_value=f'Task updated: {task.title}'
+            )
+            tenant, _ = get_current_tenant(self.request.user)
+            tenant_id = tenant.id if tenant else (getattr(self.request.user, 'company_id', None) or self.request.user.id)
+            sync_task_to_daily(task, tenant_id)
     
     @action(detail=True, methods=['post'])
     def update_progress(self, request, pk=None):
@@ -247,7 +383,7 @@ class TaskViewSet(viewsets.ModelViewSet):
             # Sync with daily planner
             DailyTask.objects.filter(task=task).update(
                 progress=progress,
-                status=task.status
+                status=map_task_status_to_daily(task.status)
             )
         
         return ok(data=TaskSerializer(task).data, request=request)
@@ -343,15 +479,47 @@ class FollowupViewSet(viewsets.ModelViewSet):
         return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
 
     def get_queryset(self):
-        tenant, error = get_current_tenant(self.request.user)
-        if error:
-            return Followup.objects.none()
-        return Followup.objects.filter(athens_tenant_id=tenant.id)
+        user = self.request.user
+        tenant, _ = get_current_tenant(user)
+        from django.db.models import Q
+
+        if user.user_type == 'superadmin':
+            qs = Followup.objects.all()
+        elif tenant is not None:
+            qs = Followup.objects.filter(athens_tenant_id=tenant.id)
+        else:
+            # Tenant not resolved — scope to followups created by this user
+            qs = Followup.objects.filter(created_by=user)
+
+        # Search
+        search = self.request.query_params.get('search', '').strip()
+        if search:
+            qs = qs.filter(
+                Q(title__icontains=search) |
+                Q(contact_person__icontains=search) |
+                Q(company__icontains=search) |
+                Q(phone__icontains=search) |
+                Q(description__icontains=search)
+            )
+
+        # Status filter — support 'overdue' as a virtual status
+        status_filter = self.request.query_params.get('status', '').strip()
+        if status_filter == 'overdue':
+            from django.utils import timezone as tz
+            qs = qs.filter(
+                followup_date__lt=tz.now().date()
+            ).exclude(status='completed').exclude(status='cancelled')
+        elif status_filter and status_filter != 'all':
+            qs = qs.filter(status=status_filter)
+
+        return qs.order_by('-created_at')
     
     def perform_create(self, serializer):
-        tenant, _ = get_current_tenant(self.request.user)
-        serializer.save(athens_tenant_id=tenant.id, created_by=self.request.user)
-    
+        user = self.request.user
+        tenant, _ = get_current_tenant(user)
+        tenant_id = tenant.id if tenant else (getattr(user, 'company_id', None) or user.id)
+        serializer.save(athens_tenant_id=tenant_id, created_by=user)
+
     @action(detail=True, methods=['post'])
     def complete(self, request, pk=None):
         followup = self.get_object()
@@ -428,25 +596,20 @@ class FollowupViewSet(viewsets.ModelViewSet):
 
 class ManpowerViewSet(viewsets.ModelViewSet):
     serializer_class = ManpowerSerializer
-    permission_classes = [IsAuthenticated, ErgonServiceEnabled, IsErgonAdmin]
-    
+    permission_classes = [IsAuthenticated, ErgonServiceEnabled]
 
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
-        return ok(data=serializer.data, request=request)
-    
+        return ok(data=self.get_serializer(self.filter_queryset(self.get_queryset()), many=True).data, request=request)
+
     def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        return ok(data=serializer.data, request=request)
-    
+        return ok(data=self.get_serializer(self.get_object()).data, request=request)
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
-    
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
@@ -454,43 +617,53 @@ class ManpowerViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return ok(data=serializer.data, request=request)
-    
+
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         self.perform_destroy(instance)
         return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
 
     def get_queryset(self):
-        tenant, error = get_current_tenant(self.request.user)
-        if error:
-            return Manpower.objects.none()
-        return Manpower.objects.filter(athens_tenant_id=tenant.id)
-    
+        user = self.request.user
+        tenant, _ = get_current_tenant(user)
+        from django.db.models import Q
+        if user.user_type == 'superadmin':
+            qs = Manpower.objects.all()
+        elif tenant:
+            qs = Manpower.objects.filter(athens_tenant_id=tenant.id)
+        else:
+            qs = Manpower.objects.filter(athens_tenant_id=getattr(user, 'company_id', None) or user.id)
+        search = self.request.query_params.get('search', '').strip()
+        if search:
+            qs = qs.filter(Q(name__icontains=search) | Q(role__icontains=search))
+        status_f = self.request.query_params.get('status', '').strip()
+        if status_f and status_f != 'all':
+            qs = qs.filter(status=status_f)
+        return qs.order_by('-created_at')
+
     def perform_create(self, serializer):
-        tenant, _ = get_current_tenant(self.request.user)
-        serializer.save(athens_tenant_id=tenant.id)
+        user = self.request.user
+        tenant, _ = get_current_tenant(user)
+        tenant_id = tenant.id if tenant else (getattr(user, 'company_id', None) or user.id)
+        serializer.save(athens_tenant_id=tenant_id)
+
 
 class MachineryViewSet(viewsets.ModelViewSet):
     serializer_class = MachinerySerializer
-    permission_classes = [IsAuthenticated, ErgonServiceEnabled, IsErgonAdmin]
-    
+    permission_classes = [IsAuthenticated, ErgonServiceEnabled]
 
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
-        return ok(data=serializer.data, request=request)
-    
+        return ok(data=self.get_serializer(self.filter_queryset(self.get_queryset()), many=True).data, request=request)
+
     def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        return ok(data=serializer.data, request=request)
-    
+        return ok(data=self.get_serializer(self.get_object()).data, request=request)
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
-    
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
@@ -498,43 +671,52 @@ class MachineryViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return ok(data=serializer.data, request=request)
-    
+
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         self.perform_destroy(instance)
         return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
 
     def get_queryset(self):
-        tenant, error = get_current_tenant(self.request.user)
-        if error:
-            return Machinery.objects.none()
-        return Machinery.objects.filter(athens_tenant_id=tenant.id)
-    
+        user = self.request.user
+        tenant, _ = get_current_tenant(user)
+        from django.db.models import Q
+        if user.user_type == 'superadmin':
+            qs = Machinery.objects.all()
+        elif tenant:
+            qs = Machinery.objects.filter(athens_tenant_id=tenant.id)
+        else:
+            qs = Machinery.objects.filter(athens_tenant_id=getattr(user, 'company_id', None) or user.id)
+        search = self.request.query_params.get('search', '').strip()
+        if search:
+            qs = qs.filter(Q(name__icontains=search) | Q(type__icontains=search) | Q(registration_no__icontains=search))
+        status_f = self.request.query_params.get('status', '').strip()
+        if status_f and status_f != 'all':
+            qs = qs.filter(status=status_f)
+        return qs.order_by('-created_at')
+
     def perform_create(self, serializer):
-        tenant, _ = get_current_tenant(self.request.user)
-        serializer.save(athens_tenant_id=tenant.id)
+        user = self.request.user
+        tenant, _ = get_current_tenant(user)
+        tenant_id = tenant.id if tenant else (getattr(user, 'company_id', None) or user.id)
+        serializer.save(athens_tenant_id=tenant_id)
 
 class AdvanceViewSet(viewsets.ModelViewSet):
     serializer_class = AdvanceSerializer
     permission_classes = [IsAuthenticated, ErgonServiceEnabled]
-    
 
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
-        return ok(data=serializer.data, request=request)
-    
+        return ok(data=self.get_serializer(self.filter_queryset(self.get_queryset()), many=True).data, request=request)
+
     def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        return ok(data=serializer.data, request=request)
-    
+        return ok(data=self.get_serializer(self.get_object()).data, request=request)
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
-    
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
@@ -542,43 +724,101 @@ class AdvanceViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return ok(data=serializer.data, request=request)
-    
+
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         self.perform_destroy(instance)
         return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
 
     def get_queryset(self):
-        tenant, error = get_current_tenant(self.request.user)
-        if error:
-            return Advance.objects.none()
-        return Advance.objects.filter(athens_tenant_id=tenant.id)
-    
+        user = self.request.user
+        tenant, _ = get_current_tenant(user)
+        from django.db.models import Q
+
+        if user.user_type == 'superadmin':
+            qs = Advance.objects.all()
+        elif user.user_type == 'masteradmin':
+            qs = Advance.objects.filter(athens_tenant_id=tenant.id) if tenant else Advance.objects.none()
+        else:
+            # Admins see all in their tenant; regular users see only their own
+            if tenant:
+                if getattr(user, 'admin_type', None) or getattr(user, 'role_type', None) == 'admin':
+                    qs = Advance.objects.filter(athens_tenant_id=tenant.id)
+                else:
+                    qs = Advance.objects.filter(employee=user, athens_tenant_id=tenant.id)
+            else:
+                qs = Advance.objects.filter(employee=user)
+
+        # Filters
+        status_f = self.request.query_params.get('status', '').strip()
+        if status_f and status_f != 'all':
+            qs = qs.filter(status=status_f)
+        search = self.request.query_params.get('search', '').strip()
+        if search:
+            qs = qs.filter(
+                Q(purpose__icontains=search) |
+                Q(employee__name__icontains=search) |
+                Q(employee__email__icontains=search)
+            )
+        return qs.select_related('employee', 'approved_by', 'project').order_by('-created_at')
+
     def perform_create(self, serializer):
-        tenant, _ = get_current_tenant(self.request.user)
-        serializer.save(athens_tenant_id=tenant.id)
+        user = self.request.user
+        tenant, _ = get_current_tenant(user)
+        tenant_id = tenant.id if tenant else (getattr(user, 'company_id', None) or user.id)
+        serializer.save(athens_tenant_id=tenant_id, employee=user)
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        advance = self.get_object()
+        if advance.status != 'pending':
+            return fail('INVALID_STATUS', f'Cannot approve a {advance.status} request.',
+                        status=status.HTTP_400_BAD_REQUEST, request=request)
+        if advance.employee == request.user:
+            return fail('SELF_APPROVAL', 'You cannot approve your own request.',
+                        status=status.HTTP_403_FORBIDDEN, request=request)
+        advance.status = 'approved'
+        advance.approved_by = request.user
+        advance.approved_date = timezone.localdate()
+        advance.save()
+        return ok(data=AdvanceSerializer(advance).data, request=request)
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        advance = self.get_object()
+        if advance.status != 'pending':
+            return fail('INVALID_STATUS', f'Cannot reject a {advance.status} request.',
+                        status=status.HTTP_400_BAD_REQUEST, request=request)
+        if advance.employee == request.user:
+            return fail('SELF_APPROVAL', 'You cannot reject your own request.',
+                        status=status.HTTP_403_FORBIDDEN, request=request)
+        reason = (request.data.get('reason') or '').strip()
+        if not reason:
+            return fail('REASON_REQUIRED', 'Rejection reason is required.',
+                        status=status.HTTP_400_BAD_REQUEST, request=request)
+        advance.status = 'rejected'
+        advance.approved_by = request.user
+        advance.rejection_reason = reason
+        advance.save()
+        return ok(data=AdvanceSerializer(advance).data, request=request)
+
 
 class ExpenseViewSet(viewsets.ModelViewSet):
     serializer_class = ExpenseSerializer
     permission_classes = [IsAuthenticated, ErgonServiceEnabled]
-    
 
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
-        return ok(data=serializer.data, request=request)
-    
+        return ok(data=self.get_serializer(self.filter_queryset(self.get_queryset()), many=True).data, request=request)
+
     def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        return ok(data=serializer.data, request=request)
-    
+        return ok(data=self.get_serializer(self.get_object()).data, request=request)
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
-    
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
@@ -586,43 +826,98 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return ok(data=serializer.data, request=request)
-    
+
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         self.perform_destroy(instance)
         return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
 
     def get_queryset(self):
-        tenant, error = get_current_tenant(self.request.user)
-        if error:
-            return Expense.objects.none()
-        return Expense.objects.filter(athens_tenant_id=tenant.id)
-    
+        user = self.request.user
+        tenant, _ = get_current_tenant(user)
+        from django.db.models import Q
+
+        if user.user_type == 'superadmin':
+            qs = Expense.objects.all()
+        elif user.user_type == 'masteradmin':
+            qs = Expense.objects.filter(athens_tenant_id=tenant.id) if tenant else Expense.objects.none()
+        else:
+            if tenant:
+                if getattr(user, 'admin_type', None) or getattr(user, 'role_type', None) == 'admin':
+                    qs = Expense.objects.filter(athens_tenant_id=tenant.id)
+                else:
+                    qs = Expense.objects.filter(employee=user, athens_tenant_id=tenant.id)
+            else:
+                qs = Expense.objects.filter(employee=user)
+
+        status_f = self.request.query_params.get('status', '').strip()
+        if status_f and status_f != 'all':
+            qs = qs.filter(status=status_f)
+        search = self.request.query_params.get('search', '').strip()
+        if search:
+            qs = qs.filter(
+                Q(description__icontains=search) |
+                Q(category__icontains=search) |
+                Q(employee__name__icontains=search) |
+                Q(employee__email__icontains=search)
+            )
+        return qs.select_related('employee', 'approved_by', 'project').order_by('-created_at')
+
     def perform_create(self, serializer):
-        tenant, _ = get_current_tenant(self.request.user)
-        serializer.save(athens_tenant_id=tenant.id)
+        user = self.request.user
+        tenant, _ = get_current_tenant(user)
+        tenant_id = tenant.id if tenant else (getattr(user, 'company_id', None) or user.id)
+        serializer.save(athens_tenant_id=tenant_id, employee=user)
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        expense = self.get_object()
+        if expense.status != 'pending':
+            return fail('INVALID_STATUS', f'Cannot approve a {expense.status} request.',
+                        status=status.HTTP_400_BAD_REQUEST, request=request)
+        if expense.employee == request.user:
+            return fail('SELF_APPROVAL', 'You cannot approve your own request.',
+                        status=status.HTTP_403_FORBIDDEN, request=request)
+        expense.status = 'approved'
+        expense.approved_by = request.user
+        expense.save()
+        return ok(data=ExpenseSerializer(expense).data, request=request)
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        expense = self.get_object()
+        if expense.status != 'pending':
+            return fail('INVALID_STATUS', f'Cannot reject a {expense.status} request.',
+                        status=status.HTTP_400_BAD_REQUEST, request=request)
+        if expense.employee == request.user:
+            return fail('SELF_APPROVAL', 'You cannot reject your own request.',
+                        status=status.HTTP_403_FORBIDDEN, request=request)
+        reason = (request.data.get('reason') or '').strip()
+        if not reason:
+            return fail('REASON_REQUIRED', 'Rejection reason is required.',
+                        status=status.HTTP_400_BAD_REQUEST, request=request)
+        expense.status = 'rejected'
+        expense.approved_by = request.user
+        expense.rejection_reason = reason
+        expense.save()
+        return ok(data=ExpenseSerializer(expense).data, request=request)
 
 class LedgerEntryViewSet(viewsets.ModelViewSet):
     serializer_class = LedgerEntrySerializer
-    permission_classes = [IsAuthenticated, ErgonServiceEnabled, IsErgonAdmin]
-    
+    permission_classes = [IsAuthenticated, ErgonServiceEnabled]
 
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
-        return ok(data=serializer.data, request=request)
-    
+        return ok(data=self.get_serializer(self.filter_queryset(self.get_queryset()), many=True).data, request=request)
+
     def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        return ok(data=serializer.data, request=request)
-    
+        return ok(data=self.get_serializer(self.get_object()).data, request=request)
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
-    
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
@@ -630,21 +925,50 @@ class LedgerEntryViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return ok(data=serializer.data, request=request)
-    
+
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         self.perform_destroy(instance)
         return ok(data=None, request=request, status=status.HTTP_204_NO_CONTENT)
 
     def get_queryset(self):
-        tenant, error = get_current_tenant(self.request.user)
-        if error:
-            return LedgerEntry.objects.none()
-        return LedgerEntry.objects.filter(athens_tenant_id=tenant.id)
-    
+        user = self.request.user
+        tenant, _ = get_current_tenant(user)
+        from django.db.models import Q
+
+        if user.user_type == 'superadmin':
+            qs = LedgerEntry.objects.all()
+        elif tenant:
+            qs = LedgerEntry.objects.filter(athens_tenant_id=tenant.id)
+        else:
+            qs = LedgerEntry.objects.filter(
+                athens_tenant_id=getattr(user, 'company_id', None) or user.id
+            )
+
+        search = self.request.query_params.get('search', '').strip()
+        if search:
+            qs = qs.filter(
+                Q(description__icontains=search) |
+                Q(reference_no__icontains=search) |
+                Q(category__icontains=search)
+            )
+        entry_type = self.request.query_params.get('entry_type', '').strip()
+        if entry_type and entry_type != 'all':
+            qs = qs.filter(entry_type=entry_type)
+        category = self.request.query_params.get('category', '').strip()
+        if category and category != 'all':
+            qs = qs.filter(category__iexact=category)
+        project_id = self.request.query_params.get('project_id', '').strip()
+        if project_id and project_id != 'all':
+            qs = qs.filter(project_id=project_id)
+
+        return qs.select_related('project', 'created_by').order_by('entry_date', 'id')
+
     def perform_create(self, serializer):
-        tenant, _ = get_current_tenant(self.request.user)
-        serializer.save(athens_tenant_id=tenant.id, created_by=self.request.user)
+        user = self.request.user
+        tenant, _ = get_current_tenant(user)
+        tenant_id = tenant.id if tenant else (getattr(user, 'company_id', None) or user.id)
+        serializer.save(athens_tenant_id=tenant_id, created_by=user)
 
 class CustomerViewSet(viewsets.ModelViewSet):
     serializer_class = CustomerSerializer
@@ -772,11 +1096,18 @@ class DailyPlannerViewSet(viewsets.ModelViewSet):
         tenant, error = get_current_tenant(self.request.user)
         if error:
             return DailyTask.objects.none()
-        
-        date = self.request.query_params.get('date')
-        if not date:
+
+        requested_date = self.request.query_params.get('date')
+        if not requested_date:
             date = timezone.now().date()
-        
+        else:
+            try:
+                date = datetime.date.fromisoformat(requested_date)
+            except ValueError:
+                date = timezone.now().date()
+
+        sync_user_tasks_for_date(self.request.user, date, tenant.id)
+
         return DailyTask.objects.filter(
             athens_tenant_id=tenant.id,
             user=self.request.user,

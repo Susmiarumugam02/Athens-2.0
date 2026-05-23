@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Badge } from '../../components/ui/Badge'
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
+import { Eye, Edit, Trash2, Plus, X } from 'lucide-react'
 import employeeAPI, { type Employee, type EmployeeStats } from '../../services/employeeAPI'
 
 const EmployeeManagement: React.FC = () => {
@@ -13,6 +14,9 @@ const EmployeeManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [showViewDetails, setShowViewDetails] = useState(false)
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
 
   const fetchEmployees = async () => {
     try {
@@ -30,7 +34,6 @@ const EmployeeManagement: React.FC = () => {
       setEmployees(employeesResponse.data.results || employeesResponse.data)
       setStats(statsResponse.data)
     } catch (err: any) {
-      console.error('Error fetching employees:', err)
       setError(err.response?.data?.message || 'Failed to fetch employees')
     } finally {
       setLoading(false)
@@ -49,6 +52,31 @@ const EmployeeManagement: React.FC = () => {
     setStatusFilter(status)
   }
 
+  const handleAddEmployee = () => {
+    setSelectedEmployee(null)
+    setShowAddForm(true)
+  }
+
+  const handleViewEmployee = (employee: Employee) => {
+    setSelectedEmployee(employee)
+    setShowViewDetails(true)
+  }
+
+  const handleEditEmployee = (employee: Employee) => {
+    setSelectedEmployee(employee)
+    setShowAddForm(true)
+  }
+
+  const handleCloseAddForm = () => {
+    setShowAddForm(false)
+    setSelectedEmployee(null)
+  }
+
+  const handleCloseViewDetails = () => {
+    setShowViewDetails(false)
+    setSelectedEmployee(null)
+  }
+
   if (loading && !employees.length) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -61,13 +89,22 @@ const EmployeeManagement: React.FC = () => {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Employee Management
-          </h1>
-          <p className="text-gray-600">
-            Manage and view employee information for your organization
-          </p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Employee Management
+            </h1>
+            <p className="text-gray-600">
+              Manage and view employee information for your organization
+            </p>
+          </div>
+          <Button 
+            onClick={handleAddEmployee}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4" />
+            Add Employee
+          </Button>
         </div>
 
         {/* Error Message */}
@@ -220,6 +257,9 @@ const EmployeeManagement: React.FC = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Contact
                       </th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -256,6 +296,41 @@ const EmployeeManagement: React.FC = () => {
                           <div className="text-sm text-gray-900">{employee.email}</div>
                           <div className="text-sm text-gray-500">{employee.phone}</div>
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              onClick={() => handleViewEmployee(employee)}
+                              size="sm"
+                              variant="outline"
+                              className="p-1.5 h-auto w-auto"
+                              title="View Details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              onClick={() => handleEditEmployee(employee)}
+                              size="sm"
+                              variant="outline"
+                              className="p-1.5 h-auto w-auto"
+                              title="Edit Employee"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              onClick={() => {
+                                if (confirm(`Delete ${employee.first_name} ${employee.last_name}?`)) {
+                                  // Handle delete
+                                }
+                              }}
+                              size="sm"
+                              variant="outline"
+                              className="p-1.5 h-auto w-auto text-red-600 hover:bg-red-50"
+                              title="Delete Employee"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -265,6 +340,123 @@ const EmployeeManagement: React.FC = () => {
           </div>
         </Card>
       </div>
+
+      {/* View Details Modal */}
+      {showViewDetails && selectedEmployee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-bold text-gray-900">Employee Details</h2>
+              <button 
+                onClick={handleCloseViewDetails}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">Name</label>
+                <p className="text-gray-900 font-medium">{selectedEmployee.first_name} {selectedEmployee.last_name}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Employee ID</label>
+                <p className="text-gray-900 font-medium">{selectedEmployee.employee_id}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Email</label>
+                <p className="text-gray-900">{selectedEmployee.email}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Phone</label>
+                <p className="text-gray-900">{selectedEmployee.phone || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Department</label>
+                <p className="text-gray-900">{selectedEmployee.department?.name || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Designation</label>
+                <p className="text-gray-900">{selectedEmployee.designation?.title || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Status</label>
+                <p className="text-gray-900">
+                  <Badge variant={selectedEmployee.status === 'active' ? 'success' : 'default'}>
+                    {selectedEmployee.status}
+                  </Badge>
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 p-6 border-t">
+              <Button onClick={handleCloseViewDetails} variant="outline">
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Employee Modal Placeholder */}
+      {showAddForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-bold text-gray-900">
+                {selectedEmployee ? 'Edit Employee' : 'Add Employee'}
+              </h2>
+              <button 
+                onClick={handleCloseAddForm}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600 mb-4">
+                {selectedEmployee ? 
+                  'Edit employee details below.' : 
+                  'Add a new employee to your organization.'}
+              </p>
+              {/* Form fields would go here - integrate with your API */}
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">First Name</label>
+                  <input 
+                    type="text" 
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                    placeholder="First name"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Last Name</label>
+                  <input 
+                    type="text" 
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                    placeholder="Last name"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Email</label>
+                  <input 
+                    type="email" 
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                    placeholder="Email address"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 p-6 border-t">
+              <Button onClick={handleCloseAddForm} variant="outline">
+                Cancel
+              </Button>
+              <Button onClick={handleCloseAddForm}>
+                {selectedEmployee ? 'Update' : 'Create'} Employee
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

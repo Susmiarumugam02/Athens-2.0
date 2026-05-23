@@ -71,7 +71,6 @@ const GrievanceForm: React.FC<GrievanceFormProps> = ({ onSuccess, initialData })
       form.resetFields();
       onSuccess?.();
     } catch (error) {
-      console.error('Error creating grievance:', error);
       message.error('Failed to report grievance');
     } finally {
       setLoading(false);

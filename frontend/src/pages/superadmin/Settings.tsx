@@ -107,10 +107,6 @@ const UltraSecureMasterAdminSettings: React.FC = () => {
   // Debug logging
   React.useEffect(() => {
     if (settings?.data) {
-      console.log('🔍 DEBUG: Settings data:', settings.data)
-      console.log('🔍 DEBUG: Security features:', settings.data.security_features)
-      console.log('🔍 DEBUG: 2FA status:', settings.data.security_features?.two_factor_authentication)
-      console.log('🔍 DEBUG: Recovery codes count:', settings.data.security_stats?.recovery_codes_count)
     }
   }, [settings])
 
@@ -350,7 +346,6 @@ const UltraSecureMasterAdminSettings: React.FC = () => {
     mutationFn: (data: any) => apiClient.updateMasterAdminEmailSettings(data),
     onSuccess: (response) => {
       toast.success('Email settings saved successfully!')
-      console.log('🎉 Save response:', response)
       
       // Update local state with saved data (like Company Dashboard)
       if (response?.data) {
@@ -364,7 +359,6 @@ const UltraSecureMasterAdminSettings: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['email-usage'] })
     },
     onError: (error: any) => {
-      console.error('❌ Save error:', error)
       toast.error(error.response?.data?.error || 'Failed to save email settings')
     }
   })

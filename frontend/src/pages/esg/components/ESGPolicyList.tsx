@@ -18,19 +18,11 @@ const ESGPolicyList: React.FC = () => {
     setLoading(true);
     try {
       const response = await getESGPolicies();
-      console.log('ESG Policies full response:', response);
-      console.log('ESG Policies response.data:', response.data);
-      console.log('ESG Policies response.data type:', typeof response.data);
-      console.log('ESG Policies response.data.results:', response.data.results);
       
       const data = response.data.results || response.data || [];
-      console.log('Processed data:', data);
-      console.log('Is data array?', Array.isArray(data));
       
       setPolicies(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('Error fetching ESG policies:', error);
-      console.error('Error details:', error.response?.data);
       message.error('Failed to fetch ESG policies');
       setPolicies([]);
     } finally {

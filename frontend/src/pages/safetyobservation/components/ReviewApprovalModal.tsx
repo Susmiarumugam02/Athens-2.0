@@ -38,7 +38,6 @@ const ReviewApprovalModal: React.FC<ReviewApprovalModalProps> = ({
       onSuccess();
       
     } catch (error: any) {
-      console.error('Approval error:', error);
       message.error('Failed to approve observation');
     } finally {
       setLoading(false);
@@ -65,7 +64,6 @@ const ReviewApprovalModal: React.FC<ReviewApprovalModalProps> = ({
       onSuccess();
       
     } catch (error: any) {
-      console.error('Rejection error:', error);
       message.error('Failed to reject observation');
     } finally {
       setLoading(false);

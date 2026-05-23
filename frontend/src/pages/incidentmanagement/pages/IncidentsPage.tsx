@@ -4,8 +4,8 @@ import { PlusOutlined, UserOutlined, UnorderedListOutlined } from '@ant-design/i
 import IncidentList from '../components/IncidentList';
 import IncidentForm from '../components/IncidentForm';
 import IncidentDetail from '../components/IncidentDetail';
+import type { IncidentFormData, IncidentListItem } from '../types';
 
-import { IncidentListItem, IncidentFormData } from '../types';
 import { useIncidents } from '../hooks/useIncidents';
 import { incidentApi } from '../services/api';
 import { useAuthStore } from '../../../store/authStore';

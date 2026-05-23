@@ -67,7 +67,6 @@ const InductionTrainingView: React.FC<InductionTrainingViewProps> = ({ induction
         setAttendanceDetails(response.data);
       }
     } catch (error) {
-      console.error('Failed to fetch attendance details:', error);
     } finally {
       setLoading(false);
     }

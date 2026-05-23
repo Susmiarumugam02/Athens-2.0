@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
@@ -12,6 +13,7 @@ interface DashboardStats {
 }
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -24,9 +26,16 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true)
       const data = await masterAdminService.getDashboardStats()
-      setStats(data)
+      setStats(data ?? null)
     } catch (err: any) {
-      setError(err.message || 'Failed to load dashboard stats')
+      const code = err?.code
+      // Auth token errors are handled globally by the interceptor — don't surface them
+      if (code === 'NO_VALID_AUTH_TOKEN' || code === 'NO_AUTH_TOKEN') {
+        setError(null)
+      } else {
+        const msg = err?.response?.data?.detail || err?.response?.data?.message || err?.message
+        setError(typeof msg === 'string' ? msg : 'Failed to load dashboard stats')
+      }
     } finally {
       setLoading(false)
     }
@@ -122,19 +131,19 @@ const Dashboard: React.FC = () => {
       <Card className="p-6">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Button className="h-20 flex flex-col items-center justify-center">
+          <Button className="h-20 flex flex-col items-center justify-center" onClick={() => navigate('/master-admin/projects')}>
             <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
             Create Project
           </Button>
-          <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
+          <Button variant="outline" className="h-20 flex flex-col items-center justify-center" onClick={() => navigate('/master-admin/admin-users')}>
             <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
             </svg>
             Manage Users
           </Button>
-          <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
+          <Button variant="outline" className="h-20 flex flex-col items-center justify-center" onClick={() => navigate('/master-admin/settings')}>
             <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>

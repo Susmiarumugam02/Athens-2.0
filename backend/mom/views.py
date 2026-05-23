@@ -1,5 +1,5 @@
 from rest_framework import generics, permissions, status
-from .models import Mom, ParticipantResponse, ParticipantAttendance
+from .models import Mom, ParticipantResponse, ParticipantAttendance, MeetingQRToken, MeetingAttendanceLog
 from .serializers import MomSerializer, ParticipantResponseSerializer, ParticipantResponseCreateSerializer, ParticipantListSerializer, MomLiveSerializer
 from authentication.models import CustomUser
 from rest_framework.response import Response
@@ -16,57 +16,99 @@ from .notification_utils import (
     send_task_assignment_notification
 )
 import os
+import secrets
+import qrcode
+import qrcode.image.svg
+import io
+import base64
+from django.utils import timezone
+from datetime import timedelta
+from django.db.models import Q
 
 class IsAdminUser(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.user_type == 'adminuser'
+        if not request.user.is_authenticated:
+            return False
+
+        user_type = getattr(request.user, 'user_type', None)
+        admin_type = getattr(request.user, 'admin_type', None)
+
+        if user_type == 'adminuser':
+            return True
+
+        if user_type == 'companyuser' and admin_type in ['client', 'epc', 'contractor', 'clientuser', 'epcuser', 'contractoruser']:
+            return True
+
+        return False
 
 class CanScheduleMom(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
-        return (
-            user.is_authenticated and
-            user.user_type == 'adminuser' and
-            user.admin_type in ['clientuser', 'epcuser']
-        )
+        if not user.is_authenticated:
+            return False
+        user_type = getattr(user, 'user_type', None)
+        admin_type = getattr(user, 'admin_type', None)
+        role_type = getattr(user, 'role_type', None)
+        # Allow adminuser, all companyuser admin types, and role_type=user
+        if user_type == 'adminuser':
+            return True
+        if user_type == 'companyuser':
+            allowed = ['client', 'epc', 'contractor', 'clientuser', 'epcuser', 'contractoruser']
+            if admin_type in allowed or role_type == 'user':
+                return True
+        return False
 
 class MomCreateView(generics.CreateAPIView):
     queryset = Mom.objects.all()
     serializer_class = MomSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, CanScheduleMom]
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
     def perform_create(self, serializer):
-        # PROJECT ISOLATION: Ensure user has a project
-        if not self.request.user.project:
-            from rest_framework.exceptions import ValidationError
-            raise ValidationError("User must be assigned to a project to create meetings.")
-        
+        try:
+            project = self.request.user.project
+        except Exception:
+            project = None
+
         mom = serializer.save(
             scheduled_by=self.request.user,
-            project=self.request.user.project
+            project=project
         )
-        
-        # Send notifications to participants via backend
+        # CRITICAL: Always add creator as participant for visibility in their own list
+        mom.participants.add(self.request.user)
+        mom.save()  # Ensure M2M is committed
+
+        participant_ids = list(mom.participants.values_list('id', flat=True))
+        print(f"[MOM CREATE] id={mom.id} title='{mom.title}' "
+              f"scheduled_by={self.request.user.id} project={project} "
+              f"participants={participant_ids} creator_added={self.request.user.id in participant_ids}")
+
+        meeting_data = {
+            'id': mom.id,
+            'title': mom.title,
+            'meeting_datetime': mom.meeting_datetime.isoformat() if mom.meeting_datetime else None,
+            'location': mom.location,
+            'agenda': mom.agenda
+        }
+
+        # Notify all participants including the creator
         for participant in mom.participants.all():
             try:
-                meeting_data = {
-                    'id': mom.id,
-                    'title': mom.title,
-                    'meeting_datetime': mom.meeting_datetime.isoformat() if mom.meeting_datetime else None,
-                    'location': mom.location,
-                    'agenda': mom.agenda
-                }
-                
                 send_meeting_invitation_notification(
                     participant_user_id=participant.id,
                     meeting_data=meeting_data,
                     scheduler_user_id=self.request.user.id
                 )
-            except Exception as e:
+            except Exception:
                 pass
+        print(f"[MOM CREATE] notifications sent to {len(participant_ids)} users")
 
 class MomUpdateView(generics.RetrieveUpdateAPIView):
-    queryset = Mom.objects.all()
+    queryset = Mom.objects.select_related('scheduled_by', 'project').prefetch_related('participants')
     serializer_class = MomSerializer
     permission_classes = [permissions.IsAuthenticated]
     
@@ -78,10 +120,12 @@ class MomUpdateView(generics.RetrieveUpdateAPIView):
     
     def get_object(self):
         obj = super().get_object()
-        # PROJECT ISOLATION: Ensure user can only access MOMs from their project
-        if not self.request.user.project or obj.project != self.request.user.project:
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("You can only access meetings from your project.")
+        print("Meeting ID:", self.kwargs.get('pk'))
+        # Allow access if same project OR user has no project (project-admin without project)
+        if user_project := getattr(self.request.user, 'project', None):
+            if obj.project and obj.project != user_project:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("You can only access meetings from your project.")
         return obj
     
     def update(self, request, *args, **kwargs):
@@ -105,39 +149,36 @@ class MomListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_serializer_context(self):
-        """Pass request context to serializer for permission checks"""
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
 
     def get_queryset(self):
-        """PROJECT ISOLATION: Filter by user's project with proper permissions"""
         user = self.request.user
-        
-        # Master admin sees all data
+        print(f"[MOM LIST] user={user.id} user_type={getattr(user,'user_type',None)} "
+              f"role_type={getattr(user,'role_type',None)} project_id={getattr(user,'project_id',None)}")
+
+        from django.db.models import Q
+
+        # Superuser / master admin sees everything
         if user.is_superuser or (hasattr(user, 'admin_type') and user.admin_type in ['master', 'masteradmin']):
-            queryset = Mom.objects.all()
-        else:
-            # PROJECT ISOLATION: Filter by user's project
-            if not user.project:
-                return Mom.objects.none()
-            
-            queryset = Mom.objects.filter(project=user.project)
-            
-            # Users can see:
-            # 1. Meetings they created
-            # 2. Meetings they are participants in
-            # 3. Completed meetings (view only)
-            from django.db.models import Q
-            queryset = queryset.filter(
-                Q(scheduled_by=user) |  # Created by user
-                Q(participants=user) |  # User is participant
-                Q(status=Mom.MeetingStatus.COMPLETED)  # Completed meetings (public view)
-            ).distinct()
-        
-        department = self.request.query_params.get('department')
-        if department:
-            queryset = queryset.filter(department=department)
+            qs = Mom.objects.select_related('scheduled_by', 'project').prefetch_related('participants').order_by('-created_at')
+            print(f"[MOM LIST] superadmin/master — total={qs.count()}")
+            return qs
+
+        # Visibility: creator OR participant (no project scoping — avoids FK mismatch)
+        # scheduled_by covers meetings created by this user even if not in participants M2M
+        queryset = (
+            Mom.objects
+            .select_related('scheduled_by', 'project')
+            .prefetch_related('participants')
+            .filter(Q(scheduled_by=user) | Q(participants__id=user.id))
+            .distinct()
+            .order_by('-created_at')
+        )
+
+        count = queryset.count()
+        print(f"[MOM LIST] queryset count={count} for user={user.id}")
         return queryset
 
 class MomDeleteView(generics.DestroyAPIView):
@@ -147,10 +188,11 @@ class MomDeleteView(generics.DestroyAPIView):
     
     def get_object(self):
         obj = super().get_object()
-        # PROJECT ISOLATION: Ensure user can only access MOMs from their project
-        if not self.request.user.project or obj.project != self.request.user.project:
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("You can only access meetings from your project.")
+        if user_project := getattr(self.request.user, 'project', None):
+            if obj.project and obj.project != user_project:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("You can only access meetings from your project.")
+        return obj
         return obj
     
     def destroy(self, request, *args, **kwargs):
@@ -337,9 +379,10 @@ class MeetingInfoView(APIView):
     def get(self, request, mom_id):
         try:
             mom = Mom.objects.get(id=mom_id)
-            
-            # PROJECT ISOLATION: Ensure user can only access MOMs from their project
-            if not request.user.project or mom.project != request.user.project:
+
+            # PROJECT ISOLATION: only enforce when both user and meeting have a project
+            user_project = getattr(request.user, 'project', None)
+            if user_project and mom.project and mom.project != user_project:
                 return Response({
                     'error': 'You can only access meetings from your project'
                 }, status=status.HTTP_403_FORBIDDEN)
@@ -382,18 +425,31 @@ class MomLiveView(APIView):
 
     def get(self, request, pk):
         mom = get_object_or_404(Mom, pk=pk)
-        
-        # PROJECT ISOLATION: Ensure user can only access MOMs from their project
-        if not request.user.project or mom.project != request.user.project:
+
+        # PROJECT ISOLATION: only enforce when both user and meeting have a project
+        user_project = getattr(request.user, 'project', None)
+        if user_project and mom.project and mom.project != user_project:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("You can only access meetings from your project.")
-        
+
         # Permission check: Only creator or participants can access live meeting
         if mom.scheduled_by != request.user and not mom.participants.filter(id=request.user.id).exists():
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Only the meeting creator or participants can access the live meeting.")
 
-        # Auto-update no response status when meeting is accessed in live mode
+        # Auto-transition scheduled → live when meeting time has passed
+        if mom.status == Mom.MeetingStatus.SCHEDULED and mom.meeting_datetime <= timezone.now():
+            mom.status = Mom.MeetingStatus.LIVE
+            mom.save(update_fields=['status'])
+            # Seed noresponse records for participants who haven't responded
+            responded_ids = set(
+                ParticipantResponse.objects.filter(mom=mom).values_list('user_id', flat=True)
+            )
+            for uid in mom.participants.values_list('id', flat=True):
+                if uid not in responded_ids:
+                    ParticipantResponse.objects.create(mom=mom, user_id=uid, status='noresponse')
+
+        # Update pending → noresponse when meeting is live
         if mom.status == Mom.MeetingStatus.LIVE:
             self.update_no_response_status(mom)
 
@@ -470,14 +526,18 @@ class MomCompleteView(APIView):
 
     def put(self, request, pk):
         mom = get_object_or_404(Mom, pk=pk)
-        
-        # PROJECT ISOLATION: Ensure user can only access MOMs from their project
-        if not request.user.project or mom.project != request.user.project:
+
+        # PROJECT ISOLATION: only enforce when both user and meeting have a project
+        user_project = getattr(request.user, 'project', None)
+        if user_project and mom.project and mom.project != user_project:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("You can only access meetings from your project.")
-        
-        # Only the creator can complete the meeting
-        if mom.scheduled_by != request.user:
+
+        # Only the creator (or superadmin/masteradmin) can complete the meeting
+        user = request.user
+        is_creator = mom.scheduled_by_id == user.id
+        is_superadmin = user.is_superuser or getattr(user, 'admin_type', None) in ('master', 'masteradmin')
+        if not is_creator and not is_superadmin:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Only the meeting creator can complete this meeting.")
         
@@ -506,6 +566,42 @@ class MomCompleteView(APIView):
                 pass
 
         return Response({'status': 'Meeting marked as completed'})
+
+class MomStartView(APIView):
+    """
+    POST /api/v1/mom/<pk>/start/
+    Creator-only: transition meeting from SCHEDULED → LIVE.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        mom = get_object_or_404(Mom, pk=pk)
+
+        if mom.scheduled_by != request.user:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Only the meeting creator can start this meeting.')
+
+        if mom.status == Mom.MeetingStatus.COMPLETED:
+            return Response({'error': 'Meeting is already completed.'}, status=status.HTTP_400_BAD_REQUEST)
+        if mom.status == Mom.MeetingStatus.CANCELLED:
+            return Response({'error': 'Meeting is cancelled.'}, status=status.HTTP_400_BAD_REQUEST)
+        if mom.status == Mom.MeetingStatus.LIVE:
+            return Response({'status': 'live', 'message': 'Meeting is already live.'})
+
+        mom.status = Mom.MeetingStatus.LIVE
+        mom.save(update_fields=['status'])
+
+        # Seed noresponse records for all participants who haven't responded
+        participants_with_responses = set(
+            ParticipantResponse.objects.filter(mom=mom).values_list('user_id', flat=True)
+        )
+        for uid in mom.participants.values_list('id', flat=True):
+            if uid not in participants_with_responses:
+                ParticipantResponse.objects.create(mom=mom, user_id=uid, status='noresponse')
+
+        serializer = MomLiveSerializer(mom, context={'request': request})
+        return Response({'status': 'live', 'meeting': serializer.data})
+
 
 class MomAddParticipantsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -568,7 +664,7 @@ class UsersByDepartmentListView(ListAPIView):
         
         department_name = self.request.query_params.get('department_name')
         queryset = CustomUser.objects.filter(
-            admin_type__in=['clientuser', 'contractoruser', 'epcuser'],
+            admin_type__in=['client', 'contractor', 'epc', 'clientuser', 'contractoruser', 'epcuser'],
             project=user.project  # Same project only
         )
         
@@ -598,3 +694,235 @@ class CsrfTokenView(APIView):
 
     def get(self, request, *args, **kwargs):
         return JsonResponse({'detail': 'CSRF cookie set'})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# QR ATTENDANCE VIEWS
+# ─────────────────────────────────────────────────────────────────────────────
+
+class MeetingQRGenerateView(APIView):
+    """
+    GET /api/v1/mom/<pk>/qr/
+    Creator-only: generate (or refresh) a QR token for a live meeting.
+    Returns a base64-encoded PNG QR image + token metadata.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        mom = get_object_or_404(Mom, pk=pk)
+
+        if mom.scheduled_by != request.user:
+            return Response({'error': 'Only the meeting creator can generate the QR code.'},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        if mom.status == Mom.MeetingStatus.COMPLETED:
+            return Response({'error': 'Meeting is already completed.'}, status=status.HTTP_400_BAD_REQUEST)
+        if mom.status == Mom.MeetingStatus.CANCELLED:
+            return Response({'error': 'Meeting is cancelled.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Auto-set meeting to LIVE when QR is generated
+        if mom.status == Mom.MeetingStatus.SCHEDULED:
+            mom.status = Mom.MeetingStatus.LIVE
+            mom.save(update_fields=['status'])
+
+        # Create or refresh token (valid for 8 hours)
+        token_value = secrets.token_urlsafe(48)
+        expires_at = timezone.now() + timedelta(hours=8)
+
+        qr_token, _ = MeetingQRToken.objects.update_or_create(
+            mom=mom,
+            defaults={'token': token_value, 'expires_at': expires_at}
+        )
+
+        # Build QR payload URL — frontend scans this and calls the mark-attendance endpoint
+        payload = f"{token_value}"
+
+        # Generate PNG QR code as base64
+        qr = qrcode.QRCode(version=1, box_size=8, border=2)
+        qr.add_data(payload)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color='black', back_color='white')
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        qr_b64 = base64.b64encode(buf.getvalue()).decode()
+
+        return Response({
+            'token': token_value,
+            'expires_at': expires_at.isoformat(),
+            'meeting_id': mom.id,
+            'meeting_title': mom.title,
+            'qr_image': f'data:image/png;base64,{qr_b64}',
+        })
+
+
+class MeetingAttendanceByQRView(APIView):
+    """
+    POST /api/v1/mom/attendance/qr/
+    Participant scans QR → sends token → attendance marked.
+    Body: { "token": "...", "latitude": 12.9, "longitude": 77.6 }
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        token_value = request.data.get('token', '').strip()
+        if not token_value:
+            return Response({'error': 'Token is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            qr_token = MeetingQRToken.objects.select_related('mom').get(token=token_value)
+        except MeetingQRToken.DoesNotExist:
+            return Response({'error': 'Invalid QR code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not qr_token.is_valid():
+            return Response({'error': 'QR code has expired.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        mom = qr_token.mom
+        return self._mark_attendance(
+            request, mom,
+            marked_via=MeetingAttendanceLog.MARKED_VIA_QR,
+            latitude=request.data.get('latitude'),
+            longitude=request.data.get('longitude'),
+        )
+
+
+class MeetingAttendanceByCodeView(APIView):
+    """
+    POST /api/v1/mom/<pk>/attendance/code/
+    Participant enters employee code → attendance marked.
+    Body: { "employee_code": "sethu_09" }
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        mom = get_object_or_404(Mom, pk=pk)
+        employee_code = request.data.get('employee_code', '').strip()
+        if not employee_code:
+            return Response({'error': 'Employee code is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Look up user by username (used as employee code) or email
+        user = CustomUser.objects.filter(
+            is_active=True
+        ).filter(
+            Q(username__iexact=employee_code) | Q(email__iexact=employee_code)
+        ).first()
+
+        if not user:
+            return Response({'error': 'Employee not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        return self._mark_attendance(
+            request, mom,
+            target_user=user,
+            marked_via=MeetingAttendanceLog.MARKED_VIA_CODE,
+        )
+
+    def _mark_attendance(self, request, mom, marked_via, target_user=None,
+                         latitude=None, longitude=None):
+        return _do_mark_attendance(request, mom, marked_via, target_user, latitude, longitude)
+
+
+class MeetingAttendanceLogView(APIView):
+    """
+    GET /api/v1/mom/<pk>/attendance/log/
+    Creator sees full attendance log with marked_via, time, etc.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        mom = get_object_or_404(Mom, pk=pk)
+        if mom.scheduled_by != request.user and not request.user.is_superuser:
+            return Response({'error': 'Only the meeting creator can view the attendance log.'},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        logs = MeetingAttendanceLog.objects.filter(mom=mom).select_related('user').order_by('attendance_time')
+        all_participant_ids = set(mom.participants.values_list('id', flat=True))
+        attended_ids = set(logs.values_list('user_id', flat=True))
+
+        attended = []
+        for log in logs:
+            attended.append({
+                'user_id': log.user_id,
+                'name': log.user.name or log.user.username or log.user.email,
+                'email': log.user.email,
+                'marked_via': log.marked_via,
+                'attendance_time': log.attendance_time.isoformat(),
+                'latitude': log.latitude,
+                'longitude': log.longitude,
+            })
+
+        absent_users = CustomUser.objects.filter(
+            id__in=all_participant_ids - attended_ids
+        ).values('id', 'name', 'username', 'email')
+
+        absent = [{
+            'user_id': u['id'],
+            'name': u['name'] or u['username'] or u['email'],
+            'email': u['email'],
+        } for u in absent_users]
+
+        total = len(all_participant_ids)
+        return Response({
+            'meeting_id': mom.id,
+            'meeting_title': mom.title,
+            'total_invited': total,
+            'total_attended': len(attended),
+            'attendance_pct': round(len(attended) / total * 100) if total else 0,
+            'attended': attended,
+            'absent': absent,
+        })
+
+
+def _do_mark_attendance(request, mom, marked_via, target_user=None,
+                        latitude=None, longitude=None):
+    """Shared logic for QR and code-based attendance marking."""
+    if mom.status != Mom.MeetingStatus.LIVE:
+        return Response(
+            {'error': 'Attendance is only allowed during a live meeting.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    user = target_user or request.user
+
+    # Must be an invited participant
+    if not mom.participants.filter(id=user.id).exists():
+        return Response(
+            {'error': f'{user.name or user.username} is not invited to this meeting.'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Duplicate attendance is idempotent: the participant is already marked,
+    # so return a normal response instead of surfacing a noisy 409 in the UI.
+    existing_log = MeetingAttendanceLog.objects.filter(mom=mom, user=user).first()
+    if existing_log:
+        return Response(
+            {
+                'success': True,
+                'already_registered': True,
+                'message': 'Attendance already registered for this participant.',
+                'user_id': user.id,
+                'name': user.name or user.username,
+                'marked_via': existing_log.marked_via,
+            }
+        )
+
+    # Write attendance log
+    MeetingAttendanceLog.objects.create(
+        mom=mom,
+        user=user,
+        marked_via=marked_via,
+        latitude=latitude,
+        longitude=longitude,
+        device_info=request.META.get('HTTP_USER_AGENT', '')[:255],
+    )
+
+    # Also update the legacy ParticipantAttendance table
+    pa, _ = ParticipantAttendance.objects.get_or_create(mom=mom, user=user)
+    pa.attended = True
+    pa.save(update_fields=['attended'])
+
+    return Response({
+        'success': True,
+        'message': f'Attendance marked for {user.name or user.username}.',
+        'user_id': user.id,
+        'name': user.name or user.username,
+        'marked_via': marked_via,
+    })

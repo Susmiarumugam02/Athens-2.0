@@ -23,7 +23,6 @@ export function useEnabledModules() {
     } catch (error) {
       // Don't spam console for expected no-token case
       if ((error as any)?.code !== 'NO_AUTH_TOKEN') {
-        console.error('Failed to load enabled modules:', error)
       }
       setEnabledModules([]) // Set empty array on error
     } finally {

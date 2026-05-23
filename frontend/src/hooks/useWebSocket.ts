@@ -33,7 +33,6 @@ export const useWebSocket = (url: string, options: UseWebSocketOptions = {}) => 
 
     try {
       const wsUrl = getWebSocketUrl(url)
-      console.log('WebSocket URL construction:', { input: url, output: wsUrl })
       wsRef.current = new WebSocket(wsUrl)
 
       wsRef.current.onopen = () => {
@@ -49,7 +48,6 @@ export const useWebSocket = (url: string, options: UseWebSocketOptions = {}) => 
           const data = JSON.parse(event.data)
           onMessage?.(data)
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error)
         }
       }
 
@@ -74,7 +72,6 @@ export const useWebSocket = (url: string, options: UseWebSocketOptions = {}) => 
         }
       }
     } catch (error) {
-      console.error('Error creating WebSocket connection:', error)
     }
   }
 

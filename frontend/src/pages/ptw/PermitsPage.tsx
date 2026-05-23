@@ -34,7 +34,6 @@ export default function PermitsPage() {
       const permitsList = Array.isArray(response.data) ? response.data : (response.data?.results || [])
       setPermits(permitsList)
     } catch (error) {
-      console.error('Failed to load permits:', error)
       toast.error('Failed to load permits')
       setPermits([])
     } finally {

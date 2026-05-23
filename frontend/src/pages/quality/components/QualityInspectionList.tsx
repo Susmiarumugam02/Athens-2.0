@@ -70,7 +70,6 @@ const QualityInspectionList: React.FC = () => {
       const response = await getQualityInspections(filters);
       setInspections(response.data?.results || response.data || []);
     } catch (error: any) {
-      console.error('Failed to load inspections:', error);
       if (error.response?.status !== 401) {
         setInspections([]);
       }

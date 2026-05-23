@@ -39,7 +39,6 @@ const BulkActions: React.FC<BulkActionsProps> = ({
       onSuccess()
       onClearSelection()
     } catch (error) {
-      console.error('Error updating applications:', error)
       toast.error('Failed to update applications')
     } finally {
       setLoading(false)

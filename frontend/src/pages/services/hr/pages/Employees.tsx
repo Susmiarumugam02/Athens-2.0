@@ -63,7 +63,6 @@ const Employees: React.FC = () => {
         pendingOnboarding: 0
       })
     } catch (error) {
-      console.error('Error fetching employee stats:', error)
     }
   }
 

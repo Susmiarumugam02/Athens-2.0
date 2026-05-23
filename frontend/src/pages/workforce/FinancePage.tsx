@@ -8,7 +8,7 @@ export default function FinancePage() {
   useEffect(() => {
     workforceApi.getInvoices()
       .then(res => setInvoices(res.data))
-      .catch(err => console.error(err))
+      .catch(() => setInvoices([]))
       .finally(() => setLoading(false))
   }, [])
 

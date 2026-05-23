@@ -37,7 +37,6 @@ export const AccountsPage: React.FC = () => {
       const response = await crmApi.getAccounts(sessionKey!)
       setAccounts(response.data.results || response.data)
     } catch (error) {
-      console.error('Error fetching accounts:', error)
       toast.error('Failed to fetch accounts')
     } finally {
       setLoading(false)
@@ -80,7 +79,6 @@ export const AccountsPage: React.FC = () => {
       toast.success('Account deleted successfully!')
       fetchAccounts()
     } catch (error) {
-      console.error('Error deleting account:', error)
       toast.error('Failed to delete account')
     }
   }

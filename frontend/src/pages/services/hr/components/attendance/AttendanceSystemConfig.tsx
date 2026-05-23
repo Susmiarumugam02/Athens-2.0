@@ -57,7 +57,6 @@ const AttendanceSystemConfig: React.FC<AttendanceSystemConfigProps> = ({ onSucce
         })
       }
     } catch (error) {
-      console.error('Error fetching config:', error)
     } finally {
       setLoading(false)
     }
@@ -82,12 +81,10 @@ const AttendanceSystemConfig: React.FC<AttendanceSystemConfigProps> = ({ onSucce
       toast.success('Attendance system configured successfully')
       onSuccess()
     } catch (error: any) {
-      console.error('Error saving config:', error)
       const errorMessage = error.response?.data?.error || error.response?.data?.detail || error.message || 'Failed to save configuration'
       const errorDetails = error.response?.data?.details
       
       if (errorDetails) {
-        console.error('Validation errors:', errorDetails)
         toast.error(`Validation failed: ${JSON.stringify(errorDetails)}`)
       } else {
         toast.error(errorMessage)

@@ -1,8 +1,18 @@
 from rest_framework import serializers
 from django.conf import settings
-from authentication.serializers import CustomUserSerializer
 from .models import Message
 from authentication.models import CustomUser
+
+
+class CustomUserSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'username', 'email', 'full_name', 'admin_type']
+
+    def get_full_name(self, obj):
+        return f"{obj.name or ''} {obj.surname or ''}".strip() or obj.username
 
 class MessageSerializer(serializers.ModelSerializer):
     sender = CustomUserSerializer(read_only=True)

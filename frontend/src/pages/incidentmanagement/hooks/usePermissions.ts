@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UserPermissions } from '../types';
+import type { UserPermissions } from '../types';
 import { useAuthStore } from '../../../store/authStore';
 import api from '../services/api';
 

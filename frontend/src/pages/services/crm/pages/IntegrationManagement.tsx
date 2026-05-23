@@ -53,7 +53,6 @@ const IntegrationManagement: React.FC = () => {
       setIntegrations(integrationsRes.data.results || integrationsRes.data || [])
       setDashboardData(dashboardRes.data)
     } catch (error) {
-      console.error('Error fetching integrations:', error)
       toast.error('Failed to fetch integrations')
     } finally {
       setLoading(false)
@@ -73,7 +72,6 @@ const IntegrationManagement: React.FC = () => {
       toast.success('Connection test successful!')
       fetchIntegrations()
     } catch (error) {
-      console.error('Error testing connection:', error)
       toast.error('Connection test failed')
     }
   }
@@ -87,7 +85,6 @@ const IntegrationManagement: React.FC = () => {
       toast.success('Data sync completed!')
       fetchIntegrations()
     } catch (error) {
-      console.error('Error syncing data:', error)
       toast.error('Data sync failed')
     }
   }

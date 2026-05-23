@@ -420,7 +420,7 @@ export interface IncidentAnalytics {
   risk_distribution: Array<{ risk_level: string; count: number; percentage: number }>;
   total_cost: number;
   average_cost_per_incident: number;
-  average_time_to_close: string; // Duration
+  average_time_to_close: number;
   investigation_completion_rate: number;
   capa_completion_rate: number;
   top_incident_types: Array<{ incident_type: string; count: number; percentage: number }>;

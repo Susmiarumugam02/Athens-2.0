@@ -69,15 +69,6 @@ const InductionTrainingList: React.FC = () => {
   
   // Helper function to check if user can edit/delete
   const canModifyRecord = useCallback((record: InductionTrainingData) => {
-    console.log('Induction canModifyRecord check:', {
-      django_user_type,
-      userId,
-      record_created_by: record.created_by,
-      record_status: record.status,
-      isProjectAdmin: django_user_type === 'projectadmin',
-      isCreator: record.created_by === userId,
-      result: django_user_type === 'projectadmin' || (record.created_by != null && userId != null && record.created_by === userId)
-    });
     
     // Project admin can always modify
     if (django_user_type === 'projectadmin') {
@@ -88,7 +79,6 @@ const InductionTrainingList: React.FC = () => {
   }, [django_user_type, userId]);
   
   // Debug logging
-  console.log('Auth Store Values:', { usertype, department, isEpcSafetyUser });
   
   // Permission control
   const { executeWithPermission, showPermissionModal, permissionRequest, closePermissionModal, onPermissionRequestSuccess } = usePermissionControl({
@@ -108,7 +98,6 @@ const InductionTrainingList: React.FC = () => {
     try {
       const endpoint = hasPermission && isEpcSafetyUser ? `/induction/manage/?created_by=${userId}` : '/induction/manage/';
       const response = await api.get(endpoint);
-      console.log('Induction Training API Response:', response.data);
       
       // Handle both paginated and non-paginated responses
       let newData = [];
@@ -224,7 +213,6 @@ const InductionTrainingList: React.FC = () => {
   const handleSaveNewIT = useCallback(async (newIT: any) => {
     try {
       const response = await api.post('/induction/manage/', newIT);
-      console.log('Create Induction Training Response:', response.data);
 
       // Calculate which page the new induction training will be on (new items are added at the beginning)
       setCurrentPage(1); // New items go to first page since they're prepended

@@ -19,10 +19,10 @@ export default function SuperAdminDashboard() {
         superadminApi.dashboard.getStats(),
         superadminApi.dashboard.getActivity(10),
       ]);
-      setStats(statsRes.data);
-      setActivity(activityRes.data);
+      // Handle both envelope {ok, data} and raw response formats
+      setStats(statsRes.data?.data ?? statsRes.data);
+      setActivity(activityRes.data?.data ?? activityRes.data);
     } catch (error) {
-      console.error('Failed to load dashboard:', error);
     } finally {
       setLoading(false);
     }

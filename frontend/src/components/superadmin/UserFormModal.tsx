@@ -22,6 +22,10 @@ interface UserFormModalProps {
 interface UserFormData {
   email: string
   password?: string
+  company_name?: string
+  phone_number?: string
+  subscription_start?: string
+  subscription_end?: string
   is_active: boolean
   requires_2fa: boolean
   role_ids: number[]
@@ -42,6 +46,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     defaultValues: {
       email: '',
       password: '',
+      company_name: '',
+      phone_number: '',
+      subscription_start: '',
+      subscription_end: '',
       is_active: true,
       requires_2fa: false,
       role_ids: []
@@ -61,6 +69,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       if (editData) {
         reset({
           email: editData.email,
+          company_name: (editData as any).company_name || '',
+          phone_number: (editData as any).phone_number || '',
           is_active: editData.is_active,
           requires_2fa: editData.requires_2fa,
           role_ids: editData.roles?.map(r => r.id) || []
@@ -69,6 +79,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         reset({
           email: '',
           password: '',
+          company_name: '',
+          phone_number: '',
+          subscription_start: '',
+          subscription_end: '',
           is_active: true,
           requires_2fa: false,
           role_ids: []
@@ -108,46 +122,101 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       description={isEditMode ? 'Update user details and permissions' : 'Add a new user to the platform'}
       form={form}
       onSubmit={onSubmit}
-      size="lg"
+      size="xl"
       loading={loading}
       submitLabel={isEditMode ? 'Update User' : 'Create User'}
     >
-      <div className="space-y-4">
-        <FormField
-          label="Email"
-          error={errors.email?.message}
-          required
-        >
-          <Input
-            {...register('email', {
-              required: 'Email is required',
-              pattern: {
-                value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                message: 'Invalid email address'
-              }
-            })}
-            type="email"
-            placeholder="user@example.com"
-            autoFocus
-          />
-        </FormField>
-
-        {!isEditMode && (
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
           <FormField
-            label="Password"
-            error={errors.password?.message}
+            label="Company Name"
+            error={errors.company_name?.message}
+          >
+            <Input
+              {...register('company_name')}
+              placeholder="Enter company name"
+            />
+          </FormField>
+
+          <FormField
+            label="Company Email"
+            error={errors.email?.message}
             required
           >
             <Input
-              {...register('password', {
-                required: 'Password is required',
-                minLength: { value: 8, message: 'Password must be at least 8 characters' }
+              {...register('email', {
+                required: 'Email is required',
+                pattern: {
+                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                  message: 'Invalid email address'
+                }
               })}
-              type="password"
-              placeholder="Enter password"
+              type="email"
+              placeholder="Enter company email"
+              autoFocus
             />
           </FormField>
-        )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <FormField
+            label="Company Phone Number"
+            error={errors.phone_number?.message}
+          >
+            <Input
+              {...register('phone_number')}
+              type="tel"
+              placeholder="Enter phone number"
+            />
+          </FormField>
+
+          {!isEditMode && (
+            <FormField
+              label="Password"
+              error={errors.password?.message}
+              required
+            >
+              <Input
+                {...register('password', {
+                  required: 'Password is required',
+                  minLength: { value: 8, message: 'Password must be at least 8 characters' }
+                })}
+                type="password"
+                placeholder="Enter password"
+              />
+            </FormField>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            label="Subscription Start Date"
+            error={errors.subscription_start?.message}
+          >
+            <input
+              type="date"
+              {...register('subscription_start')}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+            />
+          </FormField>
+
+          <FormField
+            label="Subscription End Date"
+            error={errors.subscription_end?.message}
+          >
+            <input
+              type="date"
+              {...register('subscription_end', {
+                validate: (val) => {
+                  const start = form.getValues('subscription_start')
+                  if (val && start && val < start) return 'End date must be after start date'
+                  return true
+                }
+              })}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+            />
+          </FormField>
+        </div>
 
         <FormField
           label="Roles"
@@ -156,7 +225,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         >
           <select
             multiple
-            className="w-full h-32 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full h-24 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             value={watch('role_ids')?.map(String)}
             onChange={(e) => {
               const selected = Array.from(e.target.selectedOptions).map(o => Number(o.value))
@@ -172,7 +241,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           </p>
         </FormField>
 
-        <div className="flex items-center gap-4 pt-2">
+        <div className="flex items-center gap-4 pt-1">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"

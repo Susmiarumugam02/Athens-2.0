@@ -31,23 +31,18 @@ import {
   CloseOutlined,
   ExclamationCircleOutlined,
 } from '@ant-design/icons';
-import { ColumnsType } from 'antd/es/table';
+import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useIncidents } from '../hooks/useIncidents';
+import type { IncidentFilters, IncidentListItem, UserPermissions } from '../types';
 import {
-  IncidentListItem,
-  IncidentFilters,
   INCIDENT_TYPES,
   SEVERITY_LEVELS,
   INCIDENT_STATUSES,
   RISK_LEVELS,
   BUSINESS_IMPACT_LEVELS,
-  UserPermissions,
 } from '../types';
 import { useAuthStore } from '../../../store/authStore';
-// import { usePermissionControl } from "../../../hooks/usePermissionControl"; // DISABLED
-// import PermissionRequestModal from "../../../components/permissions/PermissionRequestModal"; // DISABLED
-import PageLayout from '../../../components/ui/PageLayout';
 
 const { Search } = Input;
 const { Option } = Select;
@@ -110,30 +105,12 @@ const IncidentList: React.FC<IncidentListProps> = ({
   // Debug current user and filter information (DISABLED)
   /*
   useEffect(() => {
-    console.log('User filter debug:', {
-      currentUserId,
-      currentUsername,
-      showMyAssignments
-    });
     if (incidents && incidents.length > 0) {
-      console.log('Commercial grade fields:', {
-        risk_level: incidents[0].risk_level,
-        risk_matrix_score: incidents[0].risk_matrix_score,
-        priority_score: incidents[0].priority_score,
-        estimated_cost: incidents[0].estimated_cost,
-        business_impact: incidents[0].business_impact,
-        regulatory_reportable: incidents[0].regulatory_reportable,
-        escalation_level: incidents[0].escalation_level
-      });
       const hasCommercialFields = [
         'risk_level', 'risk_matrix_score', 'priority_score', 'estimated_cost',
         'business_impact', 'regulatory_reportable', 'escalation_level'
       ].every(field => field in incidents[0]);
-      console.log('Has commercial fields:', hasCommercialFields);
       incidents.forEach((incident, index) => {
-        console.log(`Incident ${index} investigator:`, {
-          assigned_investigator: incident.assigned_investigator,
-        });
       });
     }
   }, [currentUserId, currentUsername, showMyAssignments, incidents]);

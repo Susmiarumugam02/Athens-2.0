@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { apiClient } from '../../lib/api'
 import { 
   Building2, MapPin, Phone, Mail, Globe, FileText, 
-  Upload, X, Save, AlertCircle, CheckCircle2, Image as ImageIcon
+  Upload, X, Save, AlertCircle, CheckCircle2, Lock, Image as ImageIcon
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -27,6 +28,7 @@ interface CompanyDocument {
 }
 
 export default function CompanySettings() {
+  const navigate = useNavigate()
   const { user } = useAuthStore()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -56,7 +58,6 @@ export default function CompanySettings() {
         setLogoPreview(response.data.company_logo)
       }
     } catch (error) {
-      console.error('Failed to load company details:', error)
     } finally {
       setLoading(false)
     }
@@ -67,20 +68,15 @@ export default function CompanySettings() {
       const response = await apiClient.get('/api/company/documents/')
       setDocuments(response.data)
     } catch (error) {
-      console.error('Failed to load documents:', error)
     }
   }
 
   const handleSave = async () => {
     setSaving(true)
     try {
-      console.log('Saving company details:', details)
       const response = await apiClient.updateCompanyDetails(details)
-      console.log('Save response:', response.data)
       toast.success('Company details updated successfully')
     } catch (error: any) {
-      console.error('Save error:', error)
-      console.error('Error response:', error.response?.data)
       toast.error(error.response?.data?.error || 'Failed to update details')
     } finally {
       setSaving(false)
@@ -156,6 +152,31 @@ export default function CompanySettings() {
       <div>
         <h1 className="text-3xl font-bold text-foreground mb-2">Company Settings</h1>
         <p className="text-muted-foreground">Manage your company details and documents</p>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1fr_auto] items-start">
+        <div className="rounded-3xl border border-border bg-card p-6 shadow-sm dark:border-gray-800">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white">
+              <Lock className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Password Management</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Change your account password anytime to keep your profile secure.
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <button
+              type="button"
+              onClick={() => navigate('/app/settings/change-password')}
+              className="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+            >
+              Change Password
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Company Logo */}

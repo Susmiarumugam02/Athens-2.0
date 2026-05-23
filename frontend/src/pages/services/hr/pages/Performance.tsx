@@ -70,7 +70,6 @@ const Performance: React.FC = () => {
       })
       setDashboardData(response.data)
     } catch (error) {
-      console.error('Error fetching performance data:', error)
       toast.error('Failed to load performance data')
     } finally {
       setLoading(false)
@@ -87,7 +86,6 @@ const Performance: React.FC = () => {
       })
       setAllReviews(response.data.reviews || [])
     } catch (error) {
-      console.error('Error fetching reviews:', error)
       toast.error('Failed to load reviews')
     }
   }
@@ -102,7 +100,6 @@ const Performance: React.FC = () => {
       })
       setAnalyticsData(response.data)
     } catch (error) {
-      console.error('Error fetching analytics:', error)
       toast.error('Failed to load analytics')
     }
   }

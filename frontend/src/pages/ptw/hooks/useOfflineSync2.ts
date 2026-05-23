@@ -38,7 +38,6 @@ export const useOfflineSync = () => {
         setQueue(data);
         updateSyncStatus(data);
       } catch (error) {
-        console.error('Failed to load offline queue', error);
       }
     }
   }, []);

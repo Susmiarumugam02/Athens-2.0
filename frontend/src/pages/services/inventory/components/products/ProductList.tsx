@@ -310,7 +310,6 @@ const ProductList: React.FC = () => {
       const response = await inventoryApi.getProducts(params);
       setProducts(response.results || response);
     } catch (error) {
-      console.error('Failed to load products:', error);
       toast.error('Failed to load products');
     } finally {
       setLoading(false);
@@ -326,7 +325,6 @@ const ProductList: React.FC = () => {
       const response = await inventoryApi.getCategoriesDropdown();
       setCategories(response);
     } catch (error) {
-      console.error('Failed to load categories:', error);
     }
   };
 
@@ -342,7 +340,6 @@ const ProductList: React.FC = () => {
       setSuppliers(suppliersRes);
       // setWarehouses(warehousesRes);
     } catch (error) {
-      console.error('Failed to load dropdown data:', error);
       toast.error('Failed to load form data');
     }
   };
@@ -378,7 +375,6 @@ const ProductList: React.FC = () => {
         is_active: productDetails.is_active ?? true
       });
     } catch (error) {
-      console.error('Failed to load product details:', error);
       toast.error('Failed to load product details');
     }
     
@@ -392,7 +388,6 @@ const ProductList: React.FC = () => {
         toast.success('Product deleted successfully!');
         loadProducts();
       } catch (error) {
-        console.error('Failed to delete product:', error);
         toast.error('Failed to delete product');
       }
     }
@@ -433,7 +428,6 @@ const ProductList: React.FC = () => {
       toast.success('Barcodes generated for all products!');
       loadProducts();
     } catch (error) {
-      console.error('Failed to generate barcodes:', error);
       toast.error('Failed to generate barcodes');
     } finally {
       setModalLoading(false);
@@ -453,7 +447,6 @@ const ProductList: React.FC = () => {
       setShowBulkPriceModal(false);
       loadProducts();
     } catch (error) {
-      console.error('Failed to update prices:', error);
       toast.error('Failed to update prices');
     } finally {
       setModalLoading(false);
@@ -523,7 +516,6 @@ const ProductList: React.FC = () => {
       resetForm();
       loadProducts();
     } catch (error: any) {
-      console.error('Error saving product:', error);
       const message = error.response?.data?.error || 'Failed to save product';
       toast.error(message);
     } finally {
@@ -581,7 +573,6 @@ const ProductList: React.FC = () => {
       
       loadProducts();
     } catch (error) {
-      console.error('Failed to generate barcode:', error);
       toast.error('Failed to generate barcode');
     }
   };

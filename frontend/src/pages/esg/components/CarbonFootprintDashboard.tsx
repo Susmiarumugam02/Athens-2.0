@@ -37,7 +37,6 @@ const CarbonFootprintDashboard: React.FC = () => {
       const response = await getCarbonFootprint();
       setData(response.data.results || response.data || []);
     } catch (error) {
-      console.error('Error fetching carbon footprint data:', error);
     } finally {
       setLoading(false);
     }
@@ -80,7 +79,6 @@ const CarbonFootprintDashboard: React.FC = () => {
       setModalVisible(false);
       fetchData();
     } catch (error) {
-      console.error('Error saving carbon footprint data:', error);
     }
   };
 
@@ -89,7 +87,6 @@ const CarbonFootprintDashboard: React.FC = () => {
       await deleteCarbonFootprint(id);
       fetchData();
     } catch (error) {
-      console.error('Error deleting carbon footprint data:', error);
     }
   };
 
@@ -171,7 +168,7 @@ const CarbonFootprintDashboard: React.FC = () => {
               value={scope1Emissions}
               precision={2}
               suffix="tCO₂e"
-              valueStyle={{ color: '#f5222d' }}
+              styles={{ content: { color: '#f5222d' } }}
             />
           </Card>
         </Col>
@@ -182,7 +179,7 @@ const CarbonFootprintDashboard: React.FC = () => {
               value={scope2Emissions}
               precision={2}
               suffix="tCO₂e"
-              valueStyle={{ color: '#fa8c16' }}
+              styles={{ content: { color: '#fa8c16' } }}
             />
           </Card>
         </Col>
@@ -193,7 +190,7 @@ const CarbonFootprintDashboard: React.FC = () => {
               value={scope3Emissions}
               precision={2}
               suffix="tCO₂e"
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>

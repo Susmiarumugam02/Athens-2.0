@@ -38,7 +38,6 @@ export const AdvancedAnalyticsDashboard: React.FC<AdvancedAnalyticsDashboardProp
       const data = await analyticsApiService.getTaxAnalyticsSummary()
       setAnalyticsData(data)
     } catch (error) {
-      console.error('Failed to load analytics data:', error)
     } finally {
       setLoading(false)
     }
@@ -49,7 +48,6 @@ export const AdvancedAnalyticsDashboard: React.FC<AdvancedAnalyticsDashboardProp
       const alertsData = await analyticsApiService.getComplianceAlerts()
       setAlerts(alertsData.alerts)
     } catch (error) {
-      console.error('Failed to load alerts:', error)
     }
   }
 
@@ -59,7 +57,6 @@ export const AdvancedAnalyticsDashboard: React.FC<AdvancedAnalyticsDashboardProp
       const blob = await analyticsApiService.exportGSTR1CSV(startDate, endDate)
       analyticsApiService.downloadFile(blob, `GSTR1_${startDate}_${endDate}.csv`)
     } catch (error) {
-      console.error('Export failed:', error)
     }
   }
 
@@ -70,7 +67,6 @@ export const AdvancedAnalyticsDashboard: React.FC<AdvancedAnalyticsDashboardProp
       const blob = await analyticsApiService.exportTDSCSV(quarter, financialYear)
       analyticsApiService.downloadFile(blob, `TDS_${quarter}_${financialYear}.csv`)
     } catch (error) {
-      console.error('Export failed:', error)
     }
   }
 

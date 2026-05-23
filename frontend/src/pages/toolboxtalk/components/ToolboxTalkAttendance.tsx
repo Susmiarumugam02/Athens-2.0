@@ -382,7 +382,7 @@ const ToolboxTalkAttendance: React.FC<ToolboxTalkAttendanceProps> = ({ toolboxTa
                 </div>
               </div>
             ) : (
-              <Spin tip="Comparing photos...">
+              <Spin description="Comparing photos...">
                 <div style={{ height: 100 }} />
               </Spin>
             )}

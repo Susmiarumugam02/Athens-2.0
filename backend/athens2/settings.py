@@ -28,13 +28,14 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-=s98cb05e1ab3sj#_#*w8siv6@=%@^55(iq_jyy-8=&du8ygt7')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
 
 # Feature Flags
-FEATURE_PTW_ENABLED = False  # ptw app replaces permit_to_work
+FEATURE_PTW_ENABLED = True  # PTW module enabled
+AI_ENABLED = os.getenv('AI_ENABLED', 'True') == 'True'
 
 # Application definition
 
@@ -49,6 +50,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'drf_spectacular',
+    'channels',
     'authentication',
     'control_plane',
     'system',
@@ -63,20 +65,22 @@ INSTALLED_APPS = [
     'tbt',
     'worker',
     'attendance',
-    'chatbox',
-    'environment',
     'incidentmanagement',
     'inspection',
-    'manpower',
     'mom',
+    'manpower',
     'permissions',
+    'environment',
     'quality',
-    'voice_translator',
-    'ai_bot',
+    'chatbox',
     'ptw',
+    'admin_attendance',
+    'training_management',
+    'ai',
+    'ptw_phase3',
+    'voice_translator',
+    'ml',
 ]
-
-
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -85,6 +89,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'authentication.access_middleware.OnboardingAccessMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -112,28 +117,41 @@ WSGI_APPLICATION = 'athens2.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-db_engine = os.getenv('DB_ENGINE', 'django.db.backends.postgresql')
-db_name = os.getenv('DB_NAME')
+db_engine = os.getenv('DB_ENGINE', 'django.db.backends.sqlite3')
+db_name = os.getenv('DB_NAME', 'db.sqlite3')
 db_user = os.getenv('DB_USER')
 db_password = os.getenv('DB_PASSWORD')
 db_host = os.getenv('DB_HOST', 'localhost')
 db_port = os.getenv('DB_PORT', '5432')
 
-if not db_name or not db_user or not db_password:
-    raise RuntimeError(
-        'PostgreSQL is required. Set DB_NAME, DB_USER, and DB_PASSWORD in backend/.env.'
-    )
-
-DATABASES = {
-    'default': {
-        'ENGINE': db_engine,
-        'NAME': db_name,
-        'USER': db_user,
-        'PASSWORD': db_password,
-        'HOST': db_host,
-        'PORT': db_port,
+# For SQLite, resolve path relative to BASE_DIR
+if db_engine == 'django.db.backends.sqlite3':
+    if not db_name.startswith('/') and not db_name[1:3] == ':\\':
+        db_name = os.path.join(BASE_DIR, db_name)
+    DATABASES = {
+        'default': {
+            'ENGINE': db_engine,
+            'NAME': db_name,
+        }
     }
-}
+# For PostgreSQL, ensure all credentials are provided
+elif db_engine == 'django.db.backends.postgresql':
+    if not db_user or not db_password:
+        raise RuntimeError(
+            'PostgreSQL is required. Set DB_NAME, DB_USER, and DB_PASSWORD in backend/.env.'
+        )
+    DATABASES = {
+        'default': {
+            'ENGINE': db_engine,
+            'NAME': db_name,
+            'USER': db_user,
+            'PASSWORD': db_password,
+            'HOST': db_host,
+            'PORT': db_port,
+        }
+    }
+else:
+    raise RuntimeError(f'Unsupported database engine: {db_engine}')
 
 
 # Password validation
@@ -186,7 +204,44 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = [
     "http://72.60.218.167:5173",
     "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
     "https://ai-athens.cloud",
+    "https://www.ai-athens.cloud",
+]
+
+# CSRF Configuration
+CSRF_TRUSTED_ORIGINS = [
+    "http://72.60.218.167:5173",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+    "https://ai-athens.cloud",
+    "https://www.ai-athens.cloud",
+]
+
+# In development: allow all origins but NOT with credentials (browser blocks this combination)
+# In production: use explicit CORS_ALLOWED_ORIGINS list with credentials
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOW_CREDENTIALS = False   # Cannot combine ALLOW_ALL_ORIGINS=True with credentials=True
+else:
+    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOW_CREDENTIALS = True    # Safe with explicit origins list above
+
+# Allow common headers
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
 ]
 
 # DRF Configuration
@@ -202,11 +257,58 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": "100/hour",
-        "user": "1000/hour",
+        "anon": "10000/hour" if DEBUG else "100/hour",
+        "user": "10000/hour" if DEBUG else "1000/hour",
+        "ai": os.getenv("AI_THROTTLE_RATE", "60/min"),
     },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "system.exception_handler.custom_exception_handler",
+}
+
+# ML Configuration
+ML_MODEL_DIR = os.path.join(BASE_DIR, 'ml_models')
+
+# AI cache layer. Uses Redis in production when REDIS_URL is provided, otherwise
+# falls back to local memory so development never blocks on infrastructure.
+REDIS_URL = os.getenv('REDIS_URL', '')
+if REDIS_URL:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': REDIS_URL,
+            'TIMEOUT': int(os.getenv('CACHE_DEFAULT_TTL', '300')),
+        }
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'athens-ai-cache',
+            'TIMEOUT': int(os.getenv('CACHE_DEFAULT_TTL', '300')),
+        }
+    }
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'structured': {
+            'format': '%(asctime)s %(levelname)s %(name)s %(message)s',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'structured',
+        },
+    },
+    'loggers': {
+        'athens.ai': {
+            'handlers': ['console'],
+            'level': os.getenv('AI_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+    },
 }
 
 # JWT Configuration
@@ -237,3 +339,20 @@ SPECTACULAR_SETTINGS = {
 
 # Custom user model
 AUTH_USER_MODEL = 'authentication.User'
+
+# Django Channels
+ASGI_APPLICATION = 'athens2.asgi.application'
+
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {'hosts': [REDIS_URL]},
+        }
+    }
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        }
+    }

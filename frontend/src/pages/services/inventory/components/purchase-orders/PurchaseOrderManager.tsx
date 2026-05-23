@@ -98,7 +98,6 @@ const PurchaseOrderManager: React.FC = () => {
       const response = await inventoryApi.getPurchaseOrders(params);
       setOrders(response.results || response);
     } catch (error) {
-      console.error('Failed to load purchase orders:', error);
     } finally {
       setLoading(false);
     }
@@ -119,7 +118,6 @@ const PurchaseOrderManager: React.FC = () => {
       setProducts(productsRes.results || productsRes);
       setWarehouses(warehousesRes as any);
     } catch (error) {
-      console.error('Failed to load dropdown data:', error);
     }
   };
 
@@ -156,7 +154,6 @@ const PurchaseOrderManager: React.FC = () => {
       resetForm();
       loadOrders();
     } catch (error) {
-      console.error('Failed to create purchase order:', error);
       toast.error('Failed to create purchase order');
     } finally {
       setModalLoading(false);

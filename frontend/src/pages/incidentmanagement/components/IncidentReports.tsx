@@ -160,31 +160,31 @@ const IncidentReports: React.FC = () => {
             title: 'Total',
             dataIndex: 'total',
             key: 'total',
-            render: (value: number) => <Statistic value={value} valueStyle={{ fontSize: '16px', fontWeight: 'bold' }} />
+            render: (value: number) => <Statistic value={value} styles={{ content: { fontSize: '16px', fontWeight: 'bold' } }} />
           },
           {
             title: 'Open',
             dataIndex: 'open',
             key: 'open',
-            render: (value: number) => <Statistic value={value} valueStyle={{ fontSize: '16px', color: '#f5222d' }} />
+            render: (value: number) => <Statistic value={value} styles={{ content: { fontSize: '16px', color: '#f5222d' } }} />
           },
           {
             title: 'Under Investigation',
             dataIndex: 'under_investigation',
             key: 'under_investigation',
-            render: (value: number) => <Statistic value={value} valueStyle={{ fontSize: '16px', color: '#fa8c16' }} />
+            render: (value: number) => <Statistic value={value} styles={{ content: { fontSize: '16px', color: '#fa8c16' } }} />
           },
           {
             title: 'Resolved',
             dataIndex: 'resolved',
             key: 'resolved',
-            render: (value: number) => <Statistic value={value} valueStyle={{ fontSize: '16px', color: '#52c41a' }} />
+            render: (value: number) => <Statistic value={value} styles={{ content: { fontSize: '16px', color: '#52c41a' } }} />
           },
           {
             title: 'Closed',
             dataIndex: 'closed',
             key: 'closed',
-            render: (value: number) => <Statistic value={value} valueStyle={{ fontSize: '16px', color: '#1890ff' }} />
+            render: (value: number) => <Statistic value={value} styles={{ content: { fontSize: '16px', color: '#1890ff' } }} />
           }
         ];
       case 'incident_by_type':
@@ -199,7 +199,7 @@ const IncidentReports: React.FC = () => {
             title: 'Count',
             dataIndex: 'count',
             key: 'count',
-            render: (value: number) => <Statistic value={value} valueStyle={{ fontSize: '16px', fontWeight: 'bold' }} />
+            render: (value: number) => <Statistic value={value} styles={{ content: { fontSize: '16px', fontWeight: 'bold' } }} />
           }
         ];
       case 'incident_by_status':
@@ -218,7 +218,7 @@ const IncidentReports: React.FC = () => {
             title: 'Count',
             dataIndex: 'count',
             key: 'count',
-            render: (value: number) => <Statistic value={value} valueStyle={{ fontSize: '16px', fontWeight: 'bold' }} />
+            render: (value: number) => <Statistic value={value} styles={{ content: { fontSize: '16px', fontWeight: 'bold' } }} />
           }
         ];
       case 'incident_by_department':
@@ -233,7 +233,7 @@ const IncidentReports: React.FC = () => {
             title: 'Incidents',
             dataIndex: 'count',
             key: 'count',
-            render: (value: number) => <Statistic value={value} valueStyle={{ fontSize: '16px', fontWeight: 'bold' }} />
+            render: (value: number) => <Statistic value={value} styles={{ content: { fontSize: '16px', fontWeight: 'bold' } }} />
           }
         ];
       case 'monthly_trends':
@@ -248,19 +248,19 @@ const IncidentReports: React.FC = () => {
             title: 'New Incidents',
             dataIndex: 'incidents',
             key: 'incidents',
-            render: (value: number) => <Statistic value={value} valueStyle={{ fontSize: '16px', fontWeight: 'bold' }} />
+            render: (value: number) => <Statistic value={value} styles={{ content: { fontSize: '16px', fontWeight: 'bold' } }} />
           },
           {
             title: 'Resolved',
             dataIndex: 'resolved',
             key: 'resolved',
-            render: (value: number) => <Statistic value={value} valueStyle={{ fontSize: '16px', color: '#52c41a' }} />
+            render: (value: number) => <Statistic value={value} styles={{ content: { fontSize: '16px', color: '#52c41a' } }} />
           },
           {
             title: 'Avg Resolution (Days)',
             dataIndex: 'avg_resolution_days',
             key: 'avg_resolution_days',
-            render: (value: number) => <Statistic value={value} precision={1} valueStyle={{ fontSize: '16px', color: '#1890ff' }} />
+            render: (value: number) => <Statistic value={value} precision={1} styles={{ content: { fontSize: '16px', color: '#1890ff' } }} />
           }
         ];
       default:

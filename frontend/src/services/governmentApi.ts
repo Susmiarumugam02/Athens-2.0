@@ -119,7 +119,6 @@ class GovernmentApiService {
       })
       return response.data
     } catch (error) {
-      console.error('Failed to get GST rates:', error)
       return null
     }
   }
@@ -134,7 +133,6 @@ class GovernmentApiService {
       })
       return response.data
     } catch (error) {
-      console.error('Failed to get TDS rates:', error)
       return null
     }
   }
@@ -200,7 +198,6 @@ class GovernmentApiService {
       const response = await api.get('/finance/gov-api/compliance-status/')
       return response.data
     } catch (error) {
-      console.error('Failed to get compliance status:', error)
       return null
     }
   }
@@ -215,7 +212,6 @@ class GovernmentApiService {
       })
       return response.data.results
     } catch (error: any) {
-      console.error('Bulk validation failed:', error)
       return []
     }
   }

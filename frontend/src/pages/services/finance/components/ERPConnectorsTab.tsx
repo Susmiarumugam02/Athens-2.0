@@ -96,7 +96,6 @@ const ERPConnectorsTab: React.FC = () => {
       const response = await apiClient.get('/api/finance/integration/erp-connectors/dashboard/');
       setDashboardData(response.data);
     } catch (error: any) {
-      console.error('Failed to load dashboard data');
     }
   };
 

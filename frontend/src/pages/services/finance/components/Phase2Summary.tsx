@@ -58,10 +58,8 @@ const Phase2Summary: React.FC<Phase2SummaryProps> = ({ sessionKey }) => {
       if (response.ok) {
         setComplianceData(data)
       } else {
-        console.error('Error fetching compliance data:', data.error)
       }
     } catch (error) {
-      console.error('Error fetching compliance data:', error)
     } finally {
       setLoading(false)
     }

@@ -67,7 +67,6 @@ const DepartmentDesignationManager: React.FC<DepartmentDesignationManagerProps> 
       setDepartments(Array.isArray(deptResponse.data) ? deptResponse.data : [])
       setDesignations(Array.isArray(desigResponse.data) ? desigResponse.data : [])
     } catch (error) {
-      console.error('Error fetching data:', error)
       toast.error('Failed to load data')
     } finally {
       setLoading(false)
@@ -99,7 +98,6 @@ const DepartmentDesignationManager: React.FC<DepartmentDesignationManagerProps> 
       fetchData()
       onUpdate()
     } catch (error: any) {
-      console.error('Error saving department:', error)
       toast.error(error.response?.data?.detail || 'Failed to save department')
     }
   }
@@ -132,7 +130,6 @@ const DepartmentDesignationManager: React.FC<DepartmentDesignationManagerProps> 
       fetchData()
       onUpdate()
     } catch (error: any) {
-      console.error('Error saving designation:', error)
       toast.error(error.response?.data?.detail || 'Failed to save designation')
     }
   }

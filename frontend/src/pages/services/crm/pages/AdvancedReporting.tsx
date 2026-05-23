@@ -45,7 +45,6 @@ export const AdvancedReporting: React.FC = () => {
       setDashboards(dashboardsRes.data.results || dashboardsRes.data || [])
       setInsights(insightsRes.data.results || insightsRes.data || [])
     } catch (error) {
-      console.error('Error loading data:', error)
     } finally {
       setLoading(false)
     }
@@ -57,7 +56,6 @@ export const AdvancedReporting: React.FC = () => {
       setReportData(response.data)
       toast.success('Report generated successfully!')
     } catch (error) {
-      console.error('Error generating report:', error)
       toast.error('Failed to generate report')
     }
   }
@@ -76,7 +74,6 @@ export const AdvancedReporting: React.FC = () => {
         toast.success(`Report exported as ${format.toUpperCase()}`)
       }
     } catch (error) {
-      console.error('Error exporting report:', error)
       toast.error('Failed to export report')
     }
   }
@@ -87,7 +84,6 @@ export const AdvancedReporting: React.FC = () => {
       toast.success(response.data.message || 'Insights generated successfully!')
       loadData()
     } catch (error) {
-      console.error('Error generating insights:', error)
       toast.error('Failed to generate insights')
     }
   }
@@ -129,7 +125,6 @@ export const AdvancedReporting: React.FC = () => {
       await crmApi.acknowledgeInsight(sessionKey!, insightId)
       loadData()
     } catch (error) {
-      console.error('Error acknowledging insight:', error)
     }
   }
 

@@ -77,7 +77,6 @@ export default function AuditLogsList() {
       const response = await superadminApi.auditLogs.getStats(params);
       setStats(response.data);
     } catch (error: any) {
-      console.error('Failed to load stats:', error);
     }
   };
 

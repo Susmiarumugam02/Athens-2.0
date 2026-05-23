@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Save, AlertCircle } from 'lucide-react'
+import { sanitizePhoneInput, handlePhoneKeyDown, handlePhonePaste } from '../../lib/phoneUtils'
 import { Button } from '../ui/Button'
 import { LoadingSpinner } from '../ui/LoadingSpinner'
 import { Modal } from '../ui/Modal'
@@ -32,8 +33,6 @@ const CompanyEditModal: React.FC<CompanyEditModalProps> = ({
 
   useEffect(() => {
     if (company) {
-      console.log('🔍 DEBUG: Company data in modal:', company)
-      console.log('🔍 DEBUG: Company services:', company.services)
       
       // Get assigned service IDs - handle both array of objects and array of IDs
       let assignedServiceIds = []
@@ -50,7 +49,6 @@ const CompanyEditModal: React.FC<CompanyEditModalProps> = ({
         }
       }
       
-      console.log('🔍 DEBUG: Assigned service IDs:', assignedServiceIds)
       
       setFormData({
         name: company.name || '',
@@ -97,11 +95,9 @@ const CompanyEditModal: React.FC<CompanyEditModalProps> = ({
         ...formData,
         services: formData.selected_services.map(id => parseInt(id))
       }
-      console.log('🔍 DEBUG: Sending update data:', updateData)
       await onSave(updateData)
       onOpenChange(false)
     } catch (error) {
-      console.error('Error updating company:', error)
       setErrors({ submit: 'Failed to update company. Please try again.' })
     } finally {
       setLoading(false)
@@ -109,7 +105,8 @@ const CompanyEditModal: React.FC<CompanyEditModalProps> = ({
   }
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    const next = field === 'phone' ? sanitizePhoneInput(value, 10) : value
+    setFormData(prev => ({ ...prev, [field]: next }))
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }))
     }
@@ -249,6 +246,9 @@ const CompanyEditModal: React.FC<CompanyEditModalProps> = ({
             type="tel"
             value={formData.phone}
             onChange={(e) => handleInputChange('phone', e.target.value)}
+            onKeyDown={handlePhoneKeyDown}
+            onPaste={(e) => handlePhonePaste(e, 10)}
+            maxLength={10}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Enter phone number"
           />

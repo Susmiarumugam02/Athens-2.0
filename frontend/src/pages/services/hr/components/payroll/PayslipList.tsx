@@ -60,7 +60,6 @@ const PayslipList: React.FC<PayslipListProps> = ({ cycleId }) => {
       
       setPayslips(response.data.results || response.data || [])
     } catch (error) {
-      console.error('Error fetching payslips:', error)
       toast.error('Failed to load payslips')
     } finally {
       setLoading(false)
@@ -148,7 +147,6 @@ const PayslipList: React.FC<PayslipListProps> = ({ cycleId }) => {
       
       toast.success('Payslip PDF downloaded successfully')
     } catch (error) {
-      console.error('Error downloading PDF:', error)
       toast.error('Failed to download payslip PDF')
     }
   }

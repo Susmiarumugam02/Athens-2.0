@@ -5,7 +5,7 @@ from django.db.models import Q
 from authentication.models import User, UserType, SecurityLog
 from authentication.permissions import IsSuperAdminOrMasterAdmin
 from authentication.rbac_permissions import RequireTenantPermission
-from authentication.tenant_utils import get_tenant_id_for_filtering, require_tenant
+from authentication.tenant_utils import get_tenant_id_for_filtering
 from system.api_response import ok, fail
 from system.audit_utils import audit_log, AuditLogMixin
 from .models import Project, ProjectMembership
@@ -59,16 +59,16 @@ class ProjectViewSet(AuditLogMixin, viewsets.ModelViewSet):
         user = self.request.user
         queryset = Project.objects.select_related("company", "created_by").prefetch_related("memberships")
         
-        tenant_id = get_tenant_id_for_filtering(user)
-        
-        # Superadmin sees all (tenant_id is None)
-        if tenant_id is None:
-            pass
-        # MasterAdmin sees only their company
-        elif user.user_type == UserType.MASTERADMIN:
-            queryset = queryset.filter(company_id=tenant_id)
-        # CompanyUser sees only projects they are members of
+        # Superadmin and MasterAdmin (with or without tenant) see all projects
+        if user.user_type in [UserType.SUPERADMIN, UserType.MASTERADMIN]:
+            tenant_id = get_tenant_id_for_filtering(user)
+            if tenant_id:
+                queryset = queryset.filter(company_id=tenant_id)
+            # else: no tenant assigned — see all projects globally
         elif user.user_type == UserType.COMPANYUSER:
+            tenant_id = get_tenant_id_for_filtering(user)
+            if not tenant_id:
+                return queryset.none()
             queryset = queryset.filter(
                 company_id=tenant_id,
                 memberships__user=user,
@@ -93,30 +93,23 @@ class ProjectViewSet(AuditLogMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
         
-        # Only MasterAdmin and Superadmin can create
         if user.user_type not in [UserType.SUPERADMIN, UserType.MASTERADMIN]:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Only MasterAdmin can create projects")
         
-        # Get tenant (required for project creation)
-        tenant, err = require_tenant(user)
-        if err:
-            from rest_framework.exceptions import ValidationError
-            raise ValidationError(err)
+        # Get tenant if available; masteradmin without tenant uses company_id=None
+        tenant_id = get_tenant_id_for_filtering(user)
         
-        # Set company from canonical tenant
         project = serializer.save(
-            company_id=tenant.id,
+            company_id=tenant_id,
             created_by=user
         )
         
-        # Audit logging handled by AuditLogMixin
-        # But also log to SecurityLog for backward compatibility
         SecurityLog.objects.create(
             event_type="project_created",
             severity="info",
             user=user,
-            company_id=tenant.id,
+            company_id=tenant_id,
             ip_address=self.request.META.get("REMOTE_ADDR"),
             user_agent=self.request.META.get("HTTP_USER_AGENT"),
             metadata={

@@ -57,7 +57,6 @@ export function EditSubscriptionModal({ open, onOpenChange, subscription, onSave
       })
       onOpenChange(false)
     } catch (error) {
-      console.error('Failed to update subscription:', error)
     } finally {
       setLoading(false)
     }

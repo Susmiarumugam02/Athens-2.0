@@ -44,7 +44,6 @@ const FaceRecognitionAttendance: React.FC = () => {
       })
       setSystemConfig(response.data.results?.[0] || null)
     } catch (error) {
-      console.error('Error fetching system config:', error)
     }
   }
 
@@ -60,7 +59,6 @@ const FaceRecognitionAttendance: React.FC = () => {
       const employeesWithFaces = response.data.results?.filter((emp: Employee) => emp.face_photo) || []
       setEmployees(employeesWithFaces)
     } catch (error) {
-      console.error('Error fetching employees:', error)
     }
   }
 
@@ -145,7 +143,6 @@ const FaceRecognitionAttendance: React.FC = () => {
               })
               toast.success(response.data.message || `${action} successful`)
             } catch (error: any) {
-              console.error('Face recognition error:', error)
               setLastRecognition({
                 employee_name: 'Unknown',
                 action: action,
@@ -159,7 +156,6 @@ const FaceRecognitionAttendance: React.FC = () => {
         }, 'image/jpeg', 0.8)
       }
     } catch (error) {
-      console.error('Capture error:', error)
       toast.error('Failed to capture image')
     } finally {
       setProcessing(false)

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Mail, Bell, Save } from 'lucide-react'
-import { LoginNotification } from '../../types'
+import type { LoginNotification } from '../../types'
 import { apiClient } from '../../lib/api'
 import toast from 'react-hot-toast'
 
@@ -29,7 +29,6 @@ const LoginNotificationSettings: React.FC<LoginNotificationSettingsProps> = ({ i
           setNotificationEmail(emailSettingsResponse.data.email_address)
         }
       } catch (error) {
-        console.error('Failed to fetch email data:', error)
       }
     }
     fetchEmailData()

@@ -86,7 +86,6 @@ const ResponseModal: React.FC<ResponseModalProps> = ({
       onSuccess();
       
     } catch (error: any) {
-      console.error('Response submission error:', error);
       
       let errorMessage = 'Failed to submit response';
       if (error.response?.data) {

@@ -60,7 +60,6 @@ const LeaveCalendar: React.FC = () => {
       })
       setLeaves(response.data.results || [])
     } catch (error: any) {
-      console.error('Error fetching leaves:', error)
       toast.error('Failed to fetch leave data')
     } finally {
       setLoading(false)
@@ -81,7 +80,6 @@ const LeaveCalendar: React.FC = () => {
       })
       setHolidays(response.data.results || [])
     } catch (error: any) {
-      console.error('Error fetching holidays:', error)
       toast.error('Failed to fetch holidays')
     }
   }

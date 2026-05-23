@@ -24,10 +24,8 @@ const PerformanceOverview: React.FC = () => {
     try {
       // setLoading(true)
       // API calls will be implemented when backend is ready
-      console.log('Fetching performance data...')
       // setRecentReviews([])
     } catch (error) {
-      console.error('Error fetching performance data:', error)
     } finally {
       // setLoading(false)
     }

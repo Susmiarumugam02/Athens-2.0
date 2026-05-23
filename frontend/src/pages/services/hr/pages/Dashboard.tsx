@@ -68,13 +68,8 @@ const HRDashboard: React.FC = () => {
   const fetchCompanyData = async () => {
     try {
       const currentSessionKey = useServiceUserStore.getState().sessionKey
-      console.log('🔍 DEBUG: fetchCompanyData called')
-      console.log('🔍 DEBUG: serviceUser?.company_id:', serviceUser?.company_id)
-      console.log('🔍 DEBUG: sessionKey from props:', !!sessionKey)
-      console.log('🔍 DEBUG: sessionKey from store:', !!currentSessionKey)
 
       if (serviceUser?.company_id && currentSessionKey) {
-        console.log('🔍 DEBUG: Making API call with sessionKey:', currentSessionKey.substring(0, 10) + '...')
 
         const response = await api.get(`/api/auth/service-user/company/${serviceUser.company_id}/`, {
           headers: {
@@ -84,14 +79,10 @@ const HRDashboard: React.FC = () => {
             session_key: currentSessionKey
           }
         })
-        console.log('🔍 DEBUG: API call successful, logo data:', response.data)
         setCompanyData(response.data)
       } else {
-        console.log('🔍 DEBUG: Missing required data for API call')
       }
     } catch (error: any) {
-      console.error('🔍 DEBUG: Error fetching company logo:', error)
-      console.error('🔍 DEBUG: Error response:', error.response?.data)
     }
   }
 
@@ -119,9 +110,7 @@ const HRDashboard: React.FC = () => {
     try {
       // Real API calls will be implemented here when backend is ready
       // For now, keep default empty state
-      console.log('HR data fetch - backend APIs not implemented yet')
     } catch (error) {
-      console.error('Error fetching HR data:', error)
     }
   }
 

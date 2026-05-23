@@ -46,12 +46,6 @@ const ParticipantResponse: React.FC = () => {
   // Get action from URL parameters (accept/reject)
   const action = searchParams.get('action');
 
-  console.log('ParticipantResponse Debug:', {
-    userIdFromUrl,
-    currentUserId: user?.id,
-    resolvedUserId: userId,
-    userMatch: userId === user?.id
-  });
 
   const handleResponse = async (status: 'accepted' | 'rejected') => {
     if (!momId || !userId) {
@@ -95,17 +89,6 @@ const ParticipantResponse: React.FC = () => {
   };
 
   useEffect(() => {
-    console.log('ParticipantResponse useEffect Debug:', {
-      momId,
-      userId,
-      user: user ? { id: user.id, usertype: user.usertype, email: user.email } : null,
-      action,
-      authState: {
-        token: !!useAuthStore.getState().token,
-        isAuthenticated: useAuthStore.getState().isAuthenticated(),
-        usertype: useAuthStore.getState().usertype
-      }
-    });
 
     const fetchResponseStatus = async () => {
       if (!momId || !userId) {
@@ -121,10 +104,6 @@ const ParticipantResponse: React.FC = () => {
 
       // Security check: User can only respond for themselves
       if (userId !== user?.id) {
-        console.log('User ID mismatch:', {
-          urlUserId: userId,
-          currentUserId: user?.id
-        });
         message.error('You can only respond to your own meeting invitations.');
         navigate('/dashboard');
         setLoading(false);
@@ -156,12 +135,6 @@ const ParticipantResponse: React.FC = () => {
         const res = await api.get(`/api/v1/mom/${momId}/participants/${userId}/response/`);
         setResponseStatus(res.data);
       } catch (error: any) {
-        console.log('Error fetching response status:', {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-          message: error.message
-        });
 
         // Check if this is a session expiry issue
         if (error.message === 'Session expired') {

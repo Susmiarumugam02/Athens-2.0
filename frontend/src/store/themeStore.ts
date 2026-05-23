@@ -65,7 +65,6 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       })
     }
   } catch (error) {
-    console.warn('Theme initialization failed:', error)
     applyTheme('light')
   }
 }

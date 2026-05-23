@@ -83,7 +83,6 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
       setFormData({ code: '', name: '' })
       setErrors({})
     } catch (error: any) {
-      console.error('Error creating unit:', error)
       if (error.response?.data) {
         setErrors(error.response.data)
         toast.error('Please fix the validation errors and try again.')

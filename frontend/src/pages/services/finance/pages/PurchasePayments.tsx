@@ -79,7 +79,6 @@ const PurchasePayments: React.FC = () => {
       })
       setPurchasePayments(response.data.results || [])
     } catch (error: any) {
-      console.error('Error fetching purchase payments:', error)
       toast.error('Failed to fetch purchase payments')
     } finally {
       setIsLoading(false)
@@ -95,7 +94,6 @@ const PurchasePayments: React.FC = () => {
       })
       setVendors(response.data || [])
     } catch (error: any) {
-      console.error('Error fetching vendors:', error)
     }
   }
 
@@ -108,7 +106,6 @@ const PurchasePayments: React.FC = () => {
       })
       setVendorInvoices(response.data.results || [])
     } catch (error: any) {
-      console.error('Error fetching vendor invoices:', error)
     }
   }
 
@@ -141,7 +138,6 @@ const PurchasePayments: React.FC = () => {
       resetForm()
       fetchPurchasePayments()
     } catch (error: any) {
-      console.error('Error saving purchase payment:', error)
       toast.error(error.response?.data?.message || 'Failed to save purchase payment')
     }
   }
@@ -194,7 +190,6 @@ const PurchasePayments: React.FC = () => {
       toast.success('Purchase payment deleted successfully')
       fetchPurchasePayments()
     } catch (error: any) {
-      console.error('Error deleting purchase payment:', error)
       toast.error('Failed to delete purchase payment')
     }
   }

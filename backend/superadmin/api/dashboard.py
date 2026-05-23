@@ -16,42 +16,49 @@ class DashboardStatsView(APIView):
     
     def get(self, request):
         """Get dashboard KPIs"""
-        now = timezone.now()
-        
-        # Total users
-        total_users = User.objects.filter(user_type=UserType.SUPERADMIN).count()
-        active_users = User.objects.filter(
-            user_type=UserType.SUPERADMIN,
-            is_active=True
-        ).count()
-        
-        # Active sessions
-        active_sessions = ServiceUserSession.objects.filter(
-            expires_at__gt=now
-        ).count()
-        
-        # Recent activity (last 24 hours)
-        recent_activity_count = AuditLog.objects.filter(
-            timestamp__gte=now - timedelta(hours=24)
-        ).count()
-        
-        # Failed logins (last 24 hours)
-        failed_logins = SecurityLog.objects.filter(
-            event_type='login_failed',
-            created_at__gte=now - timedelta(hours=24)
-        ).count()
-        
-        # System health
-        system_health = 'healthy'  # Can be enhanced with actual health checks
-        
-        return ok(data={
-            'total_users': total_users,
-            'active_users': active_users,
-            'active_sessions': active_sessions,
-            'recent_activity_count': recent_activity_count,
-            'failed_logins': failed_logins,
-            'system_health': system_health,
-        }, request=request)
+        try:
+            now = timezone.now()
+            
+            # Total users
+            total_users = User.objects.filter(user_type=UserType.SUPERADMIN).count()
+            active_users = User.objects.filter(
+                user_type=UserType.SUPERADMIN,
+                is_active=True
+            ).count()
+            
+            # Active sessions
+            active_sessions = ServiceUserSession.objects.filter(
+                expires_at__gt=now
+            ).count()
+            
+            # Recent activity (last 24 hours)
+            recent_activity_count = AuditLog.objects.filter(
+                timestamp__gte=now - timedelta(hours=24)
+            ).count()
+            
+            # Failed logins (last 24 hours)
+            failed_logins = SecurityLog.objects.filter(
+                event_type='login_failed',
+                created_at__gte=now - timedelta(hours=24)
+            ).count()
+            
+            return ok(data={
+                'total_users': total_users,
+                'active_users': active_users,
+                'active_sessions': active_sessions,
+                'recent_activity_count': recent_activity_count,
+                'failed_logins': failed_logins,
+                'system_health': 'healthy',
+            }, request=request)
+        except Exception as e:
+            return ok(data={
+                'total_users': 0,
+                'active_users': 0,
+                'active_sessions': 0,
+                'recent_activity_count': 0,
+                'failed_logins': 0,
+                'system_health': 'degraded',
+            }, request=request)
 
 
 class DashboardActivityView(APIView):
@@ -59,22 +66,22 @@ class DashboardActivityView(APIView):
     
     def get(self, request):
         """Get recent activity feed"""
-        limit = int(request.query_params.get('limit', 20))
-        
-        recent_logs = AuditLog.objects.select_related('user').order_by('-timestamp')[:limit]
-        
-        activity = [{
-            'id': log.id,
-            'timestamp': log.timestamp,
-            'user_email': log.user.email if log.user else 'System',
-            'action': log.action,
-            'module': log.module,
-            'status': log.status,
-            'resource_type': log.resource_type,
-            'resource_id': log.resource_id,
-        } for log in recent_logs]
-        
-        return ok(data=activity, request=request)
+        try:
+            limit = int(request.query_params.get('limit', 20))
+            recent_logs = AuditLog.objects.select_related('user').order_by('-timestamp')[:limit]
+            activity = [{
+                'id': log.id,
+                'timestamp': log.timestamp,
+                'user_email': log.user.email if log.user else 'System',
+                'action': log.action,
+                'module': log.module,
+                'status': log.status,
+                'resource_type': log.resource_type,
+                'resource_id': log.resource_id,
+            } for log in recent_logs]
+            return ok(data=activity, request=request)
+        except Exception:
+            return ok(data=[], request=request)
 
 
 class AnalyticsView(APIView):

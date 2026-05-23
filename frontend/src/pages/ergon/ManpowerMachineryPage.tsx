@@ -1,419 +1,448 @@
-import { useState } from 'react'
-import { Plus, Search, Users, Truck, Calendar, MapPin, TrendingUp, TrendingDown } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Calendar, Edit2, MapPin, Plus, Search, Trash2, Truck, Users, X } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { ergonApi } from '../../services/ergonApi'
+import { useAuthStore } from '../../store/authStore'
 
-interface KPICardProps {
-  title: string
-  value: number | string
-  subtitle?: string
-  icon: React.ReactNode
-  trend?: { value: number; isUp: boolean }
-  onClick?: () => void
-  color?: string
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type ResType = 'manpower' | 'machinery'
+
+interface ManpowerRow {
+  id: number; name: string; role: string; contact: string
+  daily_rate: string | null; status: string; created_at: string
+  _type: 'manpower'
 }
+interface MachineryRow {
+  id: number; name: string; type: string; registration_no: string
+  daily_rate: string | null; status: string; created_at: string
+  _type: 'machinery'
+}
+type Row = ManpowerRow | MachineryRow
 
-const KPICard: React.FC<KPICardProps> = ({ title, value, subtitle, icon, trend, onClick, color = 'text-primary' }) => (
-  <div
-    onClick={onClick}
-    className={`bg-card border border-border rounded-xl p-3 ${onClick ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}`}
-  >
-    <div className="flex items-start justify-between mb-2">
-      <div className={`p-2 rounded-lg bg-accent ${color}`}>
-        {icon}
-      </div>
-      {trend && (
-        <div className={`flex items-center gap-1 text-xs ${trend.isUp ? 'text-green-600' : 'text-red-600'}`}>
-          {trend.isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-          {Math.abs(trend.value)}%
-        </div>
-      )}
-    </div>
-    <div className="text-2xl font-bold text-foreground mb-0.5">{value}</div>
-    <div className="text-xs font-medium text-foreground mb-0.5">{title}</div>
-    {subtitle && <div className="text-xs text-muted-foreground">{subtitle}</div>}
-  </div>
-)
-
-interface Resource {
-  id: number
-  type: 'manpower' | 'machinery'
+interface FormState {
+  resType: ResType
   name: string
-  category: string
-  project: string
-  location: string
-  allocationDate: string
-  status: 'active' | 'idle' | 'maintenance'
-  cost: number
-  utilization: number
+  role_or_type: string   // role for manpower, type for machinery
+  contact: string        // manpower only
+  registration_no: string // machinery only
+  daily_rate: string
+  status: string
 }
 
-export default function ManpowerMachineryPage() {
-  const [activeTab, setActiveTab] = useState<'list' | 'form'>('list')
-  const [filterType, setFilterType] = useState<string>('all')
-  const [filterStatus, setFilterStatus] = useState<string>('all')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [formData, setFormData] = useState<Partial<Resource>>({
-    type: 'manpower',
-    status: 'active'
-  })
+const EMPTY: FormState = {
+  resType: 'manpower', name: '', role_or_type: '',
+  contact: '', registration_no: '', daily_rate: '', status: 'available',
+}
 
-  const mockResources: Resource[] = [
-    {
-      id: 1,
-      type: 'manpower',
-      name: 'Electrician Team A',
-      category: 'Skilled Labor',
-      project: 'Solar Installation - ABC Corp',
-      location: 'Site A - Mumbai',
-      allocationDate: '2025-02-01',
-      status: 'active',
-      cost: 25000,
-      utilization: 85
-    },
-    {
-      id: 2,
-      type: 'machinery',
-      name: 'Excavator JCB-001',
-      category: 'Heavy Equipment',
-      project: 'Wind Farm - XYZ Ltd',
-      location: 'Site B - Pune',
-      allocationDate: '2025-02-10',
-      status: 'active',
-      cost: 15000,
-      utilization: 92
-    },
-    {
-      id: 3,
-      type: 'manpower',
-      name: 'Welding Team B',
-      category: 'Skilled Labor',
-      project: 'Solar Installation - ABC Corp',
-      location: 'Site A - Mumbai',
-      allocationDate: '2025-02-15',
-      status: 'active',
-      cost: 30000,
-      utilization: 78
-    }
-  ]
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-  const totalManpower = mockResources.filter(r => r.type === 'manpower').length
-  const totalMachinery = mockResources.filter(r => r.type === 'machinery').length
-  const activeResources = mockResources.filter(r => r.status === 'active').length
-  const avgUtilization = Math.round(
-    mockResources.reduce((sum, r) => sum + r.utilization, 0) / mockResources.length
-  )
-  const totalCost = mockResources.reduce((sum, r) => sum + r.cost, 0)
+function statusColor(s: string) {
+  if (s === 'available') return 'bg-green-100 text-green-800'
+  if (s === 'maintenance') return 'bg-red-100 text-red-800'
+  if (s === 'deallocated' || s === 'inactive') return 'bg-gray-100 text-gray-600'
+  return 'bg-yellow-100 text-yellow-800'
+}
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800'
-      case 'maintenance': return 'bg-red-100 text-red-800'
-      default: return 'bg-yellow-100 text-yellow-800'
-    }
+function rowLabel(r: Row) {
+  return r._type === 'manpower' ? (r as ManpowerRow).role : (r as MachineryRow).type
+}
+
+function extractList(data: unknown): any[] {
+  if (Array.isArray(data)) return data
+  if (data && typeof data === 'object') {
+    const d = data as any
+    if (Array.isArray(d.data)) return d.data
+    if (Array.isArray(d.results)) return d.results
   }
+  return []
+}
 
-  const getTypeColor = (type: string) => {
-    return type === 'manpower' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-  }
+// ─── Resource Modal (Create / Edit) ──────────────────────────────────────────
 
-  const getUtilizationColor = (utilization: number) => {
-    if (utilization >= 80) return 'text-green-600'
-    if (utilization >= 50) return 'text-yellow-600'
-    return 'text-red-600'
-  }
+const ResourceModal: React.FC<{
+  open: boolean; mode: 'create' | 'edit'; initial: FormState; loading: boolean
+  onClose: () => void; onSubmit: (f: FormState) => void
+}> = ({ open, mode, initial, loading, onClose, onSubmit }) => {
+  const [form, setForm] = useState<FormState>(initial)
+  useEffect(() => { if (open) setForm(initial) }, [open, initial])
+  if (!open) return null
 
-  const filteredResources = mockResources.filter(r => {
-    const matchesSearch = r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         r.project.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType = filterType === 'all' || r.type === filterType
-    const matchesStatus = filterStatus === 'all' || r.status === filterStatus
-    return matchesSearch && matchesType && matchesStatus
-  })
+  const cls = 'w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary'
+  const lbl = 'block text-sm font-medium text-foreground mb-1'
+  const set = (k: keyof FormState, v: string) => setForm(p => ({ ...p, [k]: v }))
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('Allocating resource:', formData)
-    setActiveTab('list')
-    setFormData({ type: 'manpower', status: 'active' })
+    if (!form.name.trim()) { toast.error('Name is required'); return }
+    onSubmit(form)
   }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-card border border-border rounded-xl w-full max-w-md shadow-xl">
+        <div className="flex items-center justify-between p-5 border-b border-border">
+          <h2 className="text-lg font-semibold text-foreground">
+            {mode === 'create' ? 'Allocate Resource' : 'Edit Resource'}
+          </h2>
+          <button onClick={onClose}><X className="h-5 w-5 text-muted-foreground" /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {mode === 'create' && (
+            <div>
+              <label className={lbl}>Type *</label>
+              <select value={form.resType} onChange={e => set('resType', e.target.value as ResType)} className={cls}>
+                <option value="manpower">Manpower</option>
+                <option value="machinery">Machinery</option>
+              </select>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={lbl}>Name *</label>
+              <input type="text" required value={form.name} onChange={e => set('name', e.target.value)}
+                placeholder={form.resType === 'manpower' ? 'Team / Person name' : 'Equipment name'} className={cls} />
+            </div>
+            <div>
+              <label className={lbl}>{form.resType === 'manpower' ? 'Role' : 'Equipment Type'}</label>
+              <input type="text" value={form.role_or_type} onChange={e => set('role_or_type', e.target.value)}
+                placeholder={form.resType === 'manpower' ? 'e.g. Electrician' : 'e.g. Excavator'} className={cls} />
+            </div>
+          </div>
+          {form.resType === 'manpower' ? (
+            <div>
+              <label className={lbl}>Contact</label>
+              <input type="text" value={form.contact} onChange={e => set('contact', e.target.value)}
+                placeholder="+91 98765 43210" className={cls} />
+            </div>
+          ) : (
+            <div>
+              <label className={lbl}>Registration No.</label>
+              <input type="text" value={form.registration_no} onChange={e => set('registration_no', e.target.value)}
+                placeholder="e.g. JCB-001" className={cls} />
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={lbl}>Daily Rate (₹)</label>
+              <input type="number" min="0" step="0.01" value={form.daily_rate}
+                onChange={e => set('daily_rate', e.target.value)} placeholder="0.00" className={cls} />
+            </div>
+            <div>
+              <label className={lbl}>Status *</label>
+              <select value={form.status} onChange={e => set('status', e.target.value)} className={cls}>
+                <option value="available">Available</option>
+                <option value="allocated">Allocated</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-3 pt-1">
+            <button type="submit" disabled={loading}
+              className="flex-1 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-60 text-sm font-medium">
+              {loading ? 'Saving…' : mode === 'create' ? 'Allocate' : 'Save Changes'}
+            </button>
+            <button type="button" onClick={onClose}
+              className="flex-1 py-2 bg-accent text-foreground rounded-lg text-sm font-medium">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+export default function ManpowerMachineryPage() {
+  const currentUser = useAuthStore(s => s.user)
+  const canManage = useMemo(() => {
+    if (!currentUser) return false
+    const ut = currentUser.user_type
+    const at = (currentUser as any).admin_type
+    const rt = (currentUser as any).role_type
+    return ut === 'superadmin' || ut === 'masteradmin' ||
+      at === 'client' || at === 'epc' || at === 'contractor' || rt === 'admin'
+  }, [currentUser])
+
+  const [rows, setRows]         = useState<Row[]>([])
+  const [loading, setLoading]   = useState(false)
+  const [saving, setSaving]     = useState(false)
+  const [actionId, setActionId] = useState<string | null>(null)
+
+  const [search, setSearch]             = useState('')
+  const [filterType, setFilterType]     = useState('all')
+  const [filterStatus, setFilterStatus] = useState('all')
+
+  const [createOpen, setCreateOpen]   = useState(false)
+  const [editTarget, setEditTarget]   = useState<Row | null>(null)
+
+  // ── Fetch ───────────────────────────────────────────────────────────────────
+
+  const fetchAll = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [mpRes, mcRes] = await Promise.all([
+        ergonApi.getManpower(),
+        ergonApi.getMachinery(),
+      ])
+      const mp: ManpowerRow[] = extractList(mpRes.data).map((r: any) => ({ ...r, _type: 'manpower' as const }))
+      const mc: MachineryRow[] = extractList(mcRes.data).map((r: any) => ({ ...r, _type: 'machinery' as const }))
+      setRows([...mp, ...mc].sort((a, b) => b.id - a.id))
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || 'Failed to load resources')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchAll() }, [fetchAll])
+
+  // ── Filtered ─────────────────────────────────────────────────────────────────
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase()
+    return rows.filter(r => {
+      const matchSearch = !q || r.name.toLowerCase().includes(q) || rowLabel(r).toLowerCase().includes(q)
+      const matchType   = filterType === 'all' || r._type === filterType
+      const matchStatus = filterStatus === 'all' || r.status === filterStatus
+      return matchSearch && matchType && matchStatus
+    })
+  }, [rows, search, filterType, filterStatus])
+
+  // ── Metrics ──────────────────────────────────────────────────────────────────
+
+  const metrics = useMemo(() => ({
+    manpower:  rows.filter(r => r._type === 'manpower').length,
+    machinery: rows.filter(r => r._type === 'machinery').length,
+    active:    rows.filter(r => r.status === 'available' || r.status === 'allocated').length,
+    totalCost: rows.reduce((s, r) => s + (Number(r.daily_rate) || 0) * 26, 0), // ~26 working days
+  }), [rows])
+
+  // ── Patch local ──────────────────────────────────────────────────────────────
+
+  const patchRow = (id: number, type: ResType, patch: Partial<Row>) =>
+    setRows(prev => prev.map(r => r.id === id && r._type === type ? { ...r, ...patch } as Row : r))
+
+  // ── Create ───────────────────────────────────────────────────────────────────
+
+  const handleCreate = async (form: FormState) => {
+    setSaving(true)
+    try {
+      if (form.resType === 'manpower') {
+        const res = await ergonApi.createManpower({
+          name: form.name, role: form.role_or_type,
+          contact: form.contact, daily_rate: form.daily_rate || null, status: form.status,
+        })
+        setRows(prev => [{ ...(res.data?.data ?? res.data), _type: 'manpower' as const }, ...prev])
+      } else {
+        const res = await ergonApi.createMachinery({
+          name: form.name, type: form.role_or_type,
+          registration_no: form.registration_no, daily_rate: form.daily_rate || null, status: form.status,
+        })
+        setRows(prev => [{ ...(res.data?.data ?? res.data), _type: 'machinery' as const }, ...prev])
+      }
+      toast.success('Resource allocated')
+      setCreateOpen(false)
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || Object.values(err?.response?.data || {}).flat().join(', ') || 'Failed to allocate')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // ── Edit ─────────────────────────────────────────────────────────────────────
+
+  const editInitial = useMemo((): FormState => {
+    if (!editTarget) return EMPTY
+    if (editTarget._type === 'manpower') {
+      const r = editTarget as ManpowerRow
+      return { resType: 'manpower', name: r.name, role_or_type: r.role, contact: r.contact, registration_no: '', daily_rate: r.daily_rate ?? '', status: r.status }
+    }
+    const r = editTarget as MachineryRow
+    return { resType: 'machinery', name: r.name, role_or_type: r.type, contact: '', registration_no: r.registration_no, daily_rate: r.daily_rate ?? '', status: r.status }
+  }, [editTarget])
+
+  const handleEdit = async (form: FormState) => {
+    if (!editTarget) return
+    setSaving(true)
+    try {
+      if (editTarget._type === 'manpower') {
+        const res = await ergonApi.updateManpower(editTarget.id, {
+          name: form.name, role: form.role_or_type,
+          contact: form.contact, daily_rate: form.daily_rate || null, status: form.status,
+        })
+        patchRow(editTarget.id, 'manpower', res.data?.data ?? res.data)
+      } else {
+        const res = await ergonApi.updateMachinery(editTarget.id, {
+          name: form.name, type: form.role_or_type,
+          registration_no: form.registration_no, daily_rate: form.daily_rate || null, status: form.status,
+        })
+        patchRow(editTarget.id, 'machinery', res.data?.data ?? res.data)
+      }
+      toast.success('Resource updated')
+      setEditTarget(null)
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || 'Failed to update')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // ── Deallocate (delete) ───────────────────────────────────────────────────────
+
+  const handleDeallocate = async (r: Row) => {
+    if (!window.confirm(`Deallocate "${r.name}"? This will remove it from the system.`)) return
+    setActionId(`${r._type}-${r.id}`)
+    try {
+      if (r._type === 'manpower') await ergonApi.deleteManpower(r.id)
+      else await ergonApi.deleteMachinery(r.id)
+      setRows(prev => prev.filter(x => !(x.id === r.id && x._type === r._type)))
+      toast.success('Resource deallocated')
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || 'Failed to deallocate')
+    } finally {
+      setActionId(null)
+    }
+  }
+
+  // ── Render ───────────────────────────────────────────────────────────────────
+
+  const fmt = (n: number) => n >= 1000 ? `₹${(n / 1000).toFixed(1)}K` : `₹${n.toFixed(0)}`
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3 mb-1">
             <Users className="h-8 w-8 text-primary" />
             <h1 className="text-3xl font-bold text-foreground">Manpower & Machinery</h1>
           </div>
           <p className="text-muted-foreground">Resource allocation and utilization tracking</p>
         </div>
-        <button
-          onClick={() => setActiveTab('form')}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-        >
-          <Plus className="h-4 w-4" />
-          Allocate Resource
-        </button>
+        {canManage && (
+          <button onClick={() => setCreateOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 text-sm font-medium">
+            <Plus className="h-4 w-4" /> Allocate Resource
+          </button>
+        )}
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <KPICard
-          title="Manpower"
-          value={totalManpower}
-          subtitle="Teams allocated"
-          icon={<Users className="h-5 w-5" />}
-          color="text-blue-600"
-        />
-        <KPICard
-          title="Machinery"
-          value={totalMachinery}
-          subtitle="Equipment allocated"
-          icon={<Truck className="h-5 w-5" />}
-          color="text-purple-600"
-        />
-        <KPICard
-          title="Active"
-          value={activeResources}
-          subtitle="Currently working"
-          icon={<TrendingUp className="h-5 w-5" />}
-          color="text-green-600"
-        />
-        <KPICard
-          title="Avg Utilization"
-          value={`${avgUtilization}%`}
-          subtitle="Overall efficiency"
-          icon={<TrendingUp className="h-5 w-5" />}
-          color="text-green-600"
-        />
-        <KPICard
-          title="Total Cost"
-          value={`₹${(totalCost / 1000).toFixed(0)}K`}
-          subtitle="Monthly"
-          icon={<Calendar className="h-5 w-5" />}
-        />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { title: 'Manpower',   value: metrics.manpower,  icon: <Users className="h-5 w-5" />,    color: 'text-blue-600' },
+          { title: 'Machinery',  value: metrics.machinery, icon: <Truck className="h-5 w-5" />,    color: 'text-purple-600' },
+          { title: 'Active',     value: metrics.active,    icon: <Calendar className="h-5 w-5" />, color: 'text-green-600' },
+          { title: 'Est. Monthly Cost', value: fmt(metrics.totalCost), icon: <MapPin className="h-5 w-5" />, color: 'text-orange-600' },
+        ].map(c => (
+          <div key={c.title} className="bg-card border border-border rounded-xl p-3">
+            <div className={`p-2 rounded-lg bg-accent ${c.color} w-fit mb-2`}>{c.icon}</div>
+            <div className="text-2xl font-bold text-foreground mb-0.5">{c.value}</div>
+            <div className="text-xs font-medium text-foreground">{c.title}</div>
+          </div>
+        ))}
       </div>
 
-      {/* Content */}
-      {activeTab === 'list' ? (
-        <div className="bg-card border border-border rounded-xl p-6">
-          {/* Filters */}
-          <div className="flex items-center gap-4 flex-wrap mb-6">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search resources..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="all">All Types</option>
-              <option value="manpower">Manpower</option>
-              <option value="machinery">Machinery</option>
-            </select>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="idle">Idle</option>
-              <option value="maintenance">Maintenance</option>
-            </select>
+      {/* Filters */}
+      <div className="bg-card border border-border rounded-xl p-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex-1 min-w-[200px] relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input type="text" placeholder="Search by name, role, type…"
+              value={search} onChange={e => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
           </div>
+          <select value={filterType} onChange={e => setFilterType(e.target.value)}
+            className="px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+            <option value="all">All Types</option>
+            <option value="manpower">Manpower</option>
+            <option value="machinery">Machinery</option>
+          </select>
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+            className="px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+            <option value="all">All Status</option>
+            <option value="available">Available</option>
+            <option value="allocated">Allocated</option>
+            <option value="maintenance">Maintenance</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          {(search || filterType !== 'all' || filterStatus !== 'all') && (
+            <button onClick={() => { setSearch(''); setFilterType('all'); setFilterStatus('all') }}
+              className="px-3 py-2 text-sm text-muted-foreground border border-border rounded-lg hover:bg-accent">
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
 
-          {/* Resources List */}
-          <div className="space-y-3">
-            {filteredResources.map((resource) => (
-              <div
-                key={resource.id}
-                className="flex items-center gap-3 p-4 bg-accent rounded-lg hover:bg-accent/80"
-              >
-                {resource.type === 'manpower' ? (
-                  <Users className="w-5 h-5 text-primary" />
-                ) : (
-                  <Truck className="w-5 h-5 text-primary" />
-                )}
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold text-foreground">{resource.name}</h3>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeColor(resource.type)}`}>
-                      {resource.type}
-                    </span>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(resource.status)}`}>
-                      {resource.status}
-                    </span>
+      {/* List */}
+      <div className="bg-card border border-border rounded-xl">
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">Loading…</div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-2 text-muted-foreground">
+            <Users className="h-10 w-10 opacity-30" />
+            <p className="text-sm">No resources found.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {filtered.map(r => {
+              const busy = actionId === `${r._type}-${r.id}`
+              return (
+                <div key={`${r._type}-${r.id}`} className="flex items-start gap-4 p-4 hover:bg-accent/40 transition-colors">
+                  <div className="mt-0.5 shrink-0">
+                    {r._type === 'manpower'
+                      ? <Users className="h-5 w-5 text-primary" />
+                      : <Truck className="h-5 w-5 text-primary" />}
                   </div>
-                  <p className="text-sm text-muted-foreground mb-2">{resource.category}</p>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {resource.location}
-                    </span>
-                    <span>{resource.project}</span>
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      Allocated: {resource.allocationDate}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-xs text-muted-foreground">Utilization:</span>
-                    <span className={`text-xs font-semibold ${getUtilizationColor(resource.utilization)}`}>
-                      {resource.utilization}%
-                    </span>
-                    <div className="flex-1 max-w-xs bg-background rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full ${
-                          resource.utilization >= 80 ? 'bg-green-500' :
-                          resource.utilization >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                        }`}
-                        style={{ width: `${resource.utilization}%` }}
-                      />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="font-semibold text-foreground text-sm">{r.name}</span>
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${r._type === 'manpower' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>
+                        {r._type}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColor(r.status)}`}>
+                        {r.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                      {rowLabel(r) && <span>{rowLabel(r)}</span>}
+                      {r._type === 'manpower' && (r as ManpowerRow).contact && (
+                        <span>{(r as ManpowerRow).contact}</span>
+                      )}
+                      {r._type === 'machinery' && (r as MachineryRow).registration_no && (
+                        <span>#{(r as MachineryRow).registration_no}</span>
+                      )}
+                      {r.daily_rate && <span>₹{Number(r.daily_rate).toLocaleString()}/day</span>}
                     </div>
                   </div>
+                  {canManage && (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button disabled={busy} onClick={() => setEditTarget(r)}
+                        className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground disabled:opacity-50"
+                        title="Edit">
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      <button disabled={busy} onClick={() => handleDeallocate(r)}
+                        className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600 disabled:opacity-50"
+                        title="Deallocate">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold text-foreground">₹{resource.cost.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">per month</p>
-                  <div className="flex gap-2 mt-2">
-                    <button className="px-3 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90 text-xs">
-                      Edit
-                    </button>
-                    <button className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs">
-                      Deallocate
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
-        </div>
-      ) : (
-        <div className="bg-card border border-border rounded-xl p-6">
-          <h2 className="text-xl font-semibold mb-6">Allocate Resource</h2>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Type *</label>
-                <select
-                  required
-                  value={formData.type || 'manpower'}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                  className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="manpower">Manpower</option>
-                  <option value="machinery">Machinery</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name || ''}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Category *</label>
-                <select
-                  required
-                  value={formData.category || ''}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Select Category</option>
-                  <option value="Skilled Labor">Skilled Labor</option>
-                  <option value="Unskilled Labor">Unskilled Labor</option>
-                  <option value="Heavy Equipment">Heavy Equipment</option>
-                  <option value="Light Equipment">Light Equipment</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Project *</label>
-                <select
-                  required
-                  value={formData.project || ''}
-                  onChange={(e) => setFormData({ ...formData, project: e.target.value })}
-                  className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Select Project</option>
-                  <option value="Solar Installation - ABC Corp">Solar Installation - ABC Corp</option>
-                  <option value="Wind Farm - XYZ Ltd">Wind Farm - XYZ Ltd</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Location *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.location || ''}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Allocation Date *</label>
-                <input
-                  type="date"
-                  required
-                  value={formData.allocationDate || ''}
-                  onChange={(e) => setFormData({ ...formData, allocationDate: e.target.value })}
-                  className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Monthly Cost (₹) *</label>
-                <input
-                  type="number"
-                  required
-                  value={formData.cost || ''}
-                  onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) })}
-                  className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Status *</label>
-                <select
-                  required
-                  value={formData.status || 'active'}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                  className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="active">Active</option>
-                  <option value="idle">Idle</option>
-                  <option value="maintenance">Maintenance</option>
-                </select>
-              </div>
-            </div>
+        )}
+      </div>
 
-            <div className="flex gap-4">
-              <button
-                type="submit"
-                className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-              >
-                Allocate Resource
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('list')}
-                className="px-6 py-2 bg-accent text-foreground rounded-lg hover:bg-accent/80"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      <ResourceModal open={createOpen} mode="create" initial={EMPTY} loading={saving}
+        onClose={() => setCreateOpen(false)} onSubmit={handleCreate} />
+      <ResourceModal open={!!editTarget} mode="edit" initial={editInitial} loading={saving}
+        onClose={() => setEditTarget(null)} onSubmit={handleEdit} />
     </div>
   )
 }

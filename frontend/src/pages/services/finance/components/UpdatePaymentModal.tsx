@@ -98,7 +98,6 @@ const UpdatePaymentModal: React.FC<UpdatePaymentModalProps> = ({
       toast.success('Payment updated successfully!');
       onSuccess();
     } catch (error: any) {
-      console.error('Error updating payment:', error);
       toast.error('Failed to update payment');
     } finally {
       setLoading(false);

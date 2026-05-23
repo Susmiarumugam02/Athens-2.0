@@ -180,7 +180,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
     }
 
     if (!sessionKey) {
-      console.error('No session key available')
       return
     }
 
@@ -188,7 +187,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
       const response = await apiClient.searchHSNCodes({ session_key: sessionKey, search: searchTerm })
       setHsnCodes(response.data.results || [])
     } catch (error) {
-      console.error('Error searching HSN codes:', error)
       setHsnCodes([])
     }
   }
@@ -201,20 +199,16 @@ const ProductForm: React.FC<ProductFormProps> = ({
     }
 
     if (!sessionKey) {
-      console.error('No session key available')
       return
     }
 
     try {
-      console.log('Searching SAC codes for:', searchTerm)
       const response = await apiClient.searchSACCodes({ session_key: sessionKey, search: searchTerm })
-      console.log('SAC search response:', response.data)
       setSacCodes(response.data.results || [])
       if (response.data.results && response.data.results.length > 0) {
         setShowSacDropdown(true)
       }
     } catch (error) {
-      console.error('Error searching SAC codes:', error)
       setSacCodes([])
     }
   }
@@ -222,7 +216,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
   // Search Units
   const searchUnits = async (searchTerm: string = '') => {
     if (!sessionKey) {
-      console.error('No session key available')
       return
     }
 
@@ -230,7 +223,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
       const response = await apiClient.searchUnits({ session_key: sessionKey, search: searchTerm })
       setUnits(response.data.results || [])
     } catch (error) {
-      console.error('Error searching units:', error)
       setUnits([])
     }
   }
@@ -509,7 +501,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
       onSuccess()
     } catch (error: any) {
-      console.error('Error saving product:', error)
       if (error.response?.data) {
         const serverErrors: Record<string, string> = {}
         Object.keys(error.response.data).forEach(key => {
@@ -801,7 +792,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
                     
                     if (expectedRate !== undefined && newRate !== expectedRate) {
                       // This will be handled by backend to preserve manual changes
-                      console.log('Manual GST override detected:', newRate, 'vs expected:', expectedRate)
                     }
                   }}
                   step="0.01"

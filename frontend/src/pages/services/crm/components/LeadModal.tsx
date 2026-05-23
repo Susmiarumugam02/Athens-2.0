@@ -116,7 +116,6 @@ export const LeadModal: React.FC<LeadModalProps> = ({ isOpen, onClose, onSuccess
       onSuccess()
       onClose()
     } catch (error: any) {
-      console.error('Error saving lead:', error)
       toast.error(error.response?.data?.message || 'Failed to save lead')
     } finally {
       setLoading(false)

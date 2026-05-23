@@ -78,7 +78,6 @@ const CreateHSNCodeModal: React.FC<CreateHSNCodeModalProps> = ({
       })
       setErrors({})
     } catch (error: any) {
-      console.error('Error creating HSN code:', error)
       if (error.response?.data) {
         const serverErrors: Record<string, string> = {}
         Object.keys(error.response.data).forEach(key => {

@@ -69,7 +69,6 @@ export const ActivityModal: React.FC<ActivityModalProps> = ({ isOpen, onClose, o
         setFormData(prev => ({ ...prev, assigned_to: 'auto' }))
       }
     } catch (error) {
-      console.error('Error fetching related data:', error)
     }
   }
 

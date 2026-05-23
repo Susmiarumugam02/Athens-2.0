@@ -202,11 +202,7 @@ IMPORTANT: Please keep these credentials secure and share them only with authori
 
   // Debug services data in development
   if (import.meta.env.MODE === 'development') {
-    console.log('🔍 DEBUG: CreateCompanyModal services length:', services?.length)
     if (selectedServices.length > 0) {
-      console.log('🔍 DEBUG: Selected services:', selectedServices)
-      console.log('🔍 DEBUG: Available services:', services)
-      console.log('🔍 DEBUG: Calculated total:', calculateTotalPrice())
     }
   }
 

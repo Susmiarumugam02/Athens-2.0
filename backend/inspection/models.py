@@ -5,14 +5,9 @@ import uuid
 
 class Inspection(models.Model):
     INSPECTION_TYPES = [
-        ('safety', 'Safety Inspection'),
         ('quality', 'Quality Inspection'),
-        ('environmental', 'Environmental Inspection'),
-        ('equipment', 'Equipment Inspection'),
-        ('housekeeping', 'Housekeeping Inspection'),
-        ('fire_safety', 'Fire Safety Inspection'),
+        ('civil', 'Civil Inspection'),
         ('electrical', 'Electrical Inspection'),
-        ('structural', 'Structural Inspection'),
     ]
     
     STATUS_CHOICES = [
@@ -77,6 +72,37 @@ class InspectionItem(models.Model):
         
     def __str__(self):
         return f"{self.inspection.title} - Item {self.item_number}"
+
+class InspectionTemplate(models.Model):
+    CATEGORY_CHOICES = [
+        ('safety', 'Safety'),
+        ('ehs', 'EHS'),
+        ('compliance', 'Compliance'),
+        ('monthly_audit', 'Monthly Safety Audit'),
+        ('quality', 'Quality'),
+        ('environmental', 'Environmental'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=200)
+    category = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default='safety')
+    description = models.TextField(blank=True)
+    # JSON structure: [{"section": "...", "items": [{"id": "...", "text": "...", "hint": "..."}]}]
+    sections = models.JSONField(default=list)
+    # JSON: [{"key": "...", "label": "...", "type": "text|date|select", "required": bool}]
+    header_fields = models.JSONField(default=list)
+    is_sample = models.BooleanField(default=False, help_text='Pre-loaded sample template')
+    is_active = models.BooleanField(default=True)
+    version = models.CharField(max_length=20, default='1.0')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['category', 'name']
+
+    def __str__(self):
+        return f"{self.name} ({self.get_category_display()})"
+
 
 class InspectionReport(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

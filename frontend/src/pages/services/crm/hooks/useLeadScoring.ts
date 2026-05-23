@@ -23,7 +23,6 @@ export const useLeadScoring = () => {
       setError(null)
     } catch (err: any) {
       setError(err.message || 'Failed to fetch lead scores')
-      console.error('Failed to fetch lead scores:', err)
     } finally {
       setLoading(false)
     }
@@ -70,7 +69,6 @@ export const useLeadScoring = () => {
       setError(null)
     } catch (err: any) {
       setError(err.message || 'Failed to fetch dashboard data')
-      console.error('Failed to fetch dashboard data:', err)
     } finally {
       setLoading(false)
     }
@@ -81,7 +79,6 @@ export const useLeadScoring = () => {
       const response = await crmApi.getLeadScoringAnalytics(sessionKey!)
       setAnalytics(response.data)
     } catch (err: any) {
-      console.error('Failed to fetch analytics:', err)
     }
   }
 
@@ -90,7 +87,6 @@ export const useLeadScoring = () => {
       const response = await crmApi.getTopScoredLeads(sessionKey!, limit)
       setTopLeads(response.data)
     } catch (err: any) {
-      console.error('Failed to fetch top leads:', err)
     }
   }
 
@@ -99,7 +95,6 @@ export const useLeadScoring = () => {
       const response = await crmApi.getLeadRecommendations(sessionKey!)
       setRecommendations(response.data)
     } catch (err: any) {
-      console.error('Failed to fetch recommendations:', err)
     }
   }
 
@@ -108,7 +103,6 @@ export const useLeadScoring = () => {
       const response = await crmApi.getLeadScoringInsights(sessionKey!)
       setInsights(response.data)
     } catch (err: any) {
-      console.error('Failed to fetch insights:', err)
     }
   }
 

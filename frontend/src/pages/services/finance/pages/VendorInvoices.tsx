@@ -90,7 +90,6 @@ const VendorInvoices: React.FC<VendorInvoicesProps> = ({ sessionKey: propSession
       })
       setVendorInvoices(response.data.results || [])
     } catch (error: any) {
-      console.error('Error fetching vendor invoices:', error)
       toast.error('Failed to fetch vendor invoices')
     } finally {
       setIsLoading(false)
@@ -106,7 +105,6 @@ const VendorInvoices: React.FC<VendorInvoicesProps> = ({ sessionKey: propSession
       })
       setVendors(response.data || [])
     } catch (error: any) {
-      console.error('Error fetching vendors:', error)
     }
   }
 
@@ -119,7 +117,6 @@ const VendorInvoices: React.FC<VendorInvoicesProps> = ({ sessionKey: propSession
       })
       setProducts(response.data.results || [])
     } catch (error: any) {
-      console.error('Error fetching products:', error)
     }
   }
 
@@ -169,7 +166,6 @@ const VendorInvoices: React.FC<VendorInvoicesProps> = ({ sessionKey: propSession
       resetForm()
       fetchVendorInvoices()
     } catch (error: any) {
-      console.error('Error saving vendor invoice:', error)
       toast.error(error.response?.data?.message || 'Failed to save vendor invoice')
     }
   }
@@ -208,7 +204,6 @@ const VendorInvoices: React.FC<VendorInvoicesProps> = ({ sessionKey: propSession
       // Show invoice details in a modal or navigate to detail page
       alert(`Viewing invoice: ${invoice.vendor_invoice_number}\nVendor: ${invoice.vendor_name}\nAmount: ₹${invoice.total_amount.toLocaleString()}\nStatus: ${invoice.status}`)
     } catch (error: any) {
-      console.error('Error fetching invoice details:', error)
       toast.error('Failed to load invoice details')
     }
   }
@@ -245,7 +240,6 @@ const VendorInvoices: React.FC<VendorInvoicesProps> = ({ sessionKey: propSession
       setEditingInvoice(invoice)
       setShowForm(true)
     } catch (error: any) {
-      console.error('Error fetching invoice for edit:', error)
       toast.error('Failed to load invoice for editing')
     }
   }
@@ -262,7 +256,6 @@ const VendorInvoices: React.FC<VendorInvoicesProps> = ({ sessionKey: propSession
       toast.success('Vendor invoice deleted successfully')
       fetchVendorInvoices()
     } catch (error: any) {
-      console.error('Error deleting vendor invoice:', error)
       toast.error('Failed to delete vendor invoice')
     }
   }

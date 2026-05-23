@@ -39,7 +39,6 @@ export const AIFeaturesManager: React.FC<AIFeaturesManagerProps> = ({ sessionKey
       const data = await response.json()
       setCustomers(data.results || [])
     } catch (error) {
-      console.error('Failed to fetch customers:', error)
     }
   }
 
@@ -67,7 +66,6 @@ export const AIFeaturesManager: React.FC<AIFeaturesManagerProps> = ({ sessionKey
       setPredictionData(data)
       toast.success('Payment prediction generated successfully')
     } catch (error) {
-      console.error('Failed to predict payment:', error)
       toast.error('Failed to generate payment prediction')
     } finally {
       setLoading(false)
@@ -82,7 +80,6 @@ export const AIFeaturesManager: React.FC<AIFeaturesManagerProps> = ({ sessionKey
       setFraudData(data)
       toast.success('Fraud detection analysis completed')
     } catch (error) {
-      console.error('Failed to detect fraud:', error)
       toast.error('Failed to run fraud detection')
     } finally {
       setLoading(false)
@@ -96,7 +93,6 @@ export const AIFeaturesManager: React.FC<AIFeaturesManagerProps> = ({ sessionKey
       const data = await response.json()
       setInsightsData(data)
     } catch (error) {
-      console.error('Failed to fetch insights:', error)
     } finally {
       setLoading(false)
     }

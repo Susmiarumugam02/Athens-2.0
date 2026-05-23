@@ -34,7 +34,6 @@ const ShareAnalyticsDashboard: React.FC = () => {
       })
       setDashboardData(response.data)
     } catch (error) {
-      console.error('Error fetching dashboard data:', error)
       toast.error('Failed to load analytics data')
     } finally {
       setLoading(false)
@@ -54,7 +53,6 @@ const ShareAnalyticsDashboard: React.FC = () => {
       })
       setJobPerformance(response.data)
     } catch (error) {
-      console.error('Error fetching job performance:', error)
       toast.error('Failed to load job performance data')
     }
   }

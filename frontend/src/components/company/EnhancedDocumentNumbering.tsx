@@ -54,7 +54,6 @@ const EnhancedDocumentNumbering: React.FC = () => {
         const parsed = JSON.parse(savedSettings)
         setGlobalSettings(prev => ({ ...prev, ...parsed }))
       } catch (error) {
-        console.warn('Failed to parse saved settings:', error)
         localStorage.removeItem('document-numbering-global-settings')
       }
     }
@@ -71,7 +70,6 @@ const EnhancedDocumentNumbering: React.FC = () => {
           localStorage.setItem('document-numbering-selected-services', JSON.stringify(filteredServices))
         }
       } catch (error) {
-        console.warn('Failed to parse saved services:', error)
         localStorage.removeItem('document-numbering-selected-services')
       }
     }
@@ -324,14 +322,12 @@ const EnhancedDocumentNumbering: React.FC = () => {
         const parsed = JSON.parse(savedServices)
         const hasInvalidServices = parsed.some((service: string) => !validServices.includes(service))
         if (hasInvalidServices) {
-          console.log('Clearing invalid services from localStorage:', parsed)
           const filteredServices = parsed.filter((service: string) => validServices.includes(service))
           localStorage.setItem('document-numbering-selected-services', JSON.stringify(filteredServices))
           setSelectedServices(filteredServices)
           toast.success('Removed invalid services from configuration')
         }
       } catch (error) {
-        console.error('Error parsing saved services:', error)
         localStorage.removeItem('document-numbering-selected-services')
         setSelectedServices([])
       }
@@ -340,7 +336,6 @@ const EnhancedDocumentNumbering: React.FC = () => {
   
   // Add debug logging for selectedServices changes
   useEffect(() => {
-    console.log('Selected services changed:', selectedServices)
   }, [selectedServices])
 
 
@@ -387,7 +382,6 @@ const EnhancedDocumentNumbering: React.FC = () => {
     const invalidServices = selectedServices.filter(service => !validServices.includes(service))
     
     if (invalidServices.length > 0) {
-      console.error('Invalid services detected:', invalidServices)
       toast.error(`Invalid services detected: ${invalidServices.join(', ')}. Please clear configuration and try again.`)
       return
     }
@@ -406,7 +400,6 @@ const EnhancedDocumentNumbering: React.FC = () => {
       document_configurations: documentConfigurations
     }
 
-    console.log('Sending setup data:', setupData)
     setupMutation.mutate(setupData)
   }
 

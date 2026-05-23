@@ -40,7 +40,6 @@ const AthensServiceLogin: React.FC = () => {
         toast.error('2FA required')
       }
     } catch (error: any) {
-      console.error('Athens login error:', error)
       toast.error(error.response?.data?.error || 'Login failed. Please try again.')
     }
   }

@@ -106,7 +106,6 @@ export const AccountModal: React.FC<AccountModalProps> = ({ isOpen, onClose, onS
       onSuccess()
       onClose()
     } catch (error: any) {
-      console.error('Account save error:', error)
       
       // Enhanced error handling for different error types
       let errorMessage = 'Failed to save account'

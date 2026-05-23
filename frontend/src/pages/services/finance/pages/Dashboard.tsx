@@ -141,7 +141,6 @@ const FinanceDashboard: React.FC = () => {
           // Clear the session storage
           sessionStorage.removeItem('quotationForPO')
         } catch (error) {
-          console.error('Error parsing quotation data:', error)
           sessionStorage.removeItem('quotationForPO')
         }
       }
@@ -174,7 +173,6 @@ const handleQuotationCreatePO = (quotation: any) => {
         }
       }
     } catch (error) {
-      console.warn('Failed to restore session during PO creation:', error)
     }
   }
   
@@ -192,13 +190,8 @@ const handlePOCreated = () => {
   const fetchCompanyData = async () => {
     try {
       const currentSessionKey = useServiceUserStore.getState().sessionKey
-      console.log('🔍 DEBUG: fetchCompanyData called')
-      console.log('🔍 DEBUG: serviceUser?.company_id:', serviceUser?.company_id)
-      console.log('🔍 DEBUG: sessionKey from props:', !!sessionKey)
-      console.log('🔍 DEBUG: sessionKey from store:', !!currentSessionKey)
 
       if (serviceUser?.company_id && currentSessionKey) {
-        console.log('🔍 DEBUG: Making API call with sessionKey:', currentSessionKey.substring(0, 10) + '...')
 
         // Try both Authorization header and query parameter approaches
         const response = await api.get(`/api/auth/service-user/company/${serviceUser.company_id}/`, {
@@ -209,14 +202,10 @@ const handlePOCreated = () => {
             session_key: currentSessionKey
           }
         })
-        console.log('🔍 DEBUG: API call successful, logo data:', response.data)
         setCompanyData(response.data)
       } else {
-        console.log('🔍 DEBUG: Missing required data for API call')
       }
     } catch (error: any) {
-      console.error('🔍 DEBUG: Error fetching company logo:', error)
-      console.error('🔍 DEBUG: Error response:', error.response?.data)
       // Keep the existing company data (name) but without logo
     }
   }
@@ -296,7 +285,6 @@ const handlePOCreated = () => {
         totalTDS
       })
     } catch (error) {
-      console.error('Error fetching purchase expense data:', error)
     }
   }
 
@@ -353,7 +341,6 @@ const handlePOCreated = () => {
           .slice(0, 5)
       })
     } catch (error) {
-      console.error('Error fetching financial data:', error)
     }
   }
 

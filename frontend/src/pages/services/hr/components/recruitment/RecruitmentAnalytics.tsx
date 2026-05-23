@@ -88,7 +88,6 @@ const RecruitmentAnalytics: React.FC = () => {
         sourceAnalysis: Object.entries(sourceAnalysis).map(([source, count]) => ({ source, count }))
       })
     } catch (error) {
-      console.error('Error fetching analytics:', error)
     } finally {
       setLoading(false)
     }

@@ -86,7 +86,6 @@ const PaymentList: React.FC<PaymentListProps> = ({ onAddPayment, onEditPayment, 
       setPayments(response.data.results || []);
       setTotalPages(Math.ceil(response.data.count / 10));
     } catch (error: any) {
-      console.error('Error fetching payments:', error);
       toast.error('Failed to fetch payments');
     } finally {
       setLoading(false);
@@ -105,7 +104,6 @@ const PaymentList: React.FC<PaymentListProps> = ({ onAddPayment, onEditPayment, 
       toast.success('Payment deleted successfully');
       fetchPayments();
     } catch (error: any) {
-      console.error('Error deleting payment:', error);
       toast.error('Failed to delete payment');
     }
   };

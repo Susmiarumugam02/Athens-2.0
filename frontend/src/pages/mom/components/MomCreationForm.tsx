@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Select, Typography, Card, Spin, DatePicker, App } from 'antd';
+import { Form, Input, Button, Select, Typography, Card, Spin, DatePicker, App, Tag, message as antMessage } from 'antd';
 import moment from 'moment';
 import type { Moment } from 'moment';
 import api from '../../../lib/api';
 import { useAuthStore } from '../../../store/authStore';
-import { useTheme } // from '../../../contexts/ThemeContext' // DISABLED;
+import { useTheme } from '../../../contexts/ThemeContext';
 import { safeLog } from '../../../common/utils/logSanitizer';
-// import { handleApiError } from '../../../common/utils/errorHandler'; // Unused import
 import { useNotificationsContext } from '../../../common/contexts/NotificationsContext';
 import { authGuard } from '../../../lib/authGuard';
 
@@ -16,22 +15,31 @@ const { Option } = Select;
 interface User {
   id: number;
   username: string;
-  name?: string; // Full name
+  name?: string;
   email: string;
-  department?: { id: number; name: string; } | string | number; // Can be object, string, or ID
+  department?: string;
+  designation?: string;
+  employee_code?: string;
+}
+
+interface Employee {
+  id: number;
+  name: string;
+  employee_code: string;
+  department?: string;
 }
 
 interface MomFormValues {
   title: string;
   agenda: string;
-  participants_ids: number[]; // Array of user IDs
-  department?: string; // Changed to string to match fixed options
-  meeting_datetime: Moment | null; // Moment object for meeting start time
-  location?: string; // Added location field
+  participants_ids: number[];
+  department?: string;
+  meeting_datetime: Moment | null;
+  location?: string;
 }
 
 interface MomCreationFormProps {
-  onFinishSuccess?: () => void;
+  onFinishSuccess?: (newMeeting?: any) => void;
   onCancel?: () => void;
 }
 
@@ -42,90 +50,115 @@ const fixedDepartments = [
   { id: 4, name: 'Project/Execution' },
 ];
 
+/** Build display label: "Name (code)" */
+const userLabel = (u: User): string => {
+  const name = (u.name || u.username || '').trim();
+  const code = u.employee_code || String(u.id).padStart(2, '0');
+  return `${name} (${code})`;
+};
+
 const MomCreationForm: React.FC<MomCreationFormProps> = ({ onFinishSuccess }) => {
   const [form] = Form.useForm();
-  const { username: schedulerUsername, userId: schedulerUserId, django_user_type } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
+  const schedulerUsername = user?.username || user?.email || '';
+  const schedulerUserId = user?.id;
+  const schedulerUserType = user?.user_type;
+  const schedulerAdminType = (user as any)?.admin_type;
+  const companyType = (user as any)?.company_type || schedulerAdminType;
+
+  const canScheduleMom = Boolean(
+    user && (
+      schedulerUserType === 'adminuser' ||
+      (schedulerUserType === 'companyuser' && (
+        ['client', 'epc', 'clientuser', 'epcuser', 'contractor'].includes(schedulerAdminType || '') ||
+        (user as any)?.role_type === 'user'
+      ))
+    )
+  );
+
   const { sendNotification } = useNotificationsContext();
   const [submitting, setSubmitting] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
+  const [employeesList, setEmployeesList] = useState<Employee[]>([]);
+  const [users, setUsers] = useState<Employee[]>([]);
+  const [departmentFilters, setDepartmentFilters] = useState<string[]>([]);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [employeesLoaded, setEmployeesLoaded] = useState(false);
+  const [participantsSearch, setParticipantsSearch] = useState('');
   const [selectedDateTime, setSelectedDateTime] = useState<moment.Moment | null>(null);
   const [notificationsSent, setNotificationsSent] = useState<Set<string>>(new Set());
 
-
   const { effectiveTheme } = useTheme();
+  // Use static message API — reliable inside async callbacks
+  const message = antMessage;
 
-  const { message } = App.useApp();
+  const applyEmployeeFilters = (
+    list: Employee[],
+    departments: string[] = departmentFilters,
+    search = participantsSearch
+  ) => {
+    const searchText = search?.trim().toLowerCase() ?? '';
+    const departmentFiltersLower = departments.map((dept) => dept.toLowerCase());
 
-  useEffect(() => {
-    // Only admin users (epc, client) can schedule
-    if (django_user_type !== 'adminuser') {
-        // Or redirect, show error message etc.
-        // For now, just log and disable form implicitly if needed
-        safeLog.warn("User is not an adminuser, cannot schedule MoM");
-    }
-  }, [django_user_type]);
-
-  useEffect(() => {
-    if (selectedDepartments.length > 0) {
-      const fetchUsersByDepartments = async () => {
-        // Check authentication before making API call
-        if (!authGuard.canMakeApiCall()) {
-          console.log('User not authenticated, skipping users fetch');
-          return;
-        }
-
-        setLoadingUsers(true);
-        setUsers([]); // Clear previous users
-        form.setFieldsValue({ participants_ids: [] }); // Clear selected participants
-        try {
-          // Fetch users from all selected departments
-          const allUsers: User[] = [];
-
-          for (const department of selectedDepartments) {
-            try {
-              const response = await api.get(`/api/v1/users/?department_name=${encodeURIComponent(department)}`);
-              if (response.data) {
-                // Handle different response formats
-                const userData = Array.isArray(response.data) ? response.data :
-                                (response.data.results && Array.isArray(response.data.results)) ? response.data.results : [];
-                allUsers.push(...userData);
-              }
-            } catch (error) {
-              safeLog.error(`Failed to load users for department`, { department, error });
-              // Only show error message if user is authenticated
-              if (authGuard.canMakeApiCall()) {
-                message.error(`Failed to load users for department ${department}.`);
-              }
-            }
-          }
-
-          // Remove duplicates based on user ID
-          const uniqueUsers = allUsers.filter((user, index, self) =>
-            index === self.findIndex(u => u.id === user.id)
-          );
-
-          setUsers(uniqueUsers);
-        } catch (error) {
-          // Only show error message if user is authenticated
-          if (authGuard.canMakeApiCall()) {
-            message.error('Failed to load users from selected departments.');
-          }
-          safeLog.error("Users fetch error", error);
-        } finally {
-          setLoadingUsers(false);
-        }
-      };
-      fetchUsersByDepartments();
-    } else {
-      setUsers([]); // Clear users if no departments are selected
-    }
-  }, [selectedDepartments, form, message]);
-
-  const handleDepartmentChange = (values: string[]) => {
-    setSelectedDepartments(values);
+    return list.filter((employee) => {
+      const matchesDepartment =
+        departmentFiltersLower.length === 0 ||
+        departmentFiltersLower.some((filter) =>
+          (employee.department || '').toLowerCase().includes(filter)
+        );
+      const matchesSearch =
+        !searchText ||
+        employee.name.toLowerCase().includes(searchText) ||
+        employee.employee_code.toLowerCase().includes(searchText);
+      return matchesDepartment && matchesSearch;
+    });
   };
+
+  const loadEmployees = async () => {
+    if (employeesLoaded) return;
+    setLoadingEmployees(true);
+    try {
+      const res = await api.get('/api/workforce/employees/participants/');
+      const raw = Array.isArray(res.data) ? res.data : (res.data?.results ?? []);
+
+      console.log('Employees API response:', raw);
+
+      const mapped: Employee[] = raw.map((e: any) => ({
+        id: e.id,
+        name: (e.full_name || e.name || '').trim(),
+        employee_code: String(e.employee_code || e.id).padStart(2, '0'),
+        department:
+          typeof e.department === 'object'
+            ? e.department?.name
+            : e.department || '',
+      }));
+
+      setEmployeesList(mapped);
+      setUsers(applyEmployeeFilters(mapped, departmentFilters, participantsSearch));
+      setEmployeesLoaded(true);
+
+      if (mapped.length === 0) {
+        safeLog.warn('MOM participants: no employees found');
+      }
+    } catch (err: any) {
+      safeLog.error('MOM participants load failed', err);
+      console.error('Participants API error:', err?.response?.status, err?.response?.data);
+      message.error('Could not load participants. Please check your connection.');
+    } finally {
+      setLoadingEmployees(false);
+    }
+  };
+
+  const handleParticipantsDropdownVisibleChange = (open: boolean) => {
+    if (open) {
+      loadEmployees();
+    }
+  };
+
+  const handleParticipantsSearch = (value: string) => {
+    setParticipantsSearch(value);
+    setUsers(applyEmployeeFilters(employeesList, departmentFilters, value));
+  };
+  // ─────────────────────────────────────────────────────────────────────────
 
   // Function to get help text for date/time field
   const getDateTimeHelpText = () => {
@@ -167,7 +200,7 @@ const MomCreationForm: React.FC<MomCreationFormProps> = ({ onFinishSuccess }) =>
       submissionId: currentSubmissionId
     });
 
-    if (django_user_type !== 'adminuser') {
+    if (!canScheduleMom) {
         message.error("You do not have permission to schedule meetings.");
         return;
     }
@@ -182,13 +215,20 @@ const MomCreationForm: React.FC<MomCreationFormProps> = ({ onFinishSuccess }) =>
     
     setSubmitting(true);
     try {
+      // Build clean payload — exclude UI-only fields (departments is a local filter, not a backend field)
       const payload = {
-        ...values,
-        meeting_datetime: values.meeting_datetime ? values.meeting_datetime.toISOString() : null,
-        scheduled_by: schedulerUserId, // Assuming backend expects scheduler's ID
+        title: values.title,
+        agenda: values.agenda,
+        location: values.location,
+        participants_ids: values.participants_ids,
+        // Send as local ISO string so backend timezone comparison is accurate
+        meeting_datetime: values.meeting_datetime
+          ? values.meeting_datetime.format('YYYY-MM-DDTHH:mm:ss')
+          : null,
       };
-      // Replace with your actual endpoint for creating MoM
-      const response = await api.post('/api/v1/mom/schedule/', payload); // Example endpoint
+      console.log('MOM create payload:', payload);
+      const response = await api.post('/api/v1/mom/schedule/', payload);
+      console.log('MOM CREATED:', response.data);
       safeLog.info('MOM created successfully', {
         momId: response.data.id,
         title: response.data.title,
@@ -281,12 +321,11 @@ const MomCreationForm: React.FC<MomCreationFormProps> = ({ onFinishSuccess }) =>
       }
 
       form.resetFields();
-      setSelectedDepartments([]);
-      setUsers([]);
+      setUsers(applyEmployeeFilters(employeesList, departmentFilters, participantsSearch));
       setSelectedDateTime(null);
-      setNotificationsSent(new Set()); // Reset notification tracking
+      setNotificationsSent(new Set());
       if (onFinishSuccess) {
-        onFinishSuccess();
+        onFinishSuccess(response.data);
       }
     } catch (error: any) {
       safeLog.error("MoM Creation error", {
@@ -295,21 +334,19 @@ const MomCreationForm: React.FC<MomCreationFormProps> = ({ onFinishSuccess }) =>
         data: error.response?.data,
         submissionId: currentSubmissionId
       });
-      if (error.response && error.response.data) {
-        // Handle specific backend validation errors if available
-        let errorMsg = 'Failed to schedule meeting.';
-        const errors = error.response.data;
-        if (typeof errors === 'object' && errors !== null) {
-            Object.keys(errors).forEach(key => {
-                errorMsg += ` ${key}: ${Array.isArray(errors[key]) ? errors[key].join(', ') : errors[key]}`;
-            });
-        } else if (typeof errors === 'string') {
-            errorMsg = errors;
-        }
-        message.error(errorMsg);
-      } else {
-        message.error('Failed to schedule meeting. An unexpected error occurred.');
+      console.error('MOM create failed:', error.response?.status, JSON.stringify(error.response?.data));
+      const errors = error.response?.data;
+      let errorMsg = 'Failed to schedule meeting.';
+      if (errors && typeof errors === 'object') {
+        // Surface DRF field-level errors (e.g. participants_ids, meeting_datetime)
+        const fieldErrors = Object.entries(errors)
+          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
+          .join(' | ');
+        if (fieldErrors) errorMsg = fieldErrors;
+      } else if (typeof errors === 'string') {
+        errorMsg = errors;
       }
+      message.error(errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -322,7 +359,7 @@ const MomCreationForm: React.FC<MomCreationFormProps> = ({ onFinishSuccess }) =>
     setSubmitting(false);
   };
 
-  if (django_user_type !== 'adminuser') {
+  if (!canScheduleMom) {
     return (
         <Card className={`theme-card ${effectiveTheme === 'dark' ? 'dark-theme' : 'light-theme'}`}>
             <Title level={4}>Access Denied</Title>
@@ -367,12 +404,6 @@ const MomCreationForm: React.FC<MomCreationFormProps> = ({ onFinishSuccess }) =>
                 return Promise.resolve(); // Let required rule handle empty value
               }
 
-              console.log('Date picker value debug:', {
-                value: value,
-                type: typeof value,
-                isDayjs: value && typeof value.format === 'function',
-                isMoment: value && value._isAMomentObject
-              });
 
               // Handle both dayjs and moment objects
               let selectedTime;
@@ -388,11 +419,6 @@ const MomCreationForm: React.FC<MomCreationFormProps> = ({ onFinishSuccess }) =>
 
               const currentTime = moment();
 
-              console.log('Time validation debug:', {
-                selected: selectedTime.format('YYYY-MM-DD HH:mm:ss'),
-                current: currentTime.format('YYYY-MM-DD HH:mm:ss'),
-                diffMinutes: selectedTime.diff(currentTime, 'minutes', true)
-              });
 
               if (selectedTime.isBefore(currentTime)) {
                 return Promise.reject(new Error('Meeting time cannot be in the past. Please select a future date and time.'));
@@ -477,13 +503,16 @@ const MomCreationForm: React.FC<MomCreationFormProps> = ({ onFinishSuccess }) =>
 
         <Form.Item
           label="Select Departments for Participants"
-          name="departments" // This field is just for triggering user load
-          help="Select one or more departments to load participants from"
+          name="departments"
+          help="Optional: filter participants by department"
         >
           <Select
             mode="multiple"
-            placeholder="Select departments (you can select multiple)"
-            onChange={handleDepartmentChange}
+            placeholder="Filter by department (optional)"
+            onChange={(values: string[]) => {
+              setDepartmentFilters(values);
+              setUsers(applyEmployeeFilters(employeesList, values, participantsSearch));
+            }}
             allowClear
             maxTagCount="responsive"
           >
@@ -496,44 +525,59 @@ const MomCreationForm: React.FC<MomCreationFormProps> = ({ onFinishSuccess }) =>
         </Form.Item>
 
         <Form.Item
-        label="Participants"
-        name="participants_ids"
-        rules={[{ required: true, message: 'Please select at least one participant' }]}
-      >
-        <Select
-          mode="multiple"
-          placeholder="Select participants"
-          loading={loadingUsers}
-          disabled={selectedDepartments.length === 0 || loadingUsers}
-          filterOption={(input, option) =>
-            (option?.children?.toString() ?? '').toLowerCase().includes(input.toLowerCase()) ||
-            (option?.title?.toString() ?? '').toLowerCase().includes(input.toLowerCase())
-          }
+          label={`Participants ${users.length > 0 ? `(${users.length} available)` : ''}`}
+          name="participants_ids"
+          rules={[{ required: true, message: 'Please select at least one participant' }]}
         >
-          {users.map((user) => (
-            <Option key={user.id} value={user.id} title={user.email}>
-              {user.name || user.username} ({user.email})
-            </Option>
-          ))}
-        </Select>
-      </Form.Item>
+          <Select
+            mode="multiple"
+            showSearch
+            placeholder={
+              loadingEmployees
+                ? 'Loading employees...'
+                : 'Search by name or employee code'
+            }
+            loading={loadingEmployees}
+            disabled={loadingEmployees}
+            optionFilterProp="label"
+            filterOption={false}
+            onDropdownVisibleChange={handleParticipantsDropdownVisibleChange}
+            onSearch={handleParticipantsSearch}
+            maxTagCount="responsive"
+            notFoundContent={
+              loadingEmployees ? (
+                <Spin size="small" />
+              ) : employeesList.length === 0 ? (
+                <span style={{ padding: '8px 12px', display: 'block', color: '#999' }}>
+                  No employees found
+                </span>
+              ) : (
+                <span style={{ padding: '8px 12px', display: 'block', color: '#999' }}>
+                  No matching employees
+                </span>
+              )
+            }
+          >
+            {users.map((u) => (
+              <Option key={u.id} value={u.id} label={`${u.name} (${u.employee_code})`}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 500 }}>
+                    {u.name} ({u.employee_code})
+                  </span>
+                </div>
+              </Option>
+            ))}
+          </Select>
+        </Form.Item>
 
-        {/* Show department selection status */}
-        {selectedDepartments.length > 0 && (
-          <div style={{ marginBottom: 16, padding: 12, backgroundColor: 'var(--color-ui-hover)', borderRadius: 6 }}>
-            <Typography.Text type="secondary" style={{ fontSize: '12px' }}>
-              <strong>Selected Departments:</strong> {selectedDepartments.join(', ')}
-              <br />
-              <strong>Available Participants:</strong> {users.length} users loaded
-              {loadingUsers && ' (Loading...)'}
+        {/* Status bar */}
+        {!loadingEmployees && (
+          <div style={{ marginBottom: 16, padding: '8px 12px', backgroundColor: 'var(--color-ui-hover)', borderRadius: 6 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              {employeesList.length > 0
+                ? `✅ ${users.length} participant${users.length !== 1 ? 's' : ''} available`
+                : '⚠️ No employees loaded yet. Open Participants to load your active client employees.'}
             </Typography.Text>
-          </div>
-        )}
-
-        {loadingUsers && (
-          <div style={{ textAlign: 'center', padding: '20px' }}>
-            <Spin size="large" />
-            <div style={{ marginTop: '8px' }}>Loading users from selected departments...</div>
           </div>
         )}
 

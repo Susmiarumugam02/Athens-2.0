@@ -61,7 +61,6 @@ export const LeadsPage: React.FC = () => {
       const response = await crmApi.getLeads(sessionKey!)
       setLeads(response.data.results || response.data)
     } catch (error) {
-      console.error('Error fetching leads:', error)
       toast.error('Failed to fetch leads')
     } finally {
       setLoading(false)
@@ -96,7 +95,6 @@ export const LeadsPage: React.FC = () => {
         )
       )
     } catch (error: any) {
-      console.error('Error converting lead:', error)
       const errorMessage = error.response?.data?.error || 'Failed to convert lead'
       toast.error(errorMessage)
     }
@@ -113,7 +111,6 @@ export const LeadsPage: React.FC = () => {
       toast.success('Lead deleted successfully!')
       fetchLeads()
     } catch (error) {
-      console.error('Error deleting lead:', error)
       toast.error('Failed to delete lead')
     }
   }

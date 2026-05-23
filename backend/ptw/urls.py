@@ -3,6 +3,8 @@ from rest_framework.routers import DefaultRouter
 from . import views
 from .team_members_api import get_users_by_type_and_grade
 from .webhook_views import WebhookEndpointViewSet
+from .risk_assessment import RiskAssessmentViewSet
+from .ai_service import ai_assist
 
 # Create router and register viewsets
 router = DefaultRouter()
@@ -23,6 +25,7 @@ router.register(r'compliance-reports', views.ComplianceReportViewSet)
 router.register(r'isolation-points', views.IsolationPointLibraryViewSet)
 router.register(r'permit-isolation-points', views.PermitIsolationPointViewSet)
 router.register(r'webhooks', WebhookEndpointViewSet, basename='webhook')
+router.register(r'risk-assessments', RiskAssessmentViewSet, basename='risk-assessment')
 
 urlpatterns = [
     # Workflow URLs (must come before router to avoid conflicts)
@@ -36,6 +39,7 @@ urlpatterns = [
     path('qr-scan/<str:qr_code>/', views.qr_scan_permit, name='qr-scan-permit'),
     path('mobile-permit/<int:permit_id>/', views.mobile_permit_view, name='mobile-permit-view'),
     path('team-members/get_users_by_type_and_grade/', get_users_by_type_and_grade, name='get-users-by-type-and-grade'),
+    path('ai/assist/', ai_assist, name='ptw-ai-assist'),
     
     # Online/Offline Status Management
     path('status/update/', views.update_online_status, name='update-online-status'),

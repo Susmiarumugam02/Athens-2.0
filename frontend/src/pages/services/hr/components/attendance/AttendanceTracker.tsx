@@ -68,7 +68,6 @@ const AttendanceTracker: React.FC = () => {
       setRecentAttendance(attendanceRecords)
       
     } catch (error) {
-      console.error('Error fetching attendance data:', error)
       toast.error('Failed to load attendance data')
     } finally {
       setLoading(false)

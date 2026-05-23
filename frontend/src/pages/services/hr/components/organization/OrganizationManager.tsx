@@ -43,7 +43,6 @@ const OrganizationManager: React.FC = () => {
       setDepartments(deptRes.data.results || deptRes.data || [])
       setDesignations(desigRes.data.results || desigRes.data || [])
     } catch (error) {
-      console.error('Error fetching data:', error)
       toast.error('Failed to load data')
     } finally {
       setLoading(false)

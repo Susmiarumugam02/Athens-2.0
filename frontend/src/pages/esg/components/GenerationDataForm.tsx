@@ -45,7 +45,6 @@ const GenerationDataForm: React.FC<GenerationDataFormProps> = ({ onSuccess, init
       form.resetFields();
       onSuccess?.();
     } catch (error) {
-      console.error('Error creating generation data:', error);
       message.error('Failed to record generation data');
     } finally {
       setLoading(false);

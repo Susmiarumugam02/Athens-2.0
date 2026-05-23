@@ -1,34 +1,23 @@
 from rest_framework.response import Response
 from rest_framework import status
-from authentication.tenant_utils import get_tenant_for_user
 
 
 def get_current_tenant(user):
     """
-    Extract tenant from authenticated user using canonical helper.
-    
-    Returns:
-        tuple: (tenant, error_response)
-        - If successful: (Tenant object, None)
-        - If failed: (None, Response object with error)
+    Extract tenant from authenticated user.
+    Always returns (tenant_or_None, error_response_or_None).
+    Never raises — callers decide how to handle missing tenant.
     """
-    # Use canonical tenant helper
-    tenant, error = get_tenant_for_user(user)
-    
-    if error:
-        return None, Response(
-            {"error": error},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    if tenant is None:
-        # SuperAdmin or user without tenant
-        return None, Response(
-            {"error": "User type not supported for tenant operations"},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    return tenant, None
+    from authentication.tenant_utils import get_tenant_for_user
+
+    try:
+        tenant, error = get_tenant_for_user(user)
+        if error:
+            # Don't propagate errors as HTTP responses — return (None, None)
+            return None, None
+        return tenant, None
+    except Exception:
+        return None, None
 
 
 def check_service_admin_permission(user):

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Typography, Spin, List, App } from 'antd';
 import { useParams } from 'react-router-dom';
 import api from '../../../lib/api';
-import { useTheme } // from '../../../contexts/ThemeContext' // DISABLED;
+import { useTheme } from '../../../contexts/ThemeContext';
 import PageLayout from '../../../components/ui/PageLayout';
 
 const { Title, Paragraph } = Typography;
@@ -51,12 +51,12 @@ const MomView: React.FC = () => {
         title="Meeting Details"
         subtitle="View meeting information"
         breadcrumbs={[
-          { title: 'MOM', href: '/dashboard/mom' },
+          { title: 'MOM', href: '/app/mom' },
           { title: 'View Meeting' }
         ]}
       >
         <div className="flex justify-center items-center min-h-64">
-          <Spin tip="Loading meeting details..." size="large" />
+          <Spin description="Loading meeting details..." size="large" />
         </div>
       </PageLayout>
     );
@@ -68,7 +68,7 @@ const MomView: React.FC = () => {
         title="Meeting Details"
         subtitle="Meeting not found"
         breadcrumbs={[
-          { title: 'MOM', href: '/dashboard/mom' },
+          { title: 'MOM', href: '/app/mom' },
           { title: 'View Meeting' }
         ]}
       >
@@ -85,7 +85,7 @@ const MomView: React.FC = () => {
       title={mom.title}
       subtitle="Meeting details and participants"
       breadcrumbs={[
-        { title: 'MOM', href: '/dashboard/mom' },
+        { title: 'MOM', href: '/app/mom' },
         { title: 'View Meeting' }
       ]}
     >

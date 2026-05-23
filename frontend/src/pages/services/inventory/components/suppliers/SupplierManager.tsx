@@ -91,7 +91,6 @@ const SupplierManager: React.FC = () => {
       const response = await inventoryApi.getSuppliers(params);
       setSuppliers(response.results || response);
     } catch (error) {
-      console.error('Failed to load suppliers:', error);
       toast.error('Failed to load suppliers');
     } finally {
       setLoading(false);
@@ -149,7 +148,6 @@ const SupplierManager: React.FC = () => {
       resetForm();
       loadSuppliers();
     } catch (error: any) {
-      console.error('Error saving supplier:', error);
       const message = error.response?.data?.error || 'Failed to save supplier';
       toast.error(message);
     } finally {
@@ -210,7 +208,6 @@ const SupplierManager: React.FC = () => {
         toast.success('Supplier deleted successfully!');
         loadSuppliers();
       } catch (error) {
-        console.error('Failed to delete supplier:', error);
         toast.error('Failed to delete supplier');
       }
     }

@@ -52,7 +52,6 @@ const JobApplication: React.FC = () => {
       const response = await api.get(`/api/hr/public/jobs/${jobId}/`)
       setJob(response.data)
     } catch (error) {
-      console.error('Error fetching job details:', error)
       toast.error('Job not found')
       navigate('/jobs')
     } finally {
@@ -115,7 +114,6 @@ const JobApplication: React.FC = () => {
       toast.success('Application submitted successfully!')
       navigate('/jobs')
     } catch (error: any) {
-      console.error('Error submitting application:', error)
       toast.error(error.response?.data?.detail || 'Failed to submit application')
     } finally {
       setSubmitting(false)

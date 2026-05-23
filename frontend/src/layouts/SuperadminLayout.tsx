@@ -1,17 +1,45 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { 
-  Settings, LogOut, Menu, Bell
+  Settings, LogOut, Menu, Bell, X, CheckCheck
 } from 'lucide-react'
 import { ThemeToggle } from '../components/theme/ThemeToggle'
 import { SapSidebar } from '../components/layout/SapSidebar'
 import { menuByRole } from '../components/layout/menuConfig'
+import { apiClient } from '../lib/api'
 
 const SuperadminLayout: React.FC = () => {
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const [notifications, setNotifications] = useState<any[]>([])
+  const notifRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    apiClient.get('/api/auth/notifications/').then(r => {
+      setNotifications(Array.isArray(r.data) ? r.data : r.data.results || [])
+    }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (!notifOpen) return
+    const handler = (e: MouseEvent) => {
+      if (!notifRef.current?.contains(e.target as Node)) setNotifOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [notifOpen])
+
+  const markAllRead = async () => {
+    const ids = notifications.filter(n => !n.is_read).map(n => n.id)
+    if (!ids.length) return
+    await apiClient.post('/api/auth/notifications/mark-read/', { ids }).catch(() => {})
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+  }
+
+  const unreadCount = notifications.filter(n => !n.is_read).length
 
   const sidebarItems = menuByRole.superadmin()
 
@@ -54,10 +82,33 @@ const SuperadminLayout: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <button className="p-2 text-muted-foreground hover:bg-accent/50 rounded-full transition-all relative">
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1 right-1 h-2 w-2 bg-destructive rounded-full" />
-            </button>
+            <div className="relative" ref={notifRef}>
+              <button onClick={() => setNotifOpen(o => !o)} className="p-2 text-muted-foreground hover:bg-accent/50 rounded-full transition-all relative">
+                <Bell className="w-4 h-4" />
+                {unreadCount > 0 && <span className="absolute top-1 right-1 h-2 w-2 bg-destructive rounded-full" />}
+              </button>
+              {notifOpen && (
+                <div className="absolute right-0 top-full mt-2 w-80 bg-background border border-border rounded-xl shadow-xl z-50 overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                    <span className="font-semibold text-sm">Notifications {unreadCount > 0 && <span className="ml-1 text-xs bg-destructive text-white rounded-full px-1.5">{unreadCount}</span>}</span>
+                    <div className="flex items-center gap-2">
+                      {unreadCount > 0 && <button onClick={markAllRead} className="text-xs text-primary hover:underline flex items-center gap-1"><CheckCheck className="w-3 h-3" />Mark all read</button>}
+                      <button onClick={() => setNotifOpen(false)}><X className="w-4 h-4 text-muted-foreground" /></button>
+                    </div>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto divide-y divide-border">
+                    {notifications.length === 0 ? (
+                      <div className="py-8 text-center text-sm text-muted-foreground">No notifications</div>
+                    ) : notifications.map(n => (
+                      <div key={n.id} className={`px-4 py-3 text-sm ${!n.is_read ? 'bg-primary/5' : ''}`}>
+                        <div className="font-medium text-foreground">{n.title}</div>
+                        <div className="text-muted-foreground text-xs mt-0.5">{n.message}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             <Link
               to="/superadmin/settings"
               className="p-2 text-muted-foreground hover:bg-accent/50 rounded-full transition-all relative"

@@ -34,7 +34,6 @@ const InterviewsList: React.FC = () => {
       })
       setInterviews(response.data.results || [])
     } catch (error) {
-      console.error('Error fetching interviews:', error)
       toast.error('Failed to load interviews')
     } finally {
       setLoading(false)
@@ -53,7 +52,6 @@ const InterviewsList: React.FC = () => {
       toast.success('Interview marked as completed')
       fetchInterviews()
     } catch (error) {
-      console.error('Error marking interview completed:', error)
       toast.error('Failed to mark interview as completed')
     }
   }
@@ -79,7 +77,6 @@ const InterviewsList: React.FC = () => {
       toast.success(`Candidate ${result} successfully`)
       fetchInterviews()
     } catch (error) {
-      console.error('Error updating interview result:', error)
       toast.error('Failed to update interview result')
     }
   }
@@ -99,7 +96,6 @@ const InterviewsList: React.FC = () => {
       })
       setApplications(response.data.results || [])
     } catch (error) {
-      console.error('Error fetching applications:', error)
     }
   }
 

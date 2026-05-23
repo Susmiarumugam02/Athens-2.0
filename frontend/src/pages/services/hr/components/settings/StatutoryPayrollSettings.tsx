@@ -83,7 +83,6 @@ const StatutoryPayrollSettings: React.FC = () => {
         setSettings(response.data.results[0])
       }
     } catch (error) {
-      console.error('Error fetching settings:', error)
     } finally {
       setLoading(false)
     }
@@ -102,7 +101,6 @@ const StatutoryPayrollSettings: React.FC = () => {
       })
       toast.success('Statutory & Payroll settings saved successfully')
     } catch (error) {
-      console.error('Error saving settings:', error)
       toast.error('Failed to save settings')
     } finally {
       setSaving(false)

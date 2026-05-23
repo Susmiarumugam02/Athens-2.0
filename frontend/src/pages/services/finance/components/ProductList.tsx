@@ -76,7 +76,6 @@ const ProductList: React.FC<ProductListProps> = ({
       setLoading(true)
 
       if (!sessionKey) {
-        console.error('No session key available')
         setProducts([])
         setTotalCount(0)
         setHasNext(false)
@@ -95,12 +94,9 @@ const ProductList: React.FC<ProductListProps> = ({
       params.append('page', currentPage.toString())
       params.append('page_size', pageSize.toString())
 
-      console.log('🔍 DEBUG: Fetching products with session key:', sessionKey.substring(0, 10) + '...')
-      console.log('🔍 DEBUG: API URL:', `/api/finance/products/?${params.toString()}`)
 
       const response = await apiClient.getFinanceProducts(Object.fromEntries(params))
 
-      console.log('🔍 DEBUG: Products API response:', response.data)
       const data: PaginatedResponse = response.data
 
       setProducts(data.results || [])
@@ -108,8 +104,6 @@ const ProductList: React.FC<ProductListProps> = ({
       setHasNext(!!data.next)
       setHasPrevious(!!data.previous)
     } catch (error: any) {
-      console.error('Error fetching products:', error)
-      console.error('Error response:', error.response?.data)
       setProducts([])
       setTotalCount(0)
       setHasNext(false)
@@ -131,8 +125,6 @@ const ProductList: React.FC<ProductListProps> = ({
       await apiClient.deleteFinanceProduct(productId, { session_key: sessionKey })
       fetchProducts() // Refresh the list
     } catch (error: any) {
-      console.error('Error deleting product:', error)
-      console.error('Error response:', error.response?.data)
       alert('Failed to delete product: ' + (error.response?.data?.error || error.message))
     }
   }

@@ -2,7 +2,7 @@ import React from 'react'
 import { Modal } from '../ui/Modal'
 import { Badge } from '../ui/Badge'
 import { Building, Mail, Phone, Globe, Clock, Calendar } from 'lucide-react'
-import { Tenant } from '../../services/controlPlaneService'
+import type { Tenant } from '../../services/controlPlaneService'
 
 interface ViewTenantModalProps {
   open: boolean

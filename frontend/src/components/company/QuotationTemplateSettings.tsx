@@ -38,7 +38,6 @@ const QuotationTemplateSettings: React.FC = () => {
         throw new Error('Invalid response format');
       }
     } catch (error) {
-      console.error('Error fetching template info:', error);
       // Set default templates if API fails
       setTemplates([
         {
@@ -76,7 +75,6 @@ const QuotationTemplateSettings: React.FC = () => {
         setCurrentSettings({ selected_template: 'AS' });
       }
     } catch (error) {
-      console.error('Error fetching settings:', error);
       // Set default settings on error
       setCurrentSettings({ selected_template: 'AS' });
     } finally {
@@ -98,7 +96,6 @@ const QuotationTemplateSettings: React.FC = () => {
         throw new Error(response.data.message || 'Failed to update template');
       }
     } catch (error: any) {
-      console.error('Error updating template:', error);
       const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Error updating template';
       toast.error(errorMessage);
     }
@@ -115,7 +112,6 @@ const QuotationTemplateSettings: React.FC = () => {
         newWindow.document.close();
       }
     } catch (error: any) {
-      console.error('Error loading preview:', error);
       const errorMessage = error.response?.data?.message || 'Error loading preview';
       toast.error(errorMessage);
     }

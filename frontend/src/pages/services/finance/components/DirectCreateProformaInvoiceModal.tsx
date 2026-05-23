@@ -86,7 +86,6 @@ const DirectCreateProformaInvoiceModal: React.FC<DirectCreateProformaInvoiceModa
       const response = await apiClient.getFinanceCustomers({ session_key: sessionKey })
       setCustomers(response.data.results || [])
     } catch (error) {
-      console.error('Error fetching customers:', error)
       toast.error('Failed to fetch customers')
     }
   }
@@ -96,7 +95,6 @@ const DirectCreateProformaInvoiceModal: React.FC<DirectCreateProformaInvoiceModa
       const response = await apiClient.getFinanceProducts({ session_key: sessionKey })
       setProducts(response.data.results || [])
     } catch (error) {
-      console.error('Error fetching products:', error)
       toast.error('Failed to fetch products')
     }
   }
@@ -196,7 +194,6 @@ const DirectCreateProformaInvoiceModal: React.FC<DirectCreateProformaInvoiceModa
       onSuccess()
       onClose()
     } catch (error) {
-      console.error('Error creating proforma invoice:', error)
       toast.error('Failed to create proforma invoice')
     } finally {
       setLoading(false)

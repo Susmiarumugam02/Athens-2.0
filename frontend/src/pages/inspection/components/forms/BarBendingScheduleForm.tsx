@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Input, Table, Typography, Form, Row, Col, Button, message } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { SaveOutlined, DownloadOutlined } from "@ant-design/icons";
-import PageLayout from '../../../components/ui/PageLayout';
+import PageLayout from '../../../../components/ui/PageLayout';
 import { inspectionService } from '../../services/inspectionService';
 
 const { Title } = Typography;
@@ -96,7 +96,7 @@ export default function BarBendingScheduleForm() {
         await inspectionService.createBarBendingScheduleForm(formData);
         message.success('Form created successfully');
       }
-      navigate('/inspection/bar-bending-schedule-forms');
+      navigate('/dashboard/inspection/forms/bar-bending-schedule/list');
     } catch (error) {
       message.error('Failed to save form');
     } finally {

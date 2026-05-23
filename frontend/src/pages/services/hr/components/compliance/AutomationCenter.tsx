@@ -46,7 +46,6 @@ const AutomationCenter: React.FC = () => {
       })
       setScheduledTasks(response.data || [])
     } catch (error) {
-      console.error('Error fetching scheduled tasks:', error)
       toast.error('Failed to fetch scheduled tasks')
     }
   }
@@ -108,7 +107,6 @@ const AutomationCenter: React.FC = () => {
         setTimeout(() => monitorTaskStatus(taskId), 2000)
       }
     } catch (error) {
-      console.error('Error monitoring task status:', error)
     }
   }
 

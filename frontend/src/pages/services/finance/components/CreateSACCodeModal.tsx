@@ -80,7 +80,6 @@ const CreateSACCodeModal: React.FC<CreateSACCodeModalProps> = ({
       })
       setErrors({})
     } catch (error: any) {
-      console.error('Error creating SAC code:', error)
       if (error.response?.data) {
         const serverErrors: Record<string, string> = {}
         Object.keys(error.response.data).forEach(key => {

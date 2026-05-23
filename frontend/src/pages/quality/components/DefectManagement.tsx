@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Tag, Button, Modal, Form, Input, Select, Space, App, InputNumber, DatePicker } from 'antd';
+import { Card, Table, Tag, Button, Modal, Form, Input, Select, Space, InputNumber, DatePicker, Upload, Row, Col, Switch, Divider, Timeline, Progress, AutoComplete } from 'antd';
 import { PlusOutlined, CheckCircleOutlined, EyeOutlined } from '@ant-design/icons';
+import toast from 'react-hot-toast';
 import { getQualityDefects, createQualityDefect, resolveDefect, getQualityInspections } from '../api';
 import PageLayout from '../../../components/ui/PageLayout';
 
 const DefectManagement: React.FC = () => {
-  const { message } = App.useApp();
   const [defects, setDefects] = useState([]);
   const [inspections, setInspections] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -24,7 +24,6 @@ const DefectManagement: React.FC = () => {
       const { data } = await getQualityInspections();
       setInspections(data?.results || data || []);
     } catch (error) {
-      console.error('Failed to load inspections:', error);
     }
   };
 
@@ -34,12 +33,11 @@ const DefectManagement: React.FC = () => {
       const { data } = await getQualityDefects();
       setDefects(data?.results || data || []);
     } catch (error: any) {
-      console.error('Failed to load defects:', error);
       if (error.response?.status === 401) {
         // Don't handle 401 here, let axios interceptor handle it
         return;
       }
-      message.error('UpatePro: Failed to load defects');
+      toast.error('Failed to load defects');
       setDefects([]);
     } finally {
       setLoading(false);
@@ -49,22 +47,22 @@ const DefectManagement: React.FC = () => {
   const handleCreateDefect = async (values: any) => {
     try {
       await createQualityDefect(values);
-      message.success('UpatePro: Quality defect created successfully');
+      toast.success('Quality defect created successfully');
       setModalVisible(false);
       form.resetFields();
       loadDefects();
     } catch (error: any) {
-      message.error('UpatePro: Failed to create defect');
+      toast.error('Failed to create defect');
     }
   };
 
   const handleResolveDefect = async (id: number) => {
     try {
       await resolveDefect(id);
-      message.success('UpatePro: Quality defect resolved successfully');
+      toast.success('Quality defect resolved successfully');
       loadDefects();
     } catch (error: any) {
-      message.error('UpatePro: Failed to resolve defect');
+      toast.error('Failed to resolve defect');
     }
   };
 
@@ -78,79 +76,22 @@ const DefectManagement: React.FC = () => {
   };
 
   const columns = [
-    {
-      title: 'Defect Code',
-      dataIndex: 'defect_code',
-      key: 'defect_code'
-    },
-    {
-      title: 'Category',
-      dataIndex: 'category',
-      key: 'category',
-      render: (category: string) => (
-        <Tag>{category?.replace('_', ' ').toUpperCase()}</Tag>
-      )
-    },
-    {
-      title: 'Description',
-      dataIndex: 'description',
-      key: 'description',
-      ellipsis: true
-    },
-    {
-      title: 'Severity',
-      dataIndex: 'severity',
-      key: 'severity',
-      render: (severity: string) => (
-        <Tag color={getSeverityColor(severity)}>
-          {severity?.toUpperCase()}
-        </Tag>
-      )
-    },
-    {
-      title: 'Cost Impact',
-      dataIndex: 'cost_impact',
-      key: 'cost_impact',
-      render: (cost: number) => cost ? `$${cost.toLocaleString()}` : '-'
-    },
-    {
-      title: 'Status',
-      dataIndex: 'is_resolved',
-      key: 'is_resolved',
-      render: (resolved: boolean) => (
-        <Tag color={resolved ? 'green' : 'orange'}>
-          {resolved ? 'Resolved' : 'Open'}
-        </Tag>
-      )
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      render: (_: any, record: any) => (
-        <Space>
-          <Button
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => {
-              setSelectedDefect(record);
-              setViewModalVisible(true);
-            }}
-          >
-            View
-          </Button>
-          {!record.is_resolved && (
-            <Button
-              size="small"
-              type="primary"
-              icon={<CheckCircleOutlined />}
-              onClick={() => handleResolveDefect(record.id)}
-            >
-              Resolve
-            </Button>
-          )}
-        </Space>
-      )
-    }
+    { title: 'Finding ID', dataIndex: 'defect_code', key: 'defect_code', render: (v: any, r: any) => v || r.id },
+    { title: 'Finding Title', dataIndex: 'title', key: 'title', render: (_: any, r: any) => r.defect_title || r.title || r.description?.slice(0, 80) },
+    { title: 'Category', dataIndex: 'category', key: 'category', render: (category: string) => <Tag>{(category || '').replace('_', ' ').toUpperCase()}</Tag> },
+    { title: 'Department', dataIndex: 'department', key: 'department' },
+    { title: 'Severity', dataIndex: 'severity', key: 'severity', render: (severity: string) => <Tag color={getSeverityColor(severity)}>{(severity || '').toUpperCase()}</Tag> },
+    { title: 'Risk Level', dataIndex: 'risk_level', key: 'risk_level' },
+    { title: 'Assigned To', dataIndex: 'assigned_to', key: 'assigned_to' },
+    { title: 'Due Date', dataIndex: 'due_date', key: 'due_date', render: (v: string) => v ? new Date(v).toLocaleDateString() : '-' },
+    { title: 'Status', dataIndex: 'status', key: 'status', render: (s: string) => <Tag color={s === 'closed' ? 'green' : 'orange'}>{String(s).replace(/_/g, ' ').toUpperCase()}</Tag> },
+    { title: 'Progress', dataIndex: 'progress', key: 'progress', render: (p: number) => <Progress percent={Number(p) || 0} size="small" /> },
+    { title: 'Actions', key: 'actions', render: (_: any, record: any) => (
+      <Space>
+        <Button size="small" icon={<EyeOutlined />} onClick={() => { setSelectedDefect(record); setViewModalVisible(true); }}>View</Button>
+        {!record.is_resolved && <Button size="small" type="primary" icon={<CheckCircleOutlined />} onClick={() => handleResolveDefect(record.id)}>Resolve</Button>}
+      </Space>
+    ) }
   ];
 
   return (
@@ -180,104 +121,93 @@ const DefectManagement: React.FC = () => {
       </Card>
 
       <Modal
-        title="Create New Defect"
+        title="Quality Findings & Corrective Actions"
         open={modalVisible}
         onCancel={() => setModalVisible(false)}
         footer={null}
+        width={1200}
+        destroyOnClose
       >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleCreateDefect}
-        >
-          <Form.Item
-            label="Inspection"
-            name="inspection"
-            rules={[{ required: true, message: 'Please select inspection' }]}
-          >
-            <Select 
-              placeholder="Select inspection"
-              showSearch
-              optionFilterProp="children"
-            >
-              {inspections.map((inspection: any) => (
-                <Select.Option key={inspection.id} value={inspection.id}>
-                  {inspection.inspection_id?.slice(0, 8)} - {inspection.component_type} ({inspection.reference_number})
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
+        <Form form={form} layout="vertical" onFinish={handleCreateDefect} initialValues={{ priority: 'normal', severity: 'minor', status: 'draft' }}>
+          <Card style={{ marginBottom: 16 }}>
+            <Row gutter={16}>
+              <Col xs={24} sm={12} md={8}><Form.Item label="Finding ID" name="defect_code"><Input disabled placeholder="Auto-generated" /></Form.Item></Col>
+              <Col xs={24} sm={12} md={8}><Form.Item label="Inspection Reference" name="inspection"><Select placeholder="Select inspection" showSearch optionFilterProp="children">{inspections.map((ins: any) => <Select.Option key={ins.id} value={ins.id}>{ins.inspection_id?.slice(0,8)} - {ins.reference_number}</Select.Option>)}</Select></Form.Item></Col>
+              <Col xs={24} sm={24} md={8}><Form.Item label="Audit Type" name="audit_type"><Select placeholder="Audit type"><Select.Option value="internal">Internal</Select.Option><Select.Option value="external">External</Select.Option><Select.Option value="customer">Customer</Select.Option></Select></Form.Item></Col>
+            </Row>
+            <Row gutter={16}>
+              <Col xs={24} sm={12} md={8}><Form.Item label="Finding Category" name="category" rules={[{ required: true }]}><AutoComplete options={[{value:'Dimensional'},{value:'Visual'},{value:'Material'},{value:'Functional'}]} /></Form.Item></Col>
+              <Col xs={24} sm={12} md={8}><Form.Item label="Department" name="department"><AutoComplete options={[{value:'Quality'},{value:'Production'},{value:'Maintenance'}]} /></Form.Item></Col>
+              <Col xs={24} sm={12} md={8}><Form.Item label="Location" name="location"><Input placeholder="Work location" /></Form.Item></Col>
+            </Row>
+            <Row gutter={16}>
+              <Col xs={24} sm={12} md={8}><Form.Item label="Observation Date & Time" name="observation_datetime"><DatePicker showTime style={{ width: '100%' }} /></Form.Item></Col>
+              <Col xs={24} sm={12} md={8}><Form.Item label="Reported By" name="reported_by"><Input placeholder="Inspector name" /></Form.Item></Col>
+              <Col xs={24} sm={12} md={8}><Form.Item label="Assigned To" name="assigned_to"><Input placeholder="Engineer or user" /></Form.Item></Col>
+            </Row>
+            <Row gutter={16}>
+              <Col xs={24} sm={12} md={8}><Form.Item label="Priority Level" name="priority"><Select><Select.Option value="low">Low</Select.Option><Select.Option value="normal">Normal</Select.Option><Select.Option value="high">High</Select.Option><Select.Option value="urgent">Urgent</Select.Option></Select></Form.Item></Col>
+              <Col xs={24} sm={12} md={8}><Form.Item label="Severity Level" name="severity"><Select><Select.Option value="minor">Minor</Select.Option><Select.Option value="major">Major</Select.Option><Select.Option value="critical">Critical</Select.Option></Select></Form.Item></Col>
+            </Row>
+          </Card>
 
-          <Form.Item
-            label="Defect Code"
-            name="defect_code"
-            rules={[{ required: true, message: 'Please enter defect code' }]}
-          >
-            <Input placeholder="Enter defect code" />
-          </Form.Item>
+          <Card title="Quality Finding" style={{ marginBottom: 16 }}>
+            <Row gutter={16}>
+              <Col xs={24} md={8}>
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <Button onClick={() => {/* AI suggest placeholder */}}>AI Smart Suggestion</Button>
+                  <Button onClick={() => {/* voice placeholder */}}>Voice Input</Button>
+                </Space>
+              </Col>
+              <Col xs={24} md={16}>
+                <Form.Item label="Finding Title" name="defect_title" rules={[{ required: true }]}><Input /></Form.Item>
+                <Form.Item label="Detailed Observation" name="description"><Input.TextArea rows={4} /></Form.Item>
+                <Row gutter={16}>
+                  <Col xs={24} md={12}><Form.Item label="Root Cause Analysis" name="root_cause"><Input.TextArea rows={3} /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item label="Impact Analysis" name="impact_analysis"><Input.TextArea rows={3} /></Form.Item></Col>
+                </Row>
+                <Row gutter={16}>
+                  <Col xs={24} md={12}><Form.Item label="Risk Level" name="risk_level"><Select><Select.Option value="low">Low</Select.Option><Select.Option value="medium">Medium</Select.Option><Select.Option value="high">High</Select.Option></Select></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item label="Compliance Reference" name="compliance_reference"><Input /></Form.Item></Col>
+                </Row>
+              </Col>
+            </Row>
+          </Card>
 
-          <Form.Item
-            label="Description"
-            name="description"
-            rules={[{ required: true, message: 'Please enter description' }]}
-          >
-            <Input.TextArea rows={3} placeholder="Enter defect description" />
-          </Form.Item>
+          <Card title="Evidence Management" style={{ marginBottom: 16 }}>
+            <Upload.Dragger multiple beforeUpload={() => false} accept="image/*,video/*,application/pdf">
+              <p className="ant-upload-drag-icon">Drag files here or click to upload</p>
+              <p className="ant-upload-text">Upload images, videos or documents (before/after evidence supported)</p>
+            </Upload.Dragger>
+          </Card>
 
-          <Form.Item
-            label="Category"
-            name="category"
-            rules={[{ required: true, message: 'Please select category' }]}
-          >
-            <Select placeholder="Select category">
-              <Select.Option value="dimensional">Dimensional</Select.Option>
-              <Select.Option value="visual">Visual</Select.Option>
-              <Select.Option value="material">Material</Select.Option>
-              <Select.Option value="functional">Functional</Select.Option>
-              <Select.Option value="packaging">Packaging</Select.Option>
-              <Select.Option value="documentation">Documentation</Select.Option>
-            </Select>
-          </Form.Item>
+          <Card title="Corrective Actions" style={{ marginBottom: 16 }}>
+            <Row gutter={16}>
+              <Col xs={24} md={12}><Form.Item label="Corrective Action Required" name="corrective_action"><Input.TextArea rows={3} /></Form.Item></Col>
+              <Col xs={24} md={12}><Form.Item label="Preventive Action" name="preventive_action"><Input.TextArea rows={3} /></Form.Item></Col>
+            </Row>
+            <Row gutter={16}>
+              <Col xs={24} sm={12} md={8}><Form.Item label="Responsible Person" name="responsible_person"><Input /></Form.Item></Col>
+              <Col xs={24} sm={12} md={8}><Form.Item label="Target Completion Date" name="due_date"><DatePicker style={{ width: '100%' }} /></Form.Item></Col>
+              <Col xs={24} sm={12} md={8}><Form.Item label="Verification Method" name="verification_method"><Input /></Form.Item></Col>
+            </Row>
+            <Row gutter={16}>
+              <Col xs={24} md={8}><Form.Item label="Closure Criteria" name="closure_criteria"><Input /></Form.Item></Col>
+              <Col xs={24} md={8}><Form.Item label="Escalation Level" name="escalation_level"><Select><Select.Option value="none">None</Select.Option><Select.Option value="manager">Manager</Select.Option><Select.Option value="safety">Safety</Select.Option></Select></Form.Item></Col>
+            </Row>
+          </Card>
 
-          <Form.Item
-            label="Severity"
-            name="severity"
-            rules={[{ required: true, message: 'Please select severity' }]}
-          >
-            <Select placeholder="Select severity">
-              <Select.Option value="minor">Minor</Select.Option>
-              <Select.Option value="major">Major</Select.Option>
-              <Select.Option value="critical">Critical</Select.Option>
-            </Select>
-          </Form.Item>
+          <Card title="Approval Workflow" style={{ marginBottom: 16 }}>
+            <Row gutter={16}>
+              <Col xs={24} md={8}><Form.Item label="Status" name="status"><Select><Select.Option value="draft">Draft</Select.Option><Select.Option value="under_review">Under Review</Select.Option><Select.Option value="approved">Approved</Select.Option><Select.Option value="rejected">Rejected</Select.Option><Select.Option value="closed">Closed</Select.Option></Select></Form.Item></Col>
+              <Col xs={24} md={16}><Form.Item label="Reviewer Comments" name="reviewer_comments"><Input.TextArea rows={3} /></Form.Item></Col>
+            </Row>
+          </Card>
 
-          <Form.Item
-            label="Cost Impact ($)"
-            name="cost_impact"
-          >
-            <InputNumber 
-              placeholder="Enter cost impact" 
-              style={{ width: '100%' }}
-              min={0}
-              formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={value => value!.replace(/\$\s?|(,*)/g, '')}
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="Location Details"
-            name="location_details"
-          >
-            <Input placeholder="Enter location details" />
-          </Form.Item>
-
-          <div className="flex justify-end gap-2">
-            <Button onClick={() => setModalVisible(false)}>
-              Cancel
-            </Button>
-            <Button type="primary" htmlType="submit">
-              Create Defect
-            </Button>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => { form.submit(); }}>Save Draft</Button>
+            <Button onClick={() => setModalVisible(false)}>Cancel</Button>
+            <Button type="primary" htmlType="submit">Submit Finding</Button>
           </div>
         </Form>
       </Modal>

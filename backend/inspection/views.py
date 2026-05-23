@@ -7,12 +7,28 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-from .models import Inspection, InspectionItem, InspectionReport
-from .serializers import InspectionSerializer, InspectionItemSerializer, InspectionReportSerializer
+from .models import Inspection, InspectionItem, InspectionReport, InspectionTemplate
+from .serializers import InspectionSerializer, InspectionItemSerializer, InspectionReportSerializer, InspectionTemplateSerializer
 from authentication.tenant_scoped import TenantScopedViewSet, TenantScopedReadOnlyViewSet
 from authentication.tenant_scoped_utils import ensure_tenant_context, ensure_project, enforce_collaboration_read_only
 
 User = get_user_model()
+
+class InspectionTemplateViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only viewset for inspection templates. Writable only via management command."""
+    serializer_class = InspectionTemplateSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = InspectionTemplate.objects.filter(is_active=True)
+        category = self.request.query_params.get('category')
+        if category:
+            qs = qs.filter(category=category)
+        sample_only = self.request.query_params.get('sample')
+        if sample_only == 'true':
+            qs = qs.filter(is_sample=True)
+        return qs
+
 
 class InspectionViewSet(TenantScopedViewSet):
     serializer_class = InspectionSerializer

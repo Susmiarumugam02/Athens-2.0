@@ -17,7 +17,6 @@ class AthensAdminUsersErrorBoundary extends React.Component<{}, ErrorBoundarySta
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Athens Employees Error:', error, errorInfo)
   }
 
   render() {

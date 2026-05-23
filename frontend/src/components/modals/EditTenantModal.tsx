@@ -4,7 +4,8 @@ import { AppDialog, AppDialogHeader, AppDialogTitle, AppDialogBody, AppDialogFoo
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
 import toast from 'react-hot-toast'
-import { controlPlaneService, Tenant } from '../../services/controlPlaneService'
+import { controlPlaneService } from '../../services/controlPlaneService'
+import type { Tenant } from '../../services/controlPlaneService'
 
 interface EditTenantModalProps {
   open: boolean

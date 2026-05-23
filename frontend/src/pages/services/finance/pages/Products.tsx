@@ -93,7 +93,6 @@ const Products: React.FC = () => {
       
       setMetrics({ total, products: productCount, services, avgSellingPrice })
     } catch (error) {
-      console.error('Error fetching product metrics:', error)
     }
   }
 

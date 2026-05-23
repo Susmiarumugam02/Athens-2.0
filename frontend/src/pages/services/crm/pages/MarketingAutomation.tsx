@@ -58,7 +58,6 @@ export const MarketingAutomation: React.FC = () => {
       setTemplates(templatesRes.data.results || templatesRes.data)
       setWorkflows(workflowsRes.data.results || workflowsRes.data)
     } catch (error) {
-      console.error('Error loading data:', error)
     } finally {
       setLoading(false)
     }
@@ -69,7 +68,6 @@ export const MarketingAutomation: React.FC = () => {
       await crmApi.launchMarketingCampaign(sessionKey!, campaignId)
       loadData()
     } catch (error) {
-      console.error('Error launching campaign:', error)
     }
   }
 
@@ -78,7 +76,6 @@ export const MarketingAutomation: React.FC = () => {
       await crmApi.pauseMarketingCampaign(sessionKey!, campaignId)
       loadData()
     } catch (error) {
-      console.error('Error pausing campaign:', error)
     }
   }
 

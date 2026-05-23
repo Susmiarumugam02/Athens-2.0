@@ -109,12 +109,10 @@ const SimpleTaxInvoiceForm: React.FC<SimpleTaxInvoiceFormProps> = ({
     e.preventDefault()
     
     if (loading) {
-      console.log('⚠️ Form already submitting, preventing double submission')
       return // Prevent double submission
     }
     
     setLoading(true)
-    console.log('🚀 Starting tax invoice creation...')
 
     try {
       // Validate that at least some items are selected
@@ -182,8 +180,6 @@ const SimpleTaxInvoiceForm: React.FC<SimpleTaxInvoiceFormProps> = ({
       toast.success(editingInvoice ? 'Tax Invoice updated successfully!' : 'Tax Invoice created successfully!')
       onSuccess()
     } catch (error: any) {
-      console.error('Error creating invoice:', error)
-      console.log('Data sent:', JSON.stringify(invoiceData))
       toast.error('Failed to create tax invoice')
     } finally {
       setLoading(false)

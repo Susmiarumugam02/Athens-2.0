@@ -169,7 +169,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ employee, onClose, onSave }
           !employee.profile_picture.includes('svg')) {
         profileUrl = employee.profile_picture.startsWith('http') 
           ? employee.profile_picture 
-          : `http://localhost:8000${employee.profile_picture}`
+          : `${import.meta.env.VITE_API_URL || ''}${employee.profile_picture}`
       }
       
       if (employee.face_photo && 
@@ -179,7 +179,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ employee, onClose, onSave }
           !employee.face_photo.includes('svg')) {
         faceUrl = employee.face_photo.startsWith('http') 
           ? employee.face_photo 
-          : `http://localhost:8000${employee.face_photo}`
+          : `${import.meta.env.VITE_API_URL || ''}${employee.face_photo}`
       }
       
       setProfilePreview(profileUrl)
@@ -258,7 +258,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ employee, onClose, onSave }
   const faceFileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    console.log('Session key changed:', sessionKey)
     if (sessionKey) {
       fetchDropdownData()
     }
@@ -275,7 +274,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ employee, onClose, onSave }
 
     setLoadingDropdowns(true)
     try {
-      console.log('Fetching dropdown data with session key:', sessionKey)
       const [deptResponse] = await Promise.all([
         api.get('/api/hr/dropdown/departments/', {
           headers: { Authorization: `Bearer ${sessionKey}` },
@@ -284,12 +282,9 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ employee, onClose, onSave }
 
       ])
 
-      console.log('Departments response:', deptResponse.data)
       
       setDepartments(Array.isArray(deptResponse.data) ? deptResponse.data : [])
     } catch (error) {
-      console.error('Error fetching dropdown data:', error)
-      console.error('Error details:', (error as any).response?.data)
       toast.error('Failed to load form data')
     } finally {
       setLoadingDropdowns(false)
@@ -300,15 +295,12 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ employee, onClose, onSave }
     if (!sessionKey) return
 
     try {
-      console.log('Fetching designations for department:', departmentId)
       const response = await api.get('/api/hr/dropdown/designations/', {
         headers: { Authorization: `Bearer ${sessionKey}` },
         params: { department_id: departmentId, session_key: sessionKey }
       })
-      console.log('Designations response:', response.data)
       setDesignations(Array.isArray(response.data) ? response.data : [])
     } catch (error) {
-      console.error('Error fetching designations:', error)
     }
   }
 
@@ -413,7 +405,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ employee, onClose, onSave }
       onSave(response.data)
       onClose()
     } catch (error: any) {
-      console.error('Error saving employee:', error)
       if (error.response?.data) {
         const serverErrors = error.response.data
         if (typeof serverErrors === 'object') {
@@ -494,17 +485,14 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ employee, onClose, onSave }
   }
 
   const startCamera = async () => {
-    console.log('Starting camera...')
     
     try {
       // Check if camera is available
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        console.error('Camera not supported')
         toast.error('Camera not supported in this browser')
         return
       }
 
-      console.log('Requesting camera access...')
       
       // Show camera modal first
       setShowCamera(true)
@@ -518,23 +506,18 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ employee, onClose, onSave }
         audio: false
       })
       
-      console.log('Camera access granted, stream:', stream)
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         
         // Wait for video to load and play
         videoRef.current.onloadedmetadata = () => {
-          console.log('Video metadata loaded')
           videoRef.current?.play().then(() => {
-            console.log('Video playing successfully')
           }).catch(err => {
-            console.error('Error playing video:', err)
           })
         }
       }
     } catch (error: any) {
-      console.error('Error accessing camera:', error)
       setShowCamera(false) // Hide modal on error
       
       let errorMessage = 'Unable to access camera. '

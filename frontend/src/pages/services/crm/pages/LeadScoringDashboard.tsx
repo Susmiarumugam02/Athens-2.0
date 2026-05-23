@@ -35,7 +35,6 @@ const LeadScoringDashboard: React.FC = () => {
       setTopLeads(topLeadsRes.data.results || topLeadsRes.data || [])
       
     } catch (error) {
-      console.error('Error fetching dashboard data:', error)
       setError('Failed to load dashboard data')
       toast.error('Failed to load dashboard data')
     } finally {
@@ -50,7 +49,6 @@ const LeadScoringDashboard: React.FC = () => {
       toast.success('Calculated scores for leads')
       fetchDashboardData()
     } catch (error) {
-      console.error('Error calculating scores:', error)
       toast.error('Failed to calculate scores')
     } finally {
       setCalculating(false)

@@ -154,7 +154,6 @@ const MonthlyForms: React.FC = () => {
       
       toast.success('PDF exported successfully!')
     } catch (error: any) {
-      console.error('PDF Export Error:', error)
       toast.error(error.response?.data?.error || 'Failed to export PDF')
     }
   }

@@ -4,25 +4,31 @@ export const ergonApi = {
   // Daily Planner
   getDailyTasks: (date: string) => apiClient.get('/api/ergon/daily-planner/', { params: { date } }),
   createDailyTask: (data: any) => apiClient.post('/api/ergon/daily-planner/', data),
-  startTask: (id: string) => apiClient.post(`/api/ergon/daily-planner/${id}/start_task/`),
-  pauseTask: (id: string) => apiClient.post(`/api/ergon/daily-planner/${id}/pause_task/`),
-  resumeTask: (id: string) => apiClient.post(`/api/ergon/daily-planner/${id}/resume_task/`),
-  completeTask: (id: string, data: any) => apiClient.post(`/api/ergon/daily-planner/${id}/complete_task/`, data),
-  postponeTask: (id: string, data: any) => apiClient.post(`/api/ergon/daily-planner/${id}/postpone_task/`, data),
+  updateDailyTask: (id: number, data: any) => apiClient.patch(`/api/ergon/daily-planner/${id}/`, data),
+  deleteDailyTask: (id: number) => apiClient.delete(`/api/ergon/daily-planner/${id}/`),
+  startTask: (id: number) => apiClient.post(`/api/ergon/daily-planner/${id}/start_task/`),
+  pauseTask: (id: number) => apiClient.post(`/api/ergon/daily-planner/${id}/pause_task/`),
+  resumeTask: (id: number) => apiClient.post(`/api/ergon/daily-planner/${id}/resume_task/`),
+  completeTask: (id: number, data: any) => apiClient.post(`/api/ergon/daily-planner/${id}/complete_task/`, data),
+  postponeTask: (id: number, data: any) => apiClient.post(`/api/ergon/daily-planner/${id}/postpone_task/`, data),
   rolloverTasks: () => apiClient.post('/api/ergon/daily-planner/rollover/'),
-  getDailyTaskHistory: (id: string) => apiClient.get(`/api/ergon/daily-planner/${id}/history/`),
-  getSLAHistory: (id: string) => apiClient.get(`/api/ergon/daily-planner/${id}/sla_history/`),
+  getDailyTaskHistory: (id: number) => apiClient.get(`/api/ergon/daily-planner/${id}/history/`),
+  getSLAHistory: (id: number) => apiClient.get(`/api/ergon/daily-planner/${id}/sla_history/`),
 
   // Tasks
-  getTasks: () => apiClient.get('/api/ergon/tasks/'),
+  getTasks: (params?: any) => apiClient.get('/api/ergon/tasks/', { params }),
   createTask: (data: any) => apiClient.post('/api/ergon/tasks/', data),
-  updateTask: (id: string, data: any) => apiClient.put(`/api/ergon/tasks/${id}/`, data),
+  updateTask: (id: string | number, data: any) => apiClient.put(`/api/ergon/tasks/${id}/`, data),
+  patchTask: (id: string | number, data: any) => apiClient.patch(`/api/ergon/tasks/${id}/`, data),
+  deleteTask: (id: string | number) => apiClient.delete(`/api/ergon/tasks/${id}/`),
   updateProgress: (id: string, data: any) => apiClient.post(`/api/ergon/tasks/${id}/update_progress/`, data),
   getTaskHistory: (id: string) => apiClient.get(`/api/ergon/tasks/${id}/history/`),
 
   // Follow-ups
   getFollowups: () => apiClient.get('/api/ergon/followups/'),
   createFollowup: (data: any) => apiClient.post('/api/ergon/followups/', data),
+  updateFollowup: (id: number, data: any) => apiClient.patch(`/api/ergon/followups/${id}/`, data),
+  deleteFollowup: (id: number) => apiClient.delete(`/api/ergon/followups/${id}/`),
   completeFollowup: (id: string) => apiClient.post(`/api/ergon/followups/${id}/complete/`),
   cancelFollowup: (id: string, data: any) => apiClient.post(`/api/ergon/followups/${id}/cancel/`, data),
   rescheduleFollowup: (id: string, data: any) => apiClient.post(`/api/ergon/followups/${id}/reschedule/`, data),
@@ -42,15 +48,31 @@ export const ergonApi = {
   createContact: (data: any) => apiClient.post('/api/ergon/contacts/', data),
 
   // Manpower & Machinery
-  getManpower: () => apiClient.get('/api/ergon/manpower/'),
-  getMachinery: () => apiClient.get('/api/ergon/machinery/'),
+  getManpower: (params?: any) => apiClient.get('/api/ergon/manpower/', { params }),
+  createManpower: (data: any) => apiClient.post('/api/ergon/manpower/', data),
+  updateManpower: (id: number, data: any) => apiClient.patch(`/api/ergon/manpower/${id}/`, data),
+  deleteManpower: (id: number) => apiClient.delete(`/api/ergon/manpower/${id}/`),
+  getMachinery: (params?: any) => apiClient.get('/api/ergon/machinery/', { params }),
+  createMachinery: (data: any) => apiClient.post('/api/ergon/machinery/', data),
+  updateMachinery: (id: number, data: any) => apiClient.patch(`/api/ergon/machinery/${id}/`, data),
+  deleteMachinery: (id: number) => apiClient.delete(`/api/ergon/machinery/${id}/`),
 
   // Advances & Expenses
-  getAdvances: () => apiClient.get('/api/ergon/advances/'),
-  getExpenses: () => apiClient.get('/api/ergon/expenses/'),
+  getAdvances: (params?: any) => apiClient.get('/api/ergon/advances/', { params }),
+  createAdvance: (data: any) => apiClient.post('/api/ergon/advances/', data),
+  approveAdvance: (id: number) => apiClient.post(`/api/ergon/advances/${id}/approve/`),
+  rejectAdvance: (id: number, reason: string) => apiClient.post(`/api/ergon/advances/${id}/reject/`, { reason }),
+  deleteAdvance: (id: number) => apiClient.delete(`/api/ergon/advances/${id}/`),
+  getExpenses: (params?: any) => apiClient.get('/api/ergon/expenses/', { params }),
+  createExpense: (data: any) => apiClient.post('/api/ergon/expenses/', data),
+  approveExpense: (id: number) => apiClient.post(`/api/ergon/expenses/${id}/approve/`),
+  rejectExpense: (id: number, reason: string) => apiClient.post(`/api/ergon/expenses/${id}/reject/`, { reason }),
+  deleteExpense: (id: number) => apiClient.delete(`/api/ergon/expenses/${id}/`),
 
   // Ledger
-  getLedgerEntries: () => apiClient.get('/api/ergon/ledger/'),
+  getLedgerEntries: (params?: any) => apiClient.get('/api/ergon/ledger/', { params }),
+  createLedgerEntry: (data: any) => apiClient.post('/api/ergon/ledger/', data),
+  deleteLedgerEntry: (id: number) => apiClient.delete(`/api/ergon/ledger/${id}/`),
 
   // Customers & Invoices
   getCustomers: () => apiClient.get('/api/ergon/customers/'),

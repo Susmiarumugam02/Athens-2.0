@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { message } from 'antd';
-import api from '../common/utils/axiosetup';
+import api from '../lib/api';
 
 interface UsePermissionControlProps {
   onPermissionGranted?: () => void;

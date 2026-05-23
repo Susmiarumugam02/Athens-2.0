@@ -162,7 +162,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onClose, onSave, ses
       });
       setInvoices(response.data.results || []);
     } catch (error) {
-      console.error('Error fetching invoices:', error);
       toast.error('Failed to fetch invoices');
     }
   };
@@ -175,7 +174,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onClose, onSave, ses
       });
       setProformaInvoices(response.data.results || []);
     } catch (error) {
-      console.error('Error fetching proforma invoices:', error);
       toast.error('Failed to fetch proforma invoices');
     }
   };
@@ -211,7 +209,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onClose, onSave, ses
         is_tds_received: paymentData.is_tds_received || false,
       });
     } catch (error) {
-      console.error('Error loading payment:', error);
       toast.error('Failed to load payment data');
     } finally {
       setLoading(false);
@@ -352,11 +349,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onClose, onSave, ses
         return;
       }
       
-      console.log('Form data before cleaning:', formData);
-      console.log('Sending payment data:', cleanFormData);
-      console.log('Invoice type:', formData.invoice_type);
-      console.log('Invoice ID:', formData.invoice);
-      console.log('Proforma Invoice ID:', formData.proforma_invoice);
       
       await api[method](url, cleanFormData, {
         headers: { Authorization: `Bearer ${sessionKey}` }
@@ -365,8 +357,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onClose, onSave, ses
       toast.success(payment?.id ? 'Payment updated successfully!' : 'Payment recorded successfully!');
       onSave();
     } catch (error: any) {
-      console.error('Error saving payment:', error);
-      console.error('Request data was:', cleanFormData);
       if (error.response?.data) {
         const errorData = error.response.data;
         if (typeof errorData === 'object') {

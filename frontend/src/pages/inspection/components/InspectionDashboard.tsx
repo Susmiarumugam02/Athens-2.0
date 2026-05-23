@@ -1,28 +1,109 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Statistic, Progress, Select, Tag, Button } from 'antd';
+import React, { useState, useEffect, useRef } from 'react';
+import { Card, Row, Col, Statistic, Progress, Tag, Button, Divider, Select } from 'antd';
 import { 
   ExperimentOutlined, 
   CheckCircleOutlined, 
-  ClockCircleOutlined, 
   ExclamationCircleOutlined,
-  ArrowUpOutlined,
-  ArrowDownOutlined,
-  PlusOutlined,
-  BarChartOutlined
+  BarChartOutlined,
+  ThunderboltOutlined,
+  BuildOutlined,
+  AuditOutlined,
+  SearchOutlined,
+  FileTextOutlined,
+  CalendarOutlined,
+  TeamOutlined,
+  WarningOutlined,
+  RightOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, BarChart, Bar } from 'recharts';
+import { AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, BarChart, Bar } from 'recharts';
 import PageLayout from '../../../components/ui/PageLayout';
 import { inspectionService } from '../services/inspectionService';
 import { useAuthStore } from '../../../store/authStore';
 
 const { Option } = Select;
 
+const CATEGORY_FORMS: Record<string, { label: string; icon: React.ReactNode; forms: { value: string; label: string; checklist: number; risk: string; department: string; lastDate: string }[] }> = {
+  electrical: {
+    label: 'Electrical',
+    icon: <ThunderboltOutlined />,
+    forms: [
+      { value: 'electrical_panel', label: 'Electrical Panel Inspection', checklist: 24, risk: 'High', department: 'Electrical', lastDate: '2025-07-10' },
+      { value: 'earthing', label: 'Earthing Inspection', checklist: 18, risk: 'High', department: 'Electrical', lastDate: '2025-07-08' },
+      { value: 'cable_routing', label: 'Cable Routing Inspection', checklist: 15, risk: 'Medium', department: 'Electrical', lastDate: '2025-07-05' },
+      { value: 'transformer', label: 'Transformer Inspection', checklist: 22, risk: 'Critical', department: 'Electrical', lastDate: '2025-07-01' },
+      { value: 'ht_lt', label: 'HT/LT Checklist', checklist: 30, risk: 'Critical', department: 'Electrical', lastDate: '2025-06-28' },
+    ],
+  },
+  civil: {
+    label: 'Civil',
+    icon: <BuildOutlined />,
+    forms: [
+      { value: 'concrete', label: 'Concrete Inspection', checklist: 20, risk: 'Medium', department: 'Civil', lastDate: '2025-07-11' },
+      { value: 'structural', label: 'Structural Inspection', checklist: 28, risk: 'High', department: 'Civil', lastDate: '2025-07-09' },
+      { value: 'excavation', label: 'Excavation Checklist', checklist: 16, risk: 'High', department: 'Civil', lastDate: '2025-07-07' },
+      { value: 'scaffolding', label: 'Scaffolding Inspection', checklist: 19, risk: 'High', department: 'Civil', lastDate: '2025-07-04' },
+      { value: 'reinforcement', label: 'Reinforcement Inspection', checklist: 14, risk: 'Medium', department: 'Civil', lastDate: '2025-07-02' },
+    ],
+  },
+  quality: {
+    label: 'Quality',
+    icon: <AuditOutlined />,
+    forms: [
+      { value: 'qa_qc', label: 'QA/QC Inspection', checklist: 35, risk: 'Medium', department: 'Quality', lastDate: '2025-07-12' },
+      { value: 'welding', label: 'Welding Inspection', checklist: 22, risk: 'High', department: 'Quality', lastDate: '2025-07-10' },
+      { value: 'material', label: 'Material Verification', checklist: 18, risk: 'Low', department: 'Quality', lastDate: '2025-07-08' },
+      { value: 'ncr', label: 'NCR Inspection', checklist: 12, risk: 'High', department: 'Quality', lastDate: '2025-07-06' },
+      { value: 'dimensional', label: 'Dimensional Check', checklist: 10, risk: 'Medium', department: 'Quality', lastDate: '2025-07-03' },
+    ],
+  },
+};
+
+const RISK_COLORS: Record<string, string> = {
+  Low: '#52c41a',
+  Medium: '#faad14',
+  High: '#ff7a00',
+  Critical: '#ff4d4f',
+};
+
+const FORM_ROUTES: Record<string, string> = {
+  // Electrical
+  electrical_panel: '/app/inspection/forms/ac-cable-testing/create',
+  earthing:         '/app/inspection/forms/earthing-checklist/create',
+  cable_routing:    '/app/inspection/forms/ht-cable/create',
+  transformer:      '/app/inspection/forms/ht-precommission/create',
+  ht_lt:            '/app/inspection/forms/acdb-checklist/create',
+  // Civil
+  concrete:         '/app/inspection/forms/concrete-pour-card/create',
+  structural:       '/app/inspection/forms/civil-work-checklist/create',
+  excavation:       '/app/inspection/forms/pcc-checklist/create',
+  scaffolding:      '/app/inspection/forms/bar-bending-schedule/create',
+  reinforcement:    '/app/inspection/forms/cement-register/create',
+  // Quality
+  qa_qc:            '/app/inspection/forms/control-room-audit-checklist/create',
+  welding:          '/app/inspection/forms/battery-charger-checklist/create',
+  material:         '/app/inspection/forms/battery-ups-checklist/create',
+  ncr:              '/app/inspection/forms/bus-duct-checklist/create',
+  dimensional:      '/app/inspection/forms/control-cable-checklist/create',
+};
+
+const CATEGORY_COLORS: Record<string, string> = {
+  electrical: '#722ed1',
+  civil: '#1890ff',
+  quality: '#52c41a',
+};
+
 const InspectionDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { selectedProject } = useAuthStore();
-  const [timeRange, setTimeRange] = useState('week');
   const [loading, setLoading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedForm, setSelectedForm] = useState<string | null>(null);
+  const [formSearch, setFormSearch] = useState('');
+  const [catOpen, setCatOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const catRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLDivElement>(null);
   const [dashboardData, setDashboardData] = useState({
     kpis: {
       totalInspections: 156,
@@ -43,20 +124,14 @@ const InspectionDashboard: React.FC = () => {
         { name: 'Sun', completed: 10, pending: 1, score: 90 }
       ],
       typeDistribution: [
-        { name: 'Safety', value: 45, color: '#ff4d4f' },
         { name: 'Quality', value: 32, color: '#52c41a' },
-        { name: 'Environmental', value: 28, color: '#1890ff' },
-        { name: 'Equipment', value: 25, color: '#faad14' },
+        { name: 'Civil', value: 38, color: '#1890ff' },
         { name: 'Electrical', value: 18, color: '#722ed1' },
-        { name: 'Structural', value: 8, color: '#fa8c16' }
       ],
       complianceByType: [
-        { type: 'Safety', compliant: 89, nonCompliant: 11 },
         { type: 'Quality', compliant: 95, nonCompliant: 5 },
-        { type: 'Environmental', compliant: 92, nonCompliant: 8 },
-        { type: 'Equipment', compliant: 88, nonCompliant: 12 },
+        { type: 'Civil', compliant: 91, nonCompliant: 9 },
         { type: 'Electrical', compliant: 94, nonCompliant: 6 },
-        { type: 'Structural', compliant: 100, nonCompliant: 0 }
       ]
     }
   });
@@ -64,46 +139,221 @@ const InspectionDashboard: React.FC = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      // In a real implementation, this would fetch from the backend
-      // const response = await inspectionService.getDashboardStats({ timeRange, project: selectedProject });
+      // const response = await inspectionService.getDashboardStats({ project: selectedProject });
       // setDashboardData(response.data);
     } catch (error) {
-      console.error('Failed to fetch dashboard data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, [timeRange, selectedProject]);
+  useEffect(() => { fetchDashboardData(); }, [selectedProject]);
 
-  const getChangeColor = (value: number) => value >= 0 ? '#3f8600' : '#cf1322';
-  const getChangeIcon = (value: number) => value >= 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />;
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (catRef.current && !catRef.current.contains(e.target as Node)) setCatOpen(false);
+      if (formRef.current && !formRef.current.contains(e.target as Node)) setFormOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleCategorySelect = (key: string) => {
+    setSelectedCategory(key);
+    setSelectedForm(null);
+    setFormSearch('');
+    setCatOpen(false);
+  };
+
+  const handleFormSelect = (val: string) => {
+    setSelectedForm(val);
+    setFormOpen(false);
+    setFormSearch('');
+  };
+
+  const activeCat = selectedCategory ? CATEGORY_FORMS[selectedCategory] : null;
+  const filteredForms = activeCat
+    ? activeCat.forms.filter(f => f.label.toLowerCase().includes(formSearch.toLowerCase()))
+    : [];
+  const activeFormData = activeCat && selectedForm
+    ? activeCat.forms.find(f => f.value === selectedForm)
+    : null;
+
+  const CascadingSelector = (
+    <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+      {/* Category Dropdown */}
+      <div ref={catRef} style={{ position: 'relative', minWidth: 200 }}>
+        <button
+          onClick={() => setCatOpen(o => !o)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '8px 14px', borderRadius: 10, border: '1.5px solid',
+            borderColor: selectedCategory ? CATEGORY_COLORS[selectedCategory] : '#d9d9d9',
+            background: selectedCategory ? `${CATEGORY_COLORS[selectedCategory]}12` : '#fff',
+            cursor: 'pointer', fontSize: 13, fontWeight: 500, width: '100%',
+            transition: 'all 0.2s', outline: 'none', color: '#1a1a2e',
+            boxShadow: catOpen ? '0 0 0 3px rgba(24,144,255,0.12)' : 'none',
+          }}
+        >
+          <span style={{ color: selectedCategory ? CATEGORY_COLORS[selectedCategory] : '#8c8c8c', fontSize: 15 }}>
+            {selectedCategory ? CATEGORY_FORMS[selectedCategory].icon : <AuditOutlined />}
+          </span>
+          <span style={{ flex: 1, textAlign: 'left', color: selectedCategory ? '#1a1a2e' : '#8c8c8c' }}>
+            {selectedCategory ? CATEGORY_FORMS[selectedCategory].label : 'Inspection Category'}
+          </span>
+          <span style={{ color: '#8c8c8c', fontSize: 10, transform: catOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
+        </button>
+        {catOpen && (
+          <div style={{
+            position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 1000,
+            background: '#fff', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.14)',
+            border: '1px solid #f0f0f0', overflow: 'hidden', minWidth: 200,
+          }}>
+            {Object.entries(CATEGORY_FORMS).map(([key, cat]) => (
+              <div
+                key={key}
+                onClick={() => handleCategorySelect(key)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '10px 14px', cursor: 'pointer', fontSize: 13,
+                  background: selectedCategory === key ? `${CATEGORY_COLORS[key]}15` : 'transparent',
+                  borderLeft: selectedCategory === key ? `3px solid ${CATEGORY_COLORS[key]}` : '3px solid transparent',
+                  transition: 'background 0.15s',
+                  color: '#1a1a2e',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = `${CATEGORY_COLORS[key]}10`)}
+                onMouseLeave={e => (e.currentTarget.style.background = selectedCategory === key ? `${CATEGORY_COLORS[key]}15` : 'transparent')}
+              >
+                <span style={{ color: CATEGORY_COLORS[key], fontSize: 15 }}>{cat.icon}</span>
+                <span style={{ fontWeight: selectedCategory === key ? 600 : 400 }}>{cat.label}</span>
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: '#8c8c8c', background: '#f5f5f5', borderRadius: 10, padding: '1px 7px' }}>
+                  {cat.forms.length}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Form Dropdown */}
+      <div ref={formRef} style={{ position: 'relative', minWidth: 240 }}>
+        <button
+          onClick={() => { if (activeCat) setFormOpen(o => !o); }}
+          disabled={!activeCat}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '8px 14px', borderRadius: 10, border: '1.5px solid',
+            borderColor: activeFormData ? CATEGORY_COLORS[selectedCategory!] : '#d9d9d9',
+            background: activeFormData ? `${CATEGORY_COLORS[selectedCategory!]}12` : '#fff',
+            cursor: activeCat ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 500, width: '100%',
+            transition: 'all 0.2s', outline: 'none', color: '#1a1a2e', opacity: activeCat ? 1 : 0.5,
+            boxShadow: formOpen ? '0 0 0 3px rgba(24,144,255,0.12)' : 'none',
+          }}
+        >
+          <span style={{ color: activeFormData ? CATEGORY_COLORS[selectedCategory!] : '#8c8c8c', fontSize: 15 }}>
+            <FileTextOutlined />
+          </span>
+          <span style={{ flex: 1, textAlign: 'left', color: activeFormData ? '#1a1a2e' : '#8c8c8c' }}>
+            {activeFormData ? activeFormData.label : (activeCat ? 'Select Inspection Form' : 'Select Category First')}
+          </span>
+          <span style={{ color: '#8c8c8c', fontSize: 10, transform: formOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
+        </button>
+        {formOpen && activeCat && (
+          <div style={{
+            position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 1000,
+            background: '#fff', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.14)',
+            border: '1px solid #f0f0f0', overflow: 'hidden', minWidth: 260,
+          }}>
+            <div style={{ padding: '8px 10px', borderBottom: '1px solid #f0f0f0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f5f5f5', borderRadius: 8, padding: '6px 10px' }}>
+                <SearchOutlined style={{ color: '#8c8c8c', fontSize: 13 }} />
+                <input
+                  autoFocus
+                  value={formSearch}
+                  onChange={e => setFormSearch(e.target.value)}
+                  placeholder="Search forms..."
+                  style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 13, width: '100%', color: '#1a1a2e' }}
+                />
+              </div>
+            </div>
+            <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+              {filteredForms.length === 0 ? (
+                <div style={{ padding: '14px', textAlign: 'center', color: '#8c8c8c', fontSize: 13 }}>No forms found</div>
+              ) : filteredForms.map(f => (
+                <div
+                  key={f.value}
+                  onClick={() => handleFormSelect(f.value)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '10px 14px', cursor: 'pointer', fontSize: 13,
+                    background: selectedForm === f.value ? `${CATEGORY_COLORS[selectedCategory!]}15` : 'transparent',
+                    borderLeft: selectedForm === f.value ? `3px solid ${CATEGORY_COLORS[selectedCategory!]}` : '3px solid transparent',
+                    transition: 'background 0.15s', color: '#1a1a2e',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = `${CATEGORY_COLORS[selectedCategory!]}10`)}
+                  onMouseLeave={e => (e.currentTarget.style.background = selectedForm === f.value ? `${CATEGORY_COLORS[selectedCategory!]}15` : 'transparent')}
+                >
+                  <FileTextOutlined style={{ color: CATEGORY_COLORS[selectedCategory!], fontSize: 14 }} />
+                  <span style={{ flex: 1, fontWeight: selectedForm === f.value ? 600 : 400 }}>{f.label}</span>
+                  <span style={{ fontSize: 11, color: RISK_COLORS[f.risk], background: `${RISK_COLORS[f.risk]}18`, borderRadius: 8, padding: '1px 7px', fontWeight: 600 }}>
+                    {f.risk}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <PageLayout
       title="Inspection Dashboard"
       subtitle="Monitor inspection activities, compliance rates, and performance metrics"
       icon={<ExperimentOutlined />}
-      actions={
-        <div className="flex gap-2">
-          <Select value={timeRange} onChange={setTimeRange} style={{ width: 120 }}>
-            <Option value="week">This Week</Option>
-            <Option value="month">This Month</Option>
-            <Option value="quarter">This Quarter</Option>
-            <Option value="year">This Year</Option>
-          </Select>
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />}
-            onClick={() => navigate('/dashboard/inspection/create')}
-          >
-            New Inspection
-          </Button>
-        </div>
-      }
+      actions={CascadingSelector}
     >
+      {/* Form Info Preview */}
+      {activeFormData && (
+        <div style={{
+          marginBottom: 20, padding: '14px 20px', borderRadius: 12,
+          background: `linear-gradient(135deg, ${CATEGORY_COLORS[selectedCategory!]}10, ${CATEGORY_COLORS[selectedCategory!]}05)`,
+          border: `1.5px solid ${CATEGORY_COLORS[selectedCategory!]}30`,
+          display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'center',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 22, color: CATEGORY_COLORS[selectedCategory!] }}>
+              {CATEGORY_FORMS[selectedCategory!].icon}
+            </span>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>{activeFormData.label}</div>
+              <div style={{ fontSize: 12, color: '#8c8c8c' }}>{activeFormData.department} Department</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <CheckCircleOutlined style={{ color: '#52c41a' }} />
+              <span style={{ fontSize: 13, color: '#595959' }}><b>{activeFormData.checklist}</b> checklist items</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <WarningOutlined style={{ color: RISK_COLORS[activeFormData.risk] }} />
+              <span style={{ fontSize: 13 }}>
+                Risk: <b style={{ color: RISK_COLORS[activeFormData.risk] }}>{activeFormData.risk}</b>
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <CalendarOutlined style={{ color: '#1890ff' }} />
+              <span style={{ fontSize: 13, color: '#595959' }}>Last: <b>{activeFormData.lastDate}</b></span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <TeamOutlined style={{ color: '#722ed1' }} />
+              <span style={{ fontSize: 13, color: '#595959' }}>{activeFormData.department}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* KPI Cards Row */}
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} sm={12} lg={6}>
@@ -113,9 +363,7 @@ const InspectionDashboard: React.FC = () => {
               value={dashboardData.kpis.totalInspections}
               prefix={<ExperimentOutlined />}
               suffix={
-                <Tag color="blue" icon={getChangeIcon(8.5)}>
-                  8.5%
-                </Tag>
+                <Tag color="blue">↑ 8.5%</Tag>
               }
             />
           </Card>
@@ -126,11 +374,9 @@ const InspectionDashboard: React.FC = () => {
               title="Completed"
               value={dashboardData.kpis.completedInspections}
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#3f8600' }}
+              styles={{ content: { color: '#3f8600' } }}
               suffix={
-                <Tag color="green" icon={getChangeIcon(12.3)}>
-                  12.3%
-                </Tag>
+                <Tag color="green">↑ 12.3%</Tag>
               }
             />
           </Card>
@@ -143,7 +389,7 @@ const InspectionDashboard: React.FC = () => {
               precision={1}
               suffix="%"
               prefix={<BarChartOutlined />}
-              valueStyle={{ color: dashboardData.kpis.complianceRate >= 90 ? '#3f8600' : '#faad14' }}
+              styles={{ content: { color: dashboardData.kpis.complianceRate >= 90 ? '#3f8600' : '#faad14' } }}
             />
           </Card>
         </Col>
@@ -153,7 +399,7 @@ const InspectionDashboard: React.FC = () => {
               title="Critical Findings"
               value={dashboardData.kpis.criticalFindings}
               prefix={<ExclamationCircleOutlined />}
-              valueStyle={{ color: dashboardData.kpis.criticalFindings > 5 ? '#cf1322' : '#3f8600' }}
+              styles={{ content: { color: dashboardData.kpis.criticalFindings > 5 ? '#cf1322' : '#3f8600' } }}
               suffix={
                 <Tag color={dashboardData.kpis.criticalFindings > 5 ? "red" : "green"}>
                   {dashboardData.kpis.criticalFindings > 5 ? "High" : "Low"}
@@ -163,6 +409,127 @@ const InspectionDashboard: React.FC = () => {
           </Card>
         </Col>
       </Row>
+
+      {/* ── Available Inspection Forms ── */}
+      {selectedCategory && activeCat && (
+        <div style={{ marginBottom: 24 }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16,
+            paddingBottom: 12, borderBottom: `2px solid ${CATEGORY_COLORS[selectedCategory]}30`,
+          }}>
+            <span style={{ fontSize: 18, color: CATEGORY_COLORS[selectedCategory] }}>
+              {activeCat.icon}
+            </span>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>
+                Available Inspection Forms
+              </div>
+              <div style={{ fontSize: 12, color: '#8c8c8c' }}>
+                {activeCat.label} · {activeCat.forms.length} forms available
+              </div>
+            </div>
+          </div>
+
+          <Row gutter={[16, 16]}>
+            {activeCat.forms.map(f => (
+              <Col xs={24} sm={12} lg={8} xl={6} key={f.value}>
+                <div
+                  style={{
+                    border: `1.5px solid ${selectedForm === f.value ? CATEGORY_COLORS[selectedCategory] : '#f0f0f0'}`,
+                    borderRadius: 12,
+                    padding: '16px 18px',
+                    background: selectedForm === f.value
+                      ? `linear-gradient(135deg, ${CATEGORY_COLORS[selectedCategory]}10, ${CATEGORY_COLORS[selectedCategory]}05)`
+                      : '#fff',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    boxShadow: selectedForm === f.value
+                      ? `0 4px 16px ${CATEGORY_COLORS[selectedCategory]}20`
+                      : '0 1px 4px rgba(0,0,0,0.06)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 10,
+                  }}
+                  onMouseEnter={e => {
+                    if (selectedForm !== f.value)
+                      (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.12)';
+                  }}
+                  onMouseLeave={e => {
+                    if (selectedForm !== f.value)
+                      (e.currentTarget as HTMLDivElement).style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)';
+                  }}
+                >
+                  {/* Icon + Title */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+                      background: `${CATEGORY_COLORS[selectedCategory]}15`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: CATEGORY_COLORS[selectedCategory], fontSize: 16,
+                    }}>
+                      <FileTextOutlined />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: 13, fontWeight: 700, color: '#1a1a2e',
+                        lineHeight: 1.4, wordBreak: 'break-word',
+                      }}>
+                        {f.label}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 2 }}>
+                        {f.department} Department
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Meta row */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    <span style={{
+                      fontSize: 11, padding: '2px 8px', borderRadius: 6,
+                      background: '#f5f5f5', color: '#595959',
+                      display: 'flex', alignItems: 'center', gap: 4,
+                    }}>
+                      <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 10 }} />
+                      {f.checklist} items
+                    </span>
+                    <span style={{
+                      fontSize: 11, padding: '2px 8px', borderRadius: 6,
+                      background: `${RISK_COLORS[f.risk]}15`,
+                      color: RISK_COLORS[f.risk], fontWeight: 600,
+                      display: 'flex', alignItems: 'center', gap: 4,
+                    }}>
+                      <WarningOutlined style={{ fontSize: 10 }} />
+                      {f.risk}
+                    </span>
+                  </div>
+
+                  {/* Last date */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#8c8c8c' }}>
+                    <CalendarOutlined style={{ fontSize: 11 }} />
+                    Last: {f.lastDate}
+                  </div>
+
+                  {/* Open Form button */}
+                  <Button
+                    type={selectedForm === f.value ? 'primary' : 'default'}
+                    size="small"
+                    icon={<RightOutlined />}
+                    style={{
+                      marginTop: 4,
+                      background: selectedForm === f.value ? CATEGORY_COLORS[selectedCategory] : undefined,
+                      borderColor: selectedForm === f.value ? CATEGORY_COLORS[selectedCategory] : undefined,
+                      borderRadius: 8,
+                    }}
+                    onClick={() => handleFormSelect(f.value)}
+                  >
+                    {selectedForm === f.value ? 'Form Loaded' : 'Open Form'}
+                  </Button>
+                </div>
+              </Col>
+            ))}
+          </Row>
+        </div>
+      )}
 
       {/* Charts Row */}
       <Row gutter={[16, 16]} className="mb-6">

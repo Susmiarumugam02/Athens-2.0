@@ -72,7 +72,6 @@ const Vendors: React.FC = () => {
       })
       setVendors(response.data.results || [])
     } catch (error: any) {
-      console.error('Error fetching vendors:', error)
       toast.error('Failed to fetch vendors')
     } finally {
       setIsLoading(false)
@@ -106,7 +105,6 @@ const Vendors: React.FC = () => {
       resetForm()
       fetchVendors()
     } catch (error: any) {
-      console.error('Error saving vendor:', error)
       toast.error(error.response?.data?.message || 'Failed to save vendor')
     }
   }
@@ -183,7 +181,6 @@ const Vendors: React.FC = () => {
       toast.success('Vendor deleted successfully')
       fetchVendors()
     } catch (error: any) {
-      console.error('Error deleting vendor:', error)
       toast.error('Failed to delete vendor')
     }
   }

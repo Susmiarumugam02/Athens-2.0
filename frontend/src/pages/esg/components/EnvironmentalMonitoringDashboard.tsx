@@ -40,7 +40,6 @@ const EnvironmentalMonitoringDashboard: React.FC = () => {
         setComplianceData(complianceRes.value.data);
       }
     } catch (error) {
-      console.error('Error fetching monitoring data:', error);
     } finally {
       setLoading(false);
     }
@@ -164,7 +163,7 @@ const EnvironmentalMonitoringDashboard: React.FC = () => {
                 }
                 suffix={`/${monitoring.length}`}
                 prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
-                valueStyle={{ color: '#52c41a', fontSize: '1.8rem', fontWeight: 'bold' }}
+                styles={{ content: { color: '#52c41a', fontSize: '1.8rem', fontWeight: 'bold' } }}
               />
               <Progress 
                 percent={monitoring.length > 0 ? 
@@ -184,7 +183,7 @@ const EnvironmentalMonitoringDashboard: React.FC = () => {
                   complianceData.compliance_breakdown?.find((item: any) => item.compliance_status === 'warning')?.count || 0
                 }
                 prefix={<WarningOutlined style={{ color: '#faad14' }} />}
-                valueStyle={{ color: '#faad14', fontSize: '1.8rem', fontWeight: 'bold' }}
+                styles={{ content: { color: '#faad14', fontSize: '1.8rem', fontWeight: 'bold' } }}
               />
             </Card>
           </Col>
@@ -197,7 +196,7 @@ const EnvironmentalMonitoringDashboard: React.FC = () => {
                   complianceData.compliance_breakdown?.find((item: any) => item.compliance_status === 'exceeded')?.count || 0
                 }
                 prefix={<AlertOutlined style={{ color: '#fa8c16' }} />}
-                valueStyle={{ color: '#fa8c16', fontSize: '1.8rem', fontWeight: 'bold' }}
+                styles={{ content: { color: '#fa8c16', fontSize: '1.8rem', fontWeight: 'bold' } }}
               />
             </Card>
           </Col>
@@ -210,7 +209,7 @@ const EnvironmentalMonitoringDashboard: React.FC = () => {
                   complianceData.compliance_breakdown?.find((item: any) => item.compliance_status === 'critical')?.count || 0
                 }
                 prefix={<AlertOutlined style={{ color: '#f5222d' }} />}
-                valueStyle={{ color: '#f5222d', fontSize: '1.8rem', fontWeight: 'bold' }}
+                styles={{ content: { color: '#f5222d', fontSize: '1.8rem', fontWeight: 'bold' } }}
               />
             </Card>
           </Col>

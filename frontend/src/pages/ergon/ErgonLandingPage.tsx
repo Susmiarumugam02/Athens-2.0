@@ -43,7 +43,7 @@ export default function ErgonLandingPage() {
               title="Total Tasks"
               value={mockData.kpis.totalTasks}
               prefix={<CheckSquareOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -53,7 +53,7 @@ export default function ErgonLandingPage() {
               title="Active Tasks"
               value={mockData.kpis.activeTasks}
               prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -63,7 +63,7 @@ export default function ErgonLandingPage() {
               title="Completed"
               value={mockData.kpis.completedTasks}
               prefix={<CheckSquareOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -73,7 +73,7 @@ export default function ErgonLandingPage() {
               title="Overdue"
               value={mockData.kpis.overdueTask}
               prefix={<AlertOutlined />}
-              valueStyle={{ color: '#ff4d4f' }}
+              styles={{ content: { color: '#ff4d4f' } }}
             />
           </Card>
         </Col>
@@ -86,7 +86,7 @@ export default function ErgonLandingPage() {
               title="Total Expenses"
               value={`₹${(mockData.kpis.totalExpenses / 1000).toFixed(0)}K`}
               prefix={<WalletOutlined />}
-              valueStyle={{ color: '#722ed1' }}
+              styles={{ content: { color: '#722ed1' } }}
             />
           </Card>
         </Col>
@@ -96,7 +96,7 @@ export default function ErgonLandingPage() {
               title="Pending Approvals"
               value={mockData.kpis.pendingApprovals}
               prefix={<BellOutlined />}
-              valueStyle={{ color: '#faad14' }}
+              styles={{ content: { color: '#faad14' } }}
             />
           </Card>
         </Col>
@@ -106,7 +106,7 @@ export default function ErgonLandingPage() {
               title="Resource Util."
               value={`${mockData.kpis.resourceUtilization}%`}
               prefix={<TeamOutlined />}
-              valueStyle={{ color: '#13c2c2' }}
+              styles={{ content: { color: '#13c2c2' } }}
             />
           </Card>
         </Col>
@@ -116,7 +116,7 @@ export default function ErgonLandingPage() {
               title="Budget Util."
               value={`${mockData.kpis.budgetUtilization}%`}
               prefix={<BankOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>

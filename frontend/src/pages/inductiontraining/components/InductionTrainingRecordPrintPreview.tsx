@@ -30,7 +30,6 @@ export default function InductionTrainingRecordPrintPreview({ trainingData }: In
           freshTrainingData = { ...trainingData, ...trainingResponse.data };
         }
       } catch (error) {
-        console.log('Could not fetch fresh data, using existing data');
       }
       
       // Calculate duration
@@ -55,7 +54,6 @@ export default function InductionTrainingRecordPrintPreview({ trainingData }: In
       printWindow.print();
       
     } catch (error) {
-      console.error('Error generating document:', error);
       // Still try to generate document without fresh data
       try {
         const htmlContent = generateISODocument({
@@ -67,7 +65,6 @@ export default function InductionTrainingRecordPrintPreview({ trainingData }: In
         printWindow.document.close();
         printWindow.print();
       } catch (fallbackError) {
-        console.error('Fallback document generation failed:', fallbackError);
         printWindow.close();
       }
     }

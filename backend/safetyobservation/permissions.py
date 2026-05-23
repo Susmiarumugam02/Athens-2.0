@@ -1,5 +1,35 @@
 from rest_framework import permissions
 
+
+def _has_observation_access_context(user):
+    """Accept both legacy tenant IDs and the current company/project context."""
+    if getattr(user, 'company_id', None) or getattr(user, 'tenant_id', None):
+        return True
+
+    raw_tenant_id = getattr(user, 'athens_tenant_id', None)
+    if raw_tenant_id:
+        return True
+
+    project = getattr(user, 'project', None)
+    return bool(project and getattr(project, 'company_id', None))
+
+
+def _tenant_ids_match(user, obj):
+    user_company_id = getattr(user, 'company_id', None) or getattr(user, 'tenant_id', None)
+    obj_tenant_id = getattr(obj, 'athens_tenant_id', None)
+    if user_company_id and obj_tenant_id:
+        return str(user_company_id) == str(obj_tenant_id)
+
+    raw_tenant_id = getattr(user, 'athens_tenant_id', None)
+    if raw_tenant_id and obj_tenant_id:
+        return str(raw_tenant_id) == str(obj_tenant_id)
+
+    project = getattr(user, 'project', None)
+    if project and getattr(obj, 'project_id', None):
+        return getattr(project, 'id', None) == getattr(obj, 'project_id', None)
+
+    return False
+
 class SafetyObservationPermission(permissions.BasePermission):
     """
     Custom permission for SafetyObservation:
@@ -31,7 +61,7 @@ class SafetyObservationPermission(permissions.BasePermission):
                     return True
                 else:
                     return False
-            else:
+            elif admin_type:
                 return False
 
         if user_type == 'projectadmin':
@@ -43,8 +73,9 @@ class SafetyObservationPermission(permissions.BasePermission):
                 return True
             return False
 
-        # Fallback: allow authenticated users with tenant access
-        if getattr(user, 'athens_tenant_id', None):
+        # Fallback: regular company users may have role_type='user' and no admin_type.
+        # They still need Safety Observation access after onboarding/training unlock.
+        if _has_observation_access_context(user):
             return True
 
         return False
@@ -93,7 +124,7 @@ class SafetyObservationPermission(permissions.BasePermission):
                     return False
                 else:
                     return False
-            else:
+            elif admin_type:
                 return False
 
         if user_type == 'projectadmin':
@@ -103,5 +134,13 @@ class SafetyObservationPermission(permissions.BasePermission):
                 return True
             else:
                 return False
+
+        if _tenant_ids_match(user, obj):
+            if request.method in permissions.SAFE_METHODS:
+                return True
+            if request.method in ['PUT', 'PATCH']:
+                return obj.created_by == user and obj.observationStatus.lower() != 'closed'
+            if request.method == 'DELETE':
+                return obj.created_by == user
 
         return False

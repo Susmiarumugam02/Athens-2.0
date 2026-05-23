@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   Row,
   Col,
   Statistic,
-  Progress,
-  Table,
   Tag,
   Button,
   Space,
@@ -21,12 +19,14 @@ import {
   WarningOutlined,
   RiseOutlined,
   FileTextOutlined,
-  TeamOutlined,
   CalendarOutlined,
   ReloadOutlined,
+  RobotOutlined,
+  SafetyCertificateOutlined,
 } from '@ant-design/icons';
-import dayjs from 'dayjs';
+import type { IncidentAnalytics } from '../types';
 import { useDashboardStats } from '../hooks/useIncidents';
+import { incidentApi } from '../services/api';
 import {
   SEVERITY_LEVELS,
   INCIDENT_STATUSES,
@@ -37,18 +37,36 @@ const { RangePicker } = DatePicker;
 
 interface IncidentDashboardProps {
   onViewIncidents?: () => void;
+  onCreateIncident?: () => void;
 }
 
 const IncidentDashboard: React.FC<IncidentDashboardProps> = ({
   onViewIncidents,
+  onCreateIncident,
 }) => {
   const [dateRange, setDateRange] = useState<any>(null);
-  
+  const [enhancedStats, setEnhancedStats] = useState<IncidentAnalytics | null>(null);
+  const [loadingEnhanced, setLoadingEnhanced] = useState(false);
   const { stats, loading: statsLoading, refetch: refetchStats } = useDashboardStats();
 
   const handleRefresh = () => {
     refetchStats();
+    setLoadingEnhanced(true);
+    incidentApi
+      .getAnalytics()
+      .then(data => setEnhancedStats(data))
+      .catch(() => {})
+      .finally(() => setLoadingEnhanced(false));
   };
+
+  useEffect(() => {
+    setLoadingEnhanced(true);
+    incidentApi
+      .getAnalytics()
+      .then(data => setEnhancedStats(data))
+      .catch(() => {})
+      .finally(() => setLoadingEnhanced(false));
+  }, []);
 
   const getSeverityColor = (severity: string) => {
     const severityConfig = SEVERITY_LEVELS.find(s => s.value === severity);
@@ -60,7 +78,6 @@ const IncidentDashboard: React.FC<IncidentDashboardProps> = ({
     return statusConfig?.color || 'default';
   };
 
-  // Prepare chart data
   const severityChartData = stats?.severity_distribution.map(item => ({
     type: SEVERITY_LEVELS.find(s => s.value === item.severity_level)?.label || item.severity_level,
     value: item.count,
@@ -76,36 +93,36 @@ const IncidentDashboard: React.FC<IncidentDashboardProps> = ({
     incidents: item.count,
   })) || [];
 
+  const topDepartments = enhancedStats?.incidents_by_department?.slice(0, 4) || [];
+  const topIncidentTypes = enhancedStats?.top_incident_types?.slice(0, 4) || [];
+  const hazardDistribution = enhancedStats?.risk_distribution?.slice(0, 4) || [];
 
-
-  if (statsLoading) {
+  if (statsLoading && loadingEnhanced) {
     return <Spin size="large" style={{ display: 'block', textAlign: 'center', padding: '50px' }} />;
   }
 
   return (
     <div>
-      {/* Header */}
       <Card style={{ marginBottom: 16 }}>
         <Row justify="space-between" align="middle">
           <Col>
             <h2 style={{ margin: 0 }}>Incident Management Dashboard</h2>
+            <p style={{ margin: '4px 0 0', color: '#666' }}>Enterprise intelligence for incident reporting, risk and compliance.</p>
           </Col>
           <Col>
-            <Space>
-              <RangePicker
-                value={dateRange}
-                onChange={setDateRange}
-                placeholder={['Start Date', 'End Date']}
-              />
+            <Space wrap>
+              <RangePicker value={dateRange} onChange={setDateRange} placeholder={['Start Date', 'End Date']} />
               <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
                 Refresh
+              </Button>
+              <Button type="primary" icon={<FileTextOutlined />} onClick={onCreateIncident}>
+                New Incident
               </Button>
             </Space>
           </Col>
         </Row>
       </Card>
 
-      {/* Key Metrics */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={12} md={6}>
           <Card>
@@ -113,7 +130,7 @@ const IncidentDashboard: React.FC<IncidentDashboardProps> = ({
               title="Total Incidents"
               value={stats?.total_incidents || 0}
               prefix={<FileTextOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -123,7 +140,7 @@ const IncidentDashboard: React.FC<IncidentDashboardProps> = ({
               title="Open Incidents"
               value={stats?.open_incidents || 0}
               prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: '#faad14' }}
+              styles={{ content: { color: '#faad14' } }}
             />
           </Card>
         </Col>
@@ -133,7 +150,7 @@ const IncidentDashboard: React.FC<IncidentDashboardProps> = ({
               title="Closed Incidents"
               value={stats?.closed_incidents || 0}
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -143,13 +160,12 @@ const IncidentDashboard: React.FC<IncidentDashboardProps> = ({
               title="Overdue Incidents"
               value={stats?.overdue_incidents || 0}
               prefix={<WarningOutlined />}
-              valueStyle={{ color: '#ff4d4f' }}
+              styles={{ content: { color: '#ff4d4f' } }}
             />
           </Card>
         </Col>
       </Row>
 
-      {/* Charts Row */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col xs={24} md={12}>
           <Card title="Incidents by Severity" extra={<Button type="link" onClick={onViewIncidents}>View All</Button>}>
@@ -191,7 +207,48 @@ const IncidentDashboard: React.FC<IncidentDashboardProps> = ({
         </Col>
       </Row>
 
-      {/* Monthly Trend */}
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col xs={24} lg={8}>
+          <Card title="High-Risk Departments">
+            {topDepartments.length > 0 ? (
+              topDepartments.map(item => (
+                <Tag key={item.department} color="volcano" style={{ marginBottom: 8 }}>
+                  {item.department}: {item.count}
+                </Tag>
+              ))
+            ) : (
+              <Alert message="Analytics not available" type="warning" />
+            )}
+          </Card>
+        </Col>
+        <Col xs={24} lg={8}>
+          <Card title="Top Incident Types">
+            {topIncidentTypes.length > 0 ? (
+              topIncidentTypes.map(item => (
+                <Tag key={item.incident_type} color="blue" style={{ marginBottom: 8 }}>
+                  {item.incident_type}: {item.count}
+                </Tag>
+              ))
+            ) : (
+              <Alert message="Analytics not available" type="warning" />
+            )}
+          </Card>
+        </Col>
+        <Col xs={24} lg={8}>
+          <Card title="AI Safety Pulse" extra={<SafetyCertificateOutlined />}>
+            {hazardDistribution.length > 0 ? (
+              hazardDistribution.map(item => (
+                <Tag key={item.risk_level} color="gold" style={{ marginBottom: 8 }}>
+                  {item.risk_level}: {item.count}
+                </Tag>
+              ))
+            ) : (
+              <p style={{ marginBottom: 0, color: '#666' }}>Live hazard intelligence not available yet.</p>
+            )}
+          </Card>
+        </Col>
+      </Row>
+
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={24}>
           <Card title="Monthly Incident Trend" extra={<RiseOutlined />}>
@@ -214,19 +271,15 @@ const IncidentDashboard: React.FC<IncidentDashboardProps> = ({
         </Col>
       </Row>
 
-
-
-      {/* Quick Actions */}
       <Card title="Quick Actions" style={{ marginTop: 16 }}>
         <Space wrap>
           <Button type="primary" icon={<FileTextOutlined />} onClick={onViewIncidents}>
             View All Incidents
           </Button>
-
           <Button icon={<CalendarOutlined />}>
             Schedule Investigation
           </Button>
-          <Button icon={<ExclamationCircleOutlined />}>
+          <Button icon={<ExclamationCircleOutlined />} onClick={onCreateIncident}>
             Report New Incident
           </Button>
         </Space>

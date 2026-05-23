@@ -63,7 +63,6 @@ const PTWKPIDashboard: React.FC = () => {
       const response = await getKPIs();
       setKpiData(response.data);
     } catch (error) {
-      console.error('Failed to fetch KPIs:', error);
     } finally {
       setLoading(false);
     }
@@ -201,7 +200,7 @@ const PTWKPIDashboard: React.FC = () => {
               title="Total Open"
               value={kpiData.counts.total_open}
               prefix={<FileTextOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -211,7 +210,7 @@ const PTWKPIDashboard: React.FC = () => {
               title="Pending Verification"
               value={kpiData.counts.pending_verification}
               prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: '#faad14' }}
+              styles={{ content: { color: '#faad14' } }}
             />
           </Card>
         </Col>
@@ -221,7 +220,7 @@ const PTWKPIDashboard: React.FC = () => {
               title="Pending Approval"
               value={kpiData.counts.pending_approval}
               prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: '#ff7a45' }}
+              styles={{ content: { color: '#ff7a45' } }}
             />
           </Card>
         </Col>
@@ -231,7 +230,7 @@ const PTWKPIDashboard: React.FC = () => {
               title="Overdue"
               value={totalOverdue}
               prefix={<WarningOutlined />}
-              valueStyle={{ color: totalOverdue > 0 ? '#ff4d4f' : '#52c41a' }}
+              styles={{ content: { color: totalOverdue > 0 ? '#ff4d4f' : '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -241,7 +240,7 @@ const PTWKPIDashboard: React.FC = () => {
               title="Expiring Soon"
               value={kpiData.overdue.expiring_soon}
               prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: kpiData.overdue.expiring_soon > 0 ? '#faad14' : '#52c41a' }}
+              styles={{ content: { color: kpiData.overdue.expiring_soon > 0 ? '#faad14' : '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -251,7 +250,7 @@ const PTWKPIDashboard: React.FC = () => {
               title="Active Permits"
               value={kpiData.counts.active}
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -261,7 +260,7 @@ const PTWKPIDashboard: React.FC = () => {
               title="Isolation Pending"
               value={kpiData.overdue.isolation_pending}
               prefix={<SafetyOutlined />}
-              valueStyle={{ color: kpiData.overdue.isolation_pending > 0 ? '#ff4d4f' : '#52c41a' }}
+              styles={{ content: { color: kpiData.overdue.isolation_pending > 0 ? '#ff4d4f' : '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -271,7 +270,7 @@ const PTWKPIDashboard: React.FC = () => {
               title="Closeout Pending"
               value={kpiData.overdue.closeout_pending}
               prefix={<FileTextOutlined />}
-              valueStyle={{ color: kpiData.overdue.closeout_pending > 0 ? '#ff4d4f' : '#52c41a' }}
+              styles={{ content: { color: kpiData.overdue.closeout_pending > 0 ? '#ff4d4f' : '#52c41a' } }}
             />
           </Card>
         </Col>

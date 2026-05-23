@@ -117,7 +117,7 @@ const PTWReports: React.FC = () => {
                   <Statistic
                     title="Overdue Verification"
                     value={summary.overdue?.verification || 0}
-                    valueStyle={{ color: '#cf1322' }}
+                    styles={{ content: { color: '#cf1322' } }}
                     prefix={<WarningOutlined />}
                   />
                 </Card>
@@ -127,7 +127,7 @@ const PTWReports: React.FC = () => {
                   <Statistic
                     title="Overdue Approval"
                     value={summary.overdue?.approval || 0}
-                    valueStyle={{ color: '#cf1322' }}
+                    styles={{ content: { color: '#cf1322' } }}
                     prefix={<WarningOutlined />}
                   />
                 </Card>
@@ -137,7 +137,7 @@ const PTWReports: React.FC = () => {
                   <Statistic
                     title="Expiring Soon"
                     value={summary.expiring_soon || 0}
-                    valueStyle={{ color: '#faad14' }}
+                    styles={{ content: { color: '#faad14' } }}
                     prefix={<ClockCircleOutlined />}
                   />
                 </Card>
@@ -160,7 +160,7 @@ const PTWReports: React.FC = () => {
                   <Statistic
                     title="Isolation Pending"
                     value={summary.isolation_pending || 0}
-                    valueStyle={{ color: '#1890ff' }}
+                    styles={{ content: { color: '#1890ff' } }}
                   />
                 </Card>
               </Col>
@@ -169,7 +169,7 @@ const PTWReports: React.FC = () => {
                   <Statistic
                     title="Closeout Pending"
                     value={summary.closeout_pending || 0}
-                    valueStyle={{ color: '#1890ff' }}
+                    styles={{ content: { color: '#1890ff' } }}
                   />
                 </Card>
               </Col>

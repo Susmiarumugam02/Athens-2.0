@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Input, Button, Typography, Table, Row, Col, message } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { SaveOutlined, DownloadOutlined } from "@ant-design/icons";
-import PageLayout from '../../../components/ui/PageLayout';
+import PageLayout from '../../../../components/ui/PageLayout';
 import { inspectionService } from '../../services/inspectionService';
 import BatteryUPSChecklistPrintPreview from '../BatteryUPSChecklistPrintPreview';
 
@@ -121,7 +121,7 @@ export default function BatteryUPSChecklistForm() {
         await inspectionService.createBatteryUPSChecklistForm(formData);
         message.success('Form created successfully');
       }
-      navigate('/inspection/battery-ups-checklist-forms');
+      navigate('/dashboard/inspection/forms/battery-ups-checklist/list');
     } catch (error) {
       message.error('Failed to save form');
     } finally {
@@ -135,7 +135,7 @@ export default function BatteryUPSChecklistForm() {
 
   const breadcrumbs = [
     { title: 'Inspection', href: '/inspection' },
-    { title: 'Battery UPS Checklist Forms', href: '/inspection/battery-ups-checklist-forms' },
+    { title: 'Battery UPS Checklist Forms', href: '/dashboard/inspection/forms/battery-ups-checklist/list' },
     { title: isEdit ? 'Edit Form' : 'New Form' }
   ];
 

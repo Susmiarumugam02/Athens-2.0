@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios'
+import axios, { AxiosError, AxiosHeaders } from 'axios'
 import type { AxiosResponse, AxiosInstance } from 'axios'
 import toast from 'react-hot-toast'
 
@@ -80,7 +80,6 @@ function redirectToLoginOnce() {
 const getToken = (): string | null => {
   const token = tokenManager.getAccessToken()
   if (!token) {
-    console.warn('[API] No access token found')
   }
   return token
 }
@@ -137,7 +136,6 @@ api.interceptors.request.use(
               sessionStorage.setItem('service_session_key', sessionKey)
             }
           } catch (error) {
-            console.warn('Failed to restore session key from store:', error)
           }
         }
         
@@ -152,14 +150,15 @@ api.interceptors.request.use(
           clearTokens()
           return Promise.reject(Object.assign(new Error('NO_VALID_AUTH_TOKEN'), { code: 'NO_VALID_AUTH_TOKEN' }))
         }
-        config.headers = config.headers || {}
-        config.headers.Authorization = `Bearer ${token}`
+        config.headers = AxiosHeaders.from(config.headers)
+        config.headers.set('Authorization', `Bearer ${token}`)
       }
     }
 
     // Handle FormData - remove Content-Type header to let browser set it with boundary
     if (config.data instanceof FormData) {
-      delete config.headers['Content-Type']
+      config.headers = AxiosHeaders.from(config.headers)
+      config.headers.delete('Content-Type')
     }
 
     return config
@@ -239,19 +238,21 @@ api.interceptors.response.use(
       }
     }
 
-    // Don't show error toasts or redirect for validation failures
-    if (!originalRequest?.url?.includes('/validate-token/')) {
+    // Don't show error toasts for background/silent requests
+    const isSilentEndpoint = originalRequest?.url?.includes('/validate-token/') ||
+      originalRequest?.url?.includes('/api/notifications/') ||
+      originalRequest?.url?.includes('/api/system/health/')
+
+    if (!isSilentEndpoint) {
       const errorData = error.response?.data as any
       const isAthensEmployeeEndpoint = originalRequest?.url?.includes('/api/athens-sust/employees')
-      
+
       if (!isAthensEmployeeEndpoint && error.response?.status !== 401) {
-        if (errorData?.message) {
-          toast.error(errorData.message)
-        } else if (errorData?.error) {
-          toast.error(errorData.error)
-        } else if (error.message && !error.message.includes('401')) {
-          toast.error(error.message)
+        const msg = errorData?.message || errorData?.error
+        if (msg && typeof msg === 'string') {
+          toast.error(msg)
         }
+        // Do NOT toast raw error.message — it leaks internal errors to UI
       }
     }
 
@@ -325,8 +326,14 @@ export const apiClient = {
     })
   },
 
+  getCurrentUser: () =>
+    api.get('/api/auth/me/'),
+
   changeCompanyUserPassword: (data: { current_password: string; new_password: string; confirm_password: string; force_logout_all?: boolean }) =>
-    api.post('/api/company-dashboard/security/password-change/', data),
+    api.post('/api/auth/company-dashboard/security/password-change/', data),
+
+  postInductionChangePassword: (data: { current_password: string; new_password: string; confirm_password: string }) =>
+    api.post('/api/auth/training/change-password/', data),
 
   uploadCompanyLogo: (formData: FormData) =>
     api.post('/api/auth/company/update-logo/', formData),
@@ -1163,7 +1170,7 @@ export const apiClient = {
 
   // Enhanced Password Change
   changeCompanyUserPasswordSecure: (data: { current_password: string; new_password: string; confirm_password: string; force_logout_all?: boolean }) =>
-    api.post('/api/company-dashboard/security/password-change/', data),
+    api.post('/api/auth/company-dashboard/security/password-change/', data),
 
   // Advanced Security APIs (Phase 4)
   getCaptcha: (companyId: number) =>

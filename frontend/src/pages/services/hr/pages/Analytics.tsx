@@ -61,7 +61,6 @@ const Analytics: React.FC = () => {
       })
       setAnalyticsData(response.data)
     } catch (error) {
-      console.error('Error fetching analytics:', error)
       toast.error('Failed to load analytics data')
     } finally {
       setLoading(false)

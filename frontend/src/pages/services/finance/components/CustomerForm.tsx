@@ -243,7 +243,6 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onClose, onSave }
       }
 
     } catch (error) {
-      console.error('Error fetching customer details:', error)
       // Fallback to the limited data from the list
       setFormData({
         ...customer,
@@ -509,12 +508,9 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onClose, onSave }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    console.log('Form submitted with data:', formData)
-    console.log('Customer ID:', customer?.id)
 
     // Validate form
     if (!validateForm()) {
-      console.log('Validation failed with errors:', errors)
       // Find the first tab with errors and switch to it
       const errorFields = Object.keys(errors)
       if (errorFields.some(field => ['name', 'display_name', 'email', 'phone', 'mobile', 'website', 'business_type', 'industry'].includes(field))) {
@@ -531,7 +527,6 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onClose, onSave }
       return
     }
 
-    console.log('Validation passed, proceeding with save...')
     setLoading(true)
 
     try {
@@ -563,26 +558,20 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onClose, onSave }
         payload.shipping_country = ''
       }
 
-      console.log('Sending payload:', payload)
       
       if (customer?.id) {
         // Update existing customer
-        console.log('Updating customer with ID:', customer.id)
         const response = await apiClient.updateFinanceCustomer(customer.id, payload)
-        console.log('Update response:', response)
         toast.success('Customer updated successfully!')
       } else {
         // Create new customer
-        console.log('Creating new customer')
         const response = await apiClient.createFinanceCustomer(payload)
-        console.log('Create response:', response)
         toast.success('Customer created successfully!')
       }
 
       onSave()
       onClose()
     } catch (error: any) {
-      console.error('Error saving customer:', error)
 
       // Handle validation errors from backend
       if (error.response?.data) {
@@ -635,7 +624,6 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onClose, onSave }
           
           // If there are details, log them for debugging
           if (backendErrors.details) {
-            console.error('Error details:', backendErrors.details)
             // Try to parse details if it's a string
             if (typeof backendErrors.details === 'string') {
               try {
@@ -650,7 +638,6 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onClose, onSave }
                   toast.error(`Error: ${detailErrorMessage}`)
                 }
               } catch (parseError) {
-                console.error('Could not parse error details:', parseError)
               }
             }
           }

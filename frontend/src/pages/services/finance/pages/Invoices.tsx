@@ -73,7 +73,6 @@ const Invoices: React.FC<InvoicesProps> = ({ sessionKey }) => {
         thisMonthInvoices,
       });
     } catch (error: any) {
-      console.error('Error fetching invoice stats:', error);
       toast.error('Failed to fetch invoice statistics');
     } finally {
       setLoading(false);

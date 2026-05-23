@@ -48,7 +48,6 @@ export default function UsersList() {
     } catch (err) {
       setError('Failed to load users');
       setUsers([]);
-      console.error('Failed to load users:', err);
     } finally {
       setLoading(false);
     }

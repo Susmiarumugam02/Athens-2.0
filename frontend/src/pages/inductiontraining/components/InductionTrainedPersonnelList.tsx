@@ -62,7 +62,6 @@ const InductionTrainedPersonnelList: React.FC = () => {
     setLoading(true);
     try {
       const response = await api.get('/induction/api/trained-personnel/');
-      console.log('Trained Personnel Response:', response.data);
       
       // Handle the response structure from the backend
       const responseData = response.data;
@@ -95,7 +94,6 @@ const InductionTrainedPersonnelList: React.FC = () => {
       setStats(stats);
     } catch (error) {
       message.error('Failed to fetch trained personnel data');
-      console.error('Error fetching trained personnel:', error);
     } finally {
       setLoading(false);
     }

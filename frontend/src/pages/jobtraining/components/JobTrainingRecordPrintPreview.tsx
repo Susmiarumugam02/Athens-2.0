@@ -222,7 +222,6 @@ export default function JobTrainingRecordPrintPreview({ trainingData }: JobTrain
         freshTrainingData = { ...trainingData, ...trainingResponse.data };
       }
     } catch (error) {
-      console.error('Failed to fetch training attendance for print:', error);
     }
 
     const htmlContent = generateJobTrainingDocument({

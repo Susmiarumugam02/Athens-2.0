@@ -35,7 +35,6 @@ import {
   normalizeGrade,
 } from '../utils/workflowGuards';
 import ReadinessPanel from './ReadinessPanel';
-import PersonnelSelect from './PersonnelSelect';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
@@ -749,7 +748,6 @@ const PermitDetail: React.FC = () => {
         setIsolationUnavailable(true);
         return;
       }
-      console.error('Failed to fetch isolation points:', error);
     } finally {
       setIsolationLoading(false);
     }
@@ -768,7 +766,6 @@ const PermitDetail: React.FC = () => {
         setLibraryUnavailable(true);
         return;
       }
-      console.error('Failed to fetch library points:', error);
     } finally {
       setLibraryLoading(false);
     }

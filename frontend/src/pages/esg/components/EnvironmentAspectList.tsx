@@ -45,7 +45,6 @@ const EnvironmentAspectList: React.FC = () => {
       message.success('Environment aspect deleted successfully');
       fetchAspects();
     } catch (error) {
-      console.error('Delete error:', error);
       message.error('Failed to delete environment aspect');
     }
   };

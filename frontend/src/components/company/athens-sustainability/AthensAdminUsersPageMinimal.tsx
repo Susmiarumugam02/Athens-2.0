@@ -8,6 +8,7 @@ import { Select } from '../../ui/Select'
 import { Modal } from '../../ui/Modal'
 import { LoadingSpinner } from '../../ui/LoadingSpinner'
 import { athensSustCompanyApi, type AthensEmployeeUser } from '../../../services/athensSustCompanyApi'
+import { sanitizePhoneInput, handlePhoneKeyDown, handlePhonePaste } from '../../../lib/phoneUtils'
 import toast from 'react-hot-toast'
 
 const AthensAdminUsersPage: React.FC = () => {
@@ -100,6 +101,11 @@ const AthensAdminUsersPage: React.FC = () => {
   const handleCreate = () => {
     if (!createForm.project || !createForm.email || !createForm.first_name || !createForm.last_name || !createForm.department || !createForm.designation || !createForm.phone_number) {
       toast.error('Please fill all required fields')
+      return
+    }
+
+    if (createForm.phone_number.replace(/\D/g, '').length !== 10) {
+      toast.error('Enter a valid 10-digit phone number')
       return
     }
 
@@ -362,7 +368,10 @@ Note: Please reset this password on first login.
             <Input
               placeholder="Phone number"
               value={createForm.phone_number}
-              onChange={(e) => setCreateForm({ ...createForm, phone_number: e.target.value })}
+              onChange={(e) => setCreateForm({ ...createForm, phone_number: sanitizePhoneInput(e.target.value, 10) })}
+              onKeyDown={handlePhoneKeyDown}
+              onPaste={(e) => handlePhonePaste(e, 10)}
+              maxLength={10}
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">

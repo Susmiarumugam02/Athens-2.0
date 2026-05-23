@@ -22,10 +22,16 @@ Real layouts and pages with full CRUD operations for control plane management.
 
 **NEW:** Comprehensive deployment and troubleshooting documentation:
 - **[DEPLOYMENT_TROUBLESHOOTING.md](./DEPLOYMENT_TROUBLESHOOTING.md)** - Complete troubleshooting guide
+- **[DEVELOPMENT_BYPASS_COMPLETE.md](./DEVELOPMENT_BYPASS_COMPLETE.md)** - Development induction bypass ⭐ **NEW**
+- **[DEVELOPMENT_BYPASS_QUICK_CARD.md](./DEVELOPMENT_BYPASS_QUICK_CARD.md)** - Quick reference ⭐ **NEW**
+- **[ROLE_BASED_INDUCTION_FIX.md](./ROLE_BASED_INDUCTION_FIX.md)** - Role-based induction training ⭐ **NEW**
+- **[ROLE_BASED_INDUCTION_QUICK_CARD.md](./ROLE_BASED_INDUCTION_QUICK_CARD.md)** - Quick reference ⭐ **NEW**
 - **[scripts/](./scripts/)** - Automated verification and health check scripts
   - `verify-ports.sh` - Port configuration validation
   - `health-check.sh` - Automated health monitoring
   - `pre-deploy-check.sh` - Pre-deployment validation
+  - `verify-dev-bypass.sh` - Development bypass verification ⭐ **NEW**
+  - `verify-role-based-induction.sh` - Role-based induction verification ⭐ **NEW**
 
 **Common Issues Documented:**
 - ✅ 502 Bad Gateway (port mismatch)
@@ -93,6 +99,28 @@ Real layouts and pages with full CRUD operations for control plane management.
 - ✅ Data migration from old structure complete
 - ✅ Full routing for all components
 
+## ✅ Induction Training Access Control - COMPLETE ⭐ **NEW**
+
+**Mandatory training system for all new users before platform access.**
+
+**Features:**
+- ✅ New users must complete induction training first
+- ✅ All operational modules locked until training complete
+- ✅ Automatic module unlock after successful completion
+- ✅ Progress tracking and resume capability
+- ✅ Admin bypass (Superadmin, MasterAdmin)
+- ✅ Role-based training paths
+- ✅ Tenant isolation respected
+- ✅ Route guards and sidebar filtering
+- ✅ Onboarding banner with progress bar
+
+**Quick Access:**
+- [Implementation Summary](./INDUCTION_TRAINING_IMPLEMENTATION_SUMMARY.md) ⭐ **NEW**
+- [Complete Documentation](./INDUCTION_TRAINING_ACCESS_CONTROL_COMPLETE.md) ⭐ **NEW**
+- [Quick Reference Card](./INDUCTION_TRAINING_QUICK_CARD.md) ⭐ **NEW**
+
+**Test Results:** ✅ 5/5 PASSING
+
 **Quick Access:**
 - [ERGON Modules Complete](./ERGON_MODULES_COMPLETE.md) ⭐ **NEW**
 - [ERGON Quick Card](./ERGON_QUICK_CARD.md) ⭐ **NEW**
@@ -136,8 +164,9 @@ Real layouts and pages with full CRUD operations for control plane management.
 | **ERGON Module** | **✅ Complete** | **✅ Ready** | **✅ Complete** |
 | **Workforce Module** | **✅ Complete** | **⏳ Testing** | **✅ Complete** |
 | **Contractor Compliance** | **✅ Complete** | **✅ Ready** | **✅ Complete** |
+| **Induction Training Access** | **✅ Complete** | **✅ 5/5 Passing** | **✅ Complete** |
 
-**Overall: ✅ 100% COMPLETE | Tests: ✅ 10/10 PASSING | Integration: ✅ COMPLETE | UI: ✅ READY | Modules: ✅ 4 COMPLETE**
+**Overall: ✅ 100% COMPLETE | Tests: ✅ 15/15 PASSING | Integration: ✅ COMPLETE | UI: ✅ READY | Modules: ✅ 5 COMPLETE**
 
 ---
 
@@ -164,9 +193,12 @@ npm run dev
 ## 📚 Documentation
 
 ### Operations & Troubleshooting ⭐ **NEW**
-- **[FINAL_CLOSURE_REPORT.md](./FINAL_CLOSURE_REPORT.md)** - Safety Observation 499 fix closure ⭐ **NEW**
-- **[FRONTEND_AUTH_FIX_COMPLETE.md](./FRONTEND_AUTH_FIX_COMPLETE.md)** - Frontend auth lifecycle fix ⭐ **NEW**
-- **[FRONTEND_AUTH_FIX_QUICK_CARD.md](./FRONTEND_AUTH_FIX_QUICK_CARD.md)** - Quick reference card ⭐ **NEW**
+- **[INCIDENT_REPORT_EMPLOYEE_ISOLATION.md](./INCIDENT_REPORT_EMPLOYEE_ISOLATION.md)** - Employee isolation security fix ⭐ **NEW**
+- **[EMPLOYEE_ISOLATION_SECURITY_FIX.md](./EMPLOYEE_ISOLATION_SECURITY_FIX.md)** - Detailed fix documentation ⭐ **NEW**
+- **[EMPLOYEE_ISOLATION_FIX_QUICK_CARD.md](./EMPLOYEE_ISOLATION_FIX_QUICK_CARD.md)** - Quick reference card ⭐ **NEW**
+- **[FINAL_CLOSURE_REPORT.md](./FINAL_CLOSURE_REPORT.md)** - Safety Observation 499 fix closure
+- **[FRONTEND_AUTH_FIX_COMPLETE.md](./FRONTEND_AUTH_FIX_COMPLETE.md)** - Frontend auth lifecycle fix
+- **[FRONTEND_AUTH_FIX_QUICK_CARD.md](./FRONTEND_AUTH_FIX_QUICK_CARD.md)** - Quick reference card
 - **[OPS_QUICK_REFERENCE.md](./OPS_QUICK_REFERENCE.md)** - Quick reference card for ops team
 - **[DEPLOYMENT_TROUBLESHOOTING.md](./DEPLOYMENT_TROUBLESHOOTING.md)** - Complete troubleshooting guide
 - **[ORCHESTRATOR_CHECKLIST.md](./ORCHESTRATOR_CHECKLIST.md)** - Deployment checklist
@@ -243,6 +275,12 @@ pytest -v
 - `POST /api/auth/company/login/` - Company user login
 - `POST /api/auth/token/refresh/` - Refresh access token
 - `POST /api/auth/logout/` - Logout
+
+### Training Access Control (Authenticated) ⭐ **NEW**
+- `GET /api/auth/training/status/` - Check training status
+- `POST /api/auth/training/complete/` - Mark training complete
+- `POST /api/auth/training/progress/` - Update training progress
+- `GET /api/auth/training/accessible-modules/` - Get accessible modules
 
 ### Control Plane (Superadmin Only)
 - `GET/POST /api/control-plane/tenants/` - Tenant management

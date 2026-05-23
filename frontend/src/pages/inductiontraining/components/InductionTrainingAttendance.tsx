@@ -132,15 +132,6 @@ const InductionTrainingAttendance: React.FC<InductionTrainingAttendanceProps> = 
 
           // Debug: Log all participants' data
           workersResponse.data.all_participants.forEach((participant: any, index: number) => {
-            console.log(`Participant ${index} data:`, {
-              type: participant.participant_type,
-              name: participant.name,
-              surname: participant.surname,
-              photo: participant.photo,
-              photoExists: !!participant.photo,
-              participant_id: participant.participant_id,
-              employee_id: participant.employee_id
-            });
           });
         } else if (workersResponse.data?.workers && Array.isArray(workersResponse.data.workers)) {
           // Fallback: use only workers if all_participants is not available
@@ -228,11 +219,9 @@ const InductionTrainingAttendance: React.FC<InductionTrainingAttendanceProps> = 
       });
       
       // Log response for debugging
-      console.log('Attendance submission response:', response.data);
       
       // Check for failed records
       if (response.data.failed_records && response.data.failed_records.length > 0) {
-        console.warn('Some records failed to save:', response.data.failed_records);
         message.warning(`${response.data.records_created} records saved successfully. ${response.data.failed_records.length} failed.`);
       } else {
         message.success(`Attendance submitted successfully. ${response.data.records_created} records saved.`);
@@ -241,7 +230,6 @@ const InductionTrainingAttendance: React.FC<InductionTrainingAttendanceProps> = 
       await api.put(`/induction/${inductionTraining.id}/`, { ...inductionTraining, status: 'completed' });
       setCompleted(true);
     } catch (error) {
-      console.error('Attendance submission error:', error);
       message.error('Failed to submit attendance');
     } finally {
       setSubmitting(false);

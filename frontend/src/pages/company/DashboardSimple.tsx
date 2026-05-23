@@ -61,7 +61,6 @@ export default function CompanyDashboard() {
         { id: 3, type: 'leave', title: 'Leave request approved', time: '5 hours ago', user: 'Mike Johnson' },
       ])
     } catch (error) {
-      console.error('Failed to load dashboard:', error)
     } finally {
       setLoading(false)
     }
@@ -171,7 +170,7 @@ export default function CompanyDashboard() {
               <Activity className="h-5 w-5 text-primary" />
               <h2 className="text-lg font-bold text-foreground">Recent Activities</h2>
             </div>
-            <button className="text-sm text-primary hover:underline">View All</button>
+            <button className="text-sm text-primary hover:underline" onClick={() => navigate('/app/ergon/tasks')}>View All</button>
           </div>
           
           <div className="space-y-4">

@@ -30,7 +30,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         setUser(JSON.parse(userData));
       } catch (error) {
-        console.error('Failed to parse user data:', error);
         localStorage.removeItem('authToken');
         localStorage.removeItem('userData');
       }

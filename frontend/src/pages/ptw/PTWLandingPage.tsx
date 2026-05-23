@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, Row, Col, Statistic, Select, Spin, Tag, List as AntList } from 'antd';
+import { Card, Row, Col, Statistic, Select, Spin, Tag, List as AntList, Button } from 'antd';
 import { FileTextOutlined, ClockCircleOutlined, CheckCircleOutlined, WarningOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { getPermits } from './api';
 
@@ -22,7 +22,6 @@ const PTWLandingPage: React.FC = () => {
       const response = await getPermits();
       setPermits(response.data || []);
     } catch (error: any) {
-      console.error('Failed to load permits:', error);
     } finally {
       setLoading(false);
     }
@@ -148,7 +147,7 @@ const PTWLandingPage: React.FC = () => {
               title="Total Permits"
               value={metrics.total}
               prefix={<FileTextOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -158,7 +157,7 @@ const PTWLandingPage: React.FC = () => {
               title="Active Permits"
               value={metrics.active}
               prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -168,7 +167,7 @@ const PTWLandingPage: React.FC = () => {
               title="Pending Approval"
               value={metrics.pending}
               prefix={<WarningOutlined />}
-              valueStyle={{ color: '#faad14' }}
+              styles={{ content: { color: '#faad14' } }}
             />
           </Card>
         </Col>
@@ -178,7 +177,7 @@ const PTWLandingPage: React.FC = () => {
               title="Expired"
               value={metrics.expired}
               prefix={<CloseCircleOutlined />}
-              valueStyle={{ color: '#ff4d4f' }}
+              styles={{ content: { color: '#ff4d4f' } }}
             />
           </Card>
         </Col>

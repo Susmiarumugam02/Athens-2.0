@@ -50,7 +50,6 @@ const SustainabilityTargetsDashboard: React.FC = () => {
         setProgressData(progressRes.value.data);
       }
     } catch (error) {
-      console.error('Error fetching sustainability data:', error);
     } finally {
       setLoading(false);
     }
@@ -94,7 +93,6 @@ const SustainabilityTargetsDashboard: React.FC = () => {
       setModalVisible(false);
       fetchData();
     } catch (error) {
-      console.error('Error saving target:', error);
     }
   };
 
@@ -103,7 +101,6 @@ const SustainabilityTargetsDashboard: React.FC = () => {
       await deleteSustainabilityTarget(id);
       fetchData();
     } catch (error) {
-      console.error('Error deleting target:', error);
     }
   };
 
@@ -270,7 +267,7 @@ const SustainabilityTargetsDashboard: React.FC = () => {
                 title="Total Targets"
                 value={progressData.total_targets}
                 prefix={<TrophyOutlined style={{ color: '#1890ff' }} />}
-                valueStyle={{ color: '#1890ff', fontSize: '2rem', fontWeight: 'bold' }}
+                styles={{ content: { color: '#1890ff', fontSize: '2rem', fontWeight: 'bold' } }}
               />
             </Card>
           </Col>
@@ -282,7 +279,7 @@ const SustainabilityTargetsDashboard: React.FC = () => {
                 value={progressData.on_track_targets}
                 suffix={`/${progressData.total_targets}`}
                 prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
-                valueStyle={{ color: '#52c41a', fontSize: '2rem', fontWeight: 'bold' }}
+                styles={{ content: { color: '#52c41a', fontSize: '2rem', fontWeight: 'bold' } }}
               />
               <Progress 
                 percent={progressData.total_targets > 0 ? (progressData.on_track_targets / progressData.total_targets) * 100 : 0}
@@ -299,7 +296,7 @@ const SustainabilityTargetsDashboard: React.FC = () => {
                 value={progressData.sdg_aligned}
                 suffix={`/${progressData.total_targets}`}
                 prefix={<GlobalOutlined style={{ color: '#722ed1' }} />}
-                valueStyle={{ color: '#722ed1', fontSize: '2rem', fontWeight: 'bold' }}
+                styles={{ content: { color: '#722ed1', fontSize: '2rem', fontWeight: 'bold' } }}
               />
               <Progress 
                 percent={progressData.total_targets > 0 ? (progressData.sdg_aligned / progressData.total_targets) * 100 : 0}
@@ -316,7 +313,7 @@ const SustainabilityTargetsDashboard: React.FC = () => {
                 value={progressData.paris_aligned}
                 suffix={`/${progressData.total_targets}`}
                 prefix={<RiseOutlined style={{ color: '#fa8c16' }} />}
-                valueStyle={{ color: '#fa8c16', fontSize: '2rem', fontWeight: 'bold' }}
+                styles={{ content: { color: '#fa8c16', fontSize: '2rem', fontWeight: 'bold' } }}
               />
               <Progress 
                 percent={progressData.total_targets > 0 ? (progressData.paris_aligned / progressData.total_targets) * 100 : 0}

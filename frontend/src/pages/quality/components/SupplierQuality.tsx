@@ -27,7 +27,6 @@ const SupplierQuality: React.FC = () => {
       setSuppliers(suppliersRes.data?.results || suppliersRes.data || []);
       setStats(statsRes.data || {});
     } catch (error: any) {
-      console.error('Failed to load supplier data:', error);
       if (error.response?.status !== 401) {
         setSuppliers([]);
         setStats({});
@@ -45,7 +44,6 @@ const SupplierQuality: React.FC = () => {
       form.resetFields();
       loadData();
     } catch (error: any) {
-      console.error('Failed to create supplier:', error);
       if (error.response?.status !== 401) {
         message.error('UpatePro: Failed to create supplier');
       }
@@ -135,7 +133,7 @@ const SupplierQuality: React.FC = () => {
             <Statistic
               title="Approved Suppliers"
               value={stats.approved_suppliers || 0}
-              valueStyle={{ color: '#3f8600' }}
+              styles={{ content: { color: '#3f8600' } }}
             />
           </Card>
         </Col>
@@ -154,7 +152,7 @@ const SupplierQuality: React.FC = () => {
             <Statistic
               title="A-Rated Suppliers"
               value={stats.rating_distribution?.A || 0}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>

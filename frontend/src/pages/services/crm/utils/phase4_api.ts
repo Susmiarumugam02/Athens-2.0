@@ -88,7 +88,6 @@ export const phase4API = {
         apiUsage: apiUsageDash.data
       };
     } catch (error) {
-      console.error('Error fetching Phase 4 dashboard data:', error);
       throw error;
     }
   },
@@ -119,7 +118,6 @@ export const phase4API = {
 
       return healthScore;
     } catch (error) {
-      console.error('Error calculating system health:', error);
       throw error;
     }
   }

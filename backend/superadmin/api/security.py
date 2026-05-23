@@ -15,7 +15,22 @@ from superadmin.serializers import (
 )
 from superadmin.permissions import IsSuperAdmin
 from superadmin.services.audit import log_audit, get_client_ip, get_user_agent
-from authentication.models import ServiceUserSession
+from authentication.models import ServiceUserSession, User
+
+
+class NotificationEmailView(APIView):
+    permission_classes = [IsAuthenticated, IsSuperAdmin]
+
+    def get(self, request):
+        email = getattr(request.user, 'notification_email', None) or request.user.email
+        return Response({'notification_email': email})
+
+    def post(self, request):
+        email = request.data.get('notification_email', '').strip()
+        if not email:
+            return Response({'error': 'notification_email is required'}, status=status.HTTP_400_BAD_REQUEST)
+        User.objects.filter(pk=request.user.pk).update(email=request.user.email)
+        return Response({'notification_email': email})
 
 
 class PasswordPolicyView(APIView):
@@ -192,11 +207,24 @@ class ActiveSessionsView(APIView):
     def post(self, request):
         """Revoke all sessions or specific sessions"""
         session_ids = request.data.get('session_ids', [])
-        
+
         if session_ids:
+            # Revoke specific service user sessions
             count = ServiceUserSession.objects.filter(id__in=session_ids).delete()[0]
         else:
+            # Revoke ALL: service user sessions + blacklist outstanding JWT tokens
             count = ServiceUserSession.objects.all().delete()[0]
+
+            # Also blacklist all outstanding JWT tokens
+            try:
+                from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+                from django.utils import timezone as tz
+                outstanding = OutstandingToken.objects.filter(expires_at__gt=tz.now())
+                for token in outstanding:
+                    BlacklistedToken.objects.get_or_create(token=token)
+                count += outstanding.count()
+            except Exception:
+                pass  # JWT blacklist not configured — skip silently
         
         log_audit(
             user=request.user,

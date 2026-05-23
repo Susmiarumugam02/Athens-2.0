@@ -1,6 +1,6 @@
 import React from 'react'
 import { Monitor, Smartphone, Trash2 } from 'lucide-react'
-import { DeviceFingerprint } from '../../types'
+import type { DeviceFingerprint } from '../../types'
 
 interface DeviceFingerprintManagerProps {
   devices: DeviceFingerprint[]

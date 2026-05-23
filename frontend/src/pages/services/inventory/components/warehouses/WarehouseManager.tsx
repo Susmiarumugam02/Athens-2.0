@@ -90,7 +90,6 @@ const WarehouseManager: React.FC = () => {
       const response = await inventoryApi.getWarehouses(params);
       setWarehouses(response.results || response);
     } catch (error) {
-      console.error('Failed to load warehouses:', error);
       toast.error('Failed to load warehouses');
     } finally {
       setLoading(false);
@@ -170,7 +169,6 @@ const WarehouseManager: React.FC = () => {
       resetForm();
       loadWarehouses();
     } catch (error: any) {
-      console.error('Error saving warehouse:', error);
       const message = error.response?.data?.error || 'Failed to save warehouse';
       toast.error(message);
     } finally {
@@ -229,7 +227,6 @@ const WarehouseManager: React.FC = () => {
         toast.success('Warehouse deleted successfully!');
         loadWarehouses();
       } catch (error) {
-        console.error('Failed to delete warehouse:', error);
         toast.error('Failed to delete warehouse');
       }
     }

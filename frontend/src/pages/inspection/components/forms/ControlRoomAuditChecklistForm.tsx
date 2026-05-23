@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Checkbox, message, Card } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { inspectionService } from '../../services/inspectionService';
-import PageLayout from '../../../components/ui/PageLayout';
+import PageLayout from '../../../../components/ui/PageLayout';
 
 const sections = [
   {
@@ -211,7 +211,7 @@ const ControlRoomAuditChecklistForm: React.FC = () => {
         message.success('Control Room Audit Checklist created successfully!');
       }
       
-      navigate('/inspection/control-room-audit-checklist');
+      navigate('/dashboard/inspection/forms/control-room-audit-checklist/list');
     } catch (error) {
       message.error('Failed to save form');
     } finally {
@@ -221,7 +221,7 @@ const ControlRoomAuditChecklistForm: React.FC = () => {
 
   const breadcrumbs = [
     { title: 'Inspection', href: '/inspection' },
-    { title: 'Control Room Audit Checklist', href: '/inspection/control-room-audit-checklist' },
+    { title: 'Control Room Audit Checklist', href: '/dashboard/inspection/forms/control-room-audit-checklist/list' },
     { title: isEdit ? 'Edit Form' : 'New Form' }
   ];
 
@@ -303,7 +303,7 @@ const ControlRoomAuditChecklistForm: React.FC = () => {
 
           {/* Submit Button */}
           <div className="flex justify-end gap-4 pt-4">
-            <Button onClick={() => navigate('/inspection/control-room-audit-checklist')}>
+            <Button onClick={() => navigate('/dashboard/inspection/forms/control-room-audit-checklist/list')}>
               Cancel
             </Button>
             <Button type="primary" htmlType="submit" loading={loading}>

@@ -8,6 +8,7 @@ from .models import (
     CloseoutChecklistTemplate, PermitCloseout, IsolationPointLibrary, PermitIsolationPoint,
     PermitToolboxTalk, PermitToolboxTalkAttendance
 )
+from .risk_assessment import RiskAssessment, RiskAssessmentSerializer, RiskAssessmentViewSet
 from worker.serializers import WorkerSerializer
 from authentication.models import CustomUser
 from .status_utils import normalize_permit_status

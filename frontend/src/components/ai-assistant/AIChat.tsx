@@ -92,7 +92,6 @@ const AIChat: React.FC = () => {
       window.URL.revokeObjectURL(url);
       
     } catch (error) {
-      console.error('Export error:', error);
       alert('Failed to export data');
     }
   };
@@ -161,7 +160,6 @@ const AIChat: React.FC = () => {
       setMessages(prev => [...prev, aiMessage]);
 
     } catch (error) {
-      console.error('AI Query Error:', error);
       const errorMessage: AIMessage = {
         id: (Date.now() + 1).toString(),
         type: 'ai',

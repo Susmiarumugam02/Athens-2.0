@@ -97,7 +97,6 @@ const QuotationDetail: React.FC<QuotationDetailProps> = ({ quotationId, onClose,
 
   const fetchQuotationDetail = async () => {
     if (!sessionKey) {
-      console.error('No session key available')
       return
     }
 
@@ -107,7 +106,6 @@ const QuotationDetail: React.FC<QuotationDetailProps> = ({ quotationId, onClose,
 
       setQuotation(response.data)
     } catch (error) {
-      console.error('Error fetching quotation detail:', error)
       alert('Failed to load quotation details')
     } finally {
       setLoading(false)
@@ -179,7 +177,6 @@ const QuotationDetail: React.FC<QuotationDetailProps> = ({ quotationId, onClose,
         }
       }
     } catch (error) {
-      console.error('Error generating PDF for print:', error)
       alert('Error generating PDF for print. Please try again.')
     }
   }
@@ -214,7 +211,6 @@ const QuotationDetail: React.FC<QuotationDetailProps> = ({ quotationId, onClose,
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
     } catch (error) {
-      console.error('Error generating PDF:', error)
       alert('Error generating PDF. Please try again.')
     } finally {
       setIsGeneratingPDF(false)

@@ -40,7 +40,6 @@ const ManualAttendanceEntry: React.FC<ManualAttendanceEntryProps> = ({ onSuccess
       })
       setEmployees(response.data.results || [])
     } catch (error) {
-      console.error('Error fetching employees:', error)
       toast.error('Failed to load employees')
     } finally {
       // setLoading(false)
@@ -86,7 +85,6 @@ const ManualAttendanceEntry: React.FC<ManualAttendanceEntryProps> = ({ onSuccess
         status: 'present'
       })
     } catch (error: any) {
-      console.error('Error saving attendance:', error)
       toast.error(error.response?.data?.detail || 'Failed to save attendance')
     } finally {
       setSaving(false)

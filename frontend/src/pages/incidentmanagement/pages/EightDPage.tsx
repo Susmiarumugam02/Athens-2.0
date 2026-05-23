@@ -204,7 +204,7 @@ const EightDPage: React.FC = () => {
               title="Total Processes"
               value={totalProcesses}
               prefix={<TeamOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -214,7 +214,7 @@ const EightDPage: React.FC = () => {
               title="Active"
               value={activeProcesses}
               prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -224,7 +224,7 @@ const EightDPage: React.FC = () => {
               title="Completed"
               value={completedProcesses}
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -235,7 +235,7 @@ const EightDPage: React.FC = () => {
               value={avgProgress}
               suffix="%"
               prefix={<ExclamationCircleOutlined />}
-              valueStyle={{ color: '#fa8c16' }}
+              styles={{ content: { color: '#fa8c16' } }}
             />
           </Card>
         </Col>

@@ -36,7 +36,6 @@ export const OpportunitiesPage: React.FC = () => {
       const response = await crmApi.getOpportunities(sessionKey!)
       setOpportunities(response.data.results || response.data)
     } catch (error) {
-      console.error('Error fetching opportunities:', error)
       toast.error('Failed to fetch opportunities')
     } finally {
       setLoading(false)
@@ -82,7 +81,6 @@ export const OpportunitiesPage: React.FC = () => {
       toast.success('Opportunity deleted successfully!')
       fetchOpportunities()
     } catch (error) {
-      console.error('Error deleting opportunity:', error)
       toast.error('Failed to delete opportunity')
     }
   }

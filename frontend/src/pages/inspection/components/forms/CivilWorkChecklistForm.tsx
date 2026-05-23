@@ -3,7 +3,7 @@ import { Form, Input, Table, Button, DatePicker, message } from "antd";
 import { useNavigate } from "react-router-dom";
 import { DownloadOutlined, CloseOutlined } from '@ant-design/icons';
 import { inspectionService } from '../../services/inspectionService';
-import PageLayout from '../../../components/ui/PageLayout';
+import PageLayout from '../../../../components/ui/PageLayout';
 
 const dataSource = [
   'Reinforcement', 'Cement', '20mm Aggregate', '10 mm Aggregate', 'Sand',

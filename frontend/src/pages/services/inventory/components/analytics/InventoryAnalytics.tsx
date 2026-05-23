@@ -145,7 +145,6 @@ const AIInsightCard: React.FC<AIInsightCardProps> = ({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('Take Action clicked');
                 if (onTakeAction) {
                   onTakeAction();
                 }
@@ -214,7 +213,6 @@ const InventoryAnalytics: React.FC<InventoryAnalyticsProps> = ({ onNavigate }) =
       }
       
     } catch (error: any) {
-      console.error('Failed to load analytics:', error);
       toast.error('Failed to load analytics data');
       
       setAnalyticsData({
@@ -478,7 +476,6 @@ const InventoryAnalytics: React.FC<InventoryAnalyticsProps> = ({ onNavigate }) =
           <select
             value={timeRange}
             onChange={(e) => {
-              console.log('Time range changed to:', e.target.value);
               handleTimeRangeChange(e.target.value);
             }}
             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white cursor-pointer relative z-20"
@@ -493,7 +490,6 @@ const InventoryAnalytics: React.FC<InventoryAnalyticsProps> = ({ onNavigate }) =
           <button
             type="button"
             onClick={() => {
-              console.log('Refresh clicked');
               handleRefresh();
             }}
             disabled={refreshing}
@@ -507,7 +503,6 @@ const InventoryAnalytics: React.FC<InventoryAnalyticsProps> = ({ onNavigate }) =
           <button
             type="button"
             onClick={() => {
-              console.log('Export clicked');
               handleExportReport();
             }}
             disabled={exporting}
@@ -639,7 +634,6 @@ const InventoryAnalytics: React.FC<InventoryAnalyticsProps> = ({ onNavigate }) =
           <button
             type="button"
             onClick={() => {
-              console.log('View All Insights clicked');
               setShowAllInsights(!showAllInsights);
               toast.success(showAllInsights ? 'Showing key insights' : 'Showing all insights');
             }}
@@ -686,7 +680,7 @@ const InventoryAnalytics: React.FC<InventoryAnalyticsProps> = ({ onNavigate }) =
             </h3>
             <button
               type="button"
-              onClick={() => console.log('Inventory Trends view clicked')}
+              onClick={() => loadAnalytics()}
               className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white cursor-pointer"
             >
               <Eye className="w-4 h-4" />
@@ -710,7 +704,7 @@ const InventoryAnalytics: React.FC<InventoryAnalyticsProps> = ({ onNavigate }) =
             </h3>
             <button
               type="button"
-              onClick={() => console.log('Category Distribution view clicked')}
+              onClick={() => loadAnalytics()}
               className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white cursor-pointer"
             >
               <Eye className="w-4 h-4" />

@@ -157,7 +157,6 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({ quotationForPO, initial
       setIsEditing(true)
       setShowForm(true)
     } catch (error) {
-      console.error('Error loading PO details:', error)
       toast.error('Failed to load purchase order details')
     }
   }
@@ -173,7 +172,6 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({ quotationForPO, initial
       setSelectedPOId(po.id)
       setShowView(true)
     } catch (error) {
-      console.error('Error loading PO details:', error)
       toast.error('Failed to load purchase order details')
     }
   }
@@ -240,7 +238,6 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({ quotationForPO, initial
       setSelectedPO(freshPOData)
       setShowRaiseInvoice(true)
     } catch (error) {
-      console.error('Error loading PO details:', error)
       toast.error('Failed to load purchase order details')
     }
   }
@@ -261,7 +258,6 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({ quotationForPO, initial
       setShowRaiseInvoice(false)
       setShowProformaForm(true)
     } catch (error) {
-      console.error('Error refreshing PO data:', error)
       toast.error('Failed to refresh purchase order data')
     }
   }
@@ -277,7 +273,6 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({ quotationForPO, initial
       setShowRaiseInvoice(false)
       setShowInvoiceForm(true)
     } catch (error) {
-      console.error('Error refreshing PO data:', error)
       toast.error('Failed to refresh purchase order data')
     }
   }

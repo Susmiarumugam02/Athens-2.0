@@ -27,10 +27,8 @@ const QuotationEdit: React.FC<QuotationEditProps> = ({ quotationId, onClose, onS
       setLoading(true)
       const response = await apiClient.getFinanceQuotation(quotationId, { session_key: sessionKey })
 
-      console.log('Loaded quotation for editing:', response.data)
       setQuotation(response.data)
     } catch (error) {
-      console.error('Error loading quotation details:', error)
       toast.error('Failed to load quotation details')
       onClose()
     } finally {

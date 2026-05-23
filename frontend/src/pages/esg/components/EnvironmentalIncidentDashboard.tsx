@@ -35,7 +35,6 @@ const EnvironmentalIncidentDashboard: React.FC = () => {
       const response = await getEnvironmentalIncidents();
       setData(response.data.results || response.data || []);
     } catch (error) {
-      console.error('Error fetching environmental incidents:', error);
     } finally {
       setLoading(false);
     }
@@ -76,7 +75,6 @@ const EnvironmentalIncidentDashboard: React.FC = () => {
       setModalVisible(false);
       fetchData();
     } catch (error) {
-      console.error('Error saving environmental incident:', error);
     }
   };
 
@@ -85,7 +83,6 @@ const EnvironmentalIncidentDashboard: React.FC = () => {
       await deleteEnvironmentalIncident(id);
       fetchData();
     } catch (error) {
-      console.error('Error deleting environmental incident:', error);
     }
   };
 
@@ -212,7 +209,7 @@ const EnvironmentalIncidentDashboard: React.FC = () => {
             <Statistic
               title="Open Incidents"
               value={openIncidents}
-              valueStyle={{ color: '#f5222d' }}
+              styles={{ content: { color: '#f5222d' } }}
               prefix={<ExclamationCircleOutlined />}
             />
           </Card>
@@ -222,7 +219,7 @@ const EnvironmentalIncidentDashboard: React.FC = () => {
             <Statistic
               title="Critical Incidents"
               value={criticalIncidents}
-              valueStyle={{ color: '#722ed1' }}
+              styles={{ content: { color: '#722ed1' } }}
             />
           </Card>
         </Col>
@@ -231,7 +228,7 @@ const EnvironmentalIncidentDashboard: React.FC = () => {
             <Statistic
               title="Regulatory Notifications"
               value={regulatoryNotifications}
-              valueStyle={{ color: '#fa8c16' }}
+              styles={{ content: { color: '#fa8c16' } }}
             />
           </Card>
         </Col>

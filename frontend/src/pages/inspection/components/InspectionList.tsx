@@ -26,7 +26,6 @@ const InspectionList: React.FC = () => {
   const fetchInspections = async () => {
     // Check authentication before making API call
     if (!authGuard.canMakeApiCall()) {
-      console.log('User not authenticated, skipping inspections fetch');
       return;
     }
 
@@ -170,12 +169,12 @@ const InspectionList: React.FC = () => {
           <Button
             type="text"
             icon={<EyeOutlined />}
-            onClick={() => navigate(`/dashboard/inspection/view/${record.id}`)}
+            onClick={() => navigate(`/app/inspection/view/${record.id}`)}
           />
           <Button
             type="text"
             icon={<EditOutlined />}
-            onClick={() => navigate(`/dashboard/inspection/edit/${record.id}`)}
+            onClick={() => navigate(`/app/inspection/edit/${record.id}`)}
           />
           {record.status === 'scheduled' && (
             <Button
@@ -222,7 +221,7 @@ const InspectionList: React.FC = () => {
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
-                onClick={() => navigate('/dashboard/inspection/create')}
+                onClick={() => navigate('/app/inspection/create')}
               >
                 Create Inspection
               </Button>
@@ -256,14 +255,9 @@ const InspectionList: React.FC = () => {
                 allowClear
                 onChange={setTypeFilter}
               >
-                <Option value="safety">Safety</Option>
                 <Option value="quality">Quality</Option>
-                <Option value="environmental">Environmental</Option>
-                <Option value="equipment">Equipment</Option>
-                <Option value="housekeeping">Housekeeping</Option>
-                <Option value="fire_safety">Fire Safety</Option>
+                <Option value="civil">Civil</Option>
                 <Option value="electrical">Electrical</Option>
-                <Option value="structural">Structural</Option>
               </Select>
             </div>
 

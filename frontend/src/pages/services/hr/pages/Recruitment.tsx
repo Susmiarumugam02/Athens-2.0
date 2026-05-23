@@ -75,7 +75,6 @@ const Recruitment: React.FC = () => {
         topPerformingJobs: Math.floor(activeJobs * 0.3)
       })
     } catch (error) {
-      console.error('Error fetching recruitment data:', error)
       toast.error('Failed to load recruitment data')
     } finally {
       setLoading(false)
@@ -109,7 +108,6 @@ const Recruitment: React.FC = () => {
       toast.success('Job posting deleted successfully')
       fetchRecruitmentData()
     } catch (error) {
-      console.error('Error deleting job posting:', error)
       toast.error('Failed to delete job posting')
     }
   }

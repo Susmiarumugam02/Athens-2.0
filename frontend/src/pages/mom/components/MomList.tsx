@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Space, Popconfirm, Card, Modal, App, Breadcrumb, Typography } from 'antd';
+import { Table, Button, Space, Popconfirm, Card, Modal, App, Breadcrumb, Typography, message as antMessage } from 'antd';
 import { EditOutlined, DeleteOutlined, HomeOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../lib/api';
@@ -7,10 +7,8 @@ import { useAuthStore } from '../../../store/authStore';
 import moment from 'moment';
 import MomCreationForm from './MomCreationForm';
 import PageLayout from '../../../components/ui/PageLayout';
-import { useTheme } // from '../../../contexts/ThemeContext' // DISABLED;
 import { usePermissionControl } from '../../../hooks/usePermissionControl';
 import PermissionRequestModal from '../../../components/permissions/PermissionRequestModal';
-import { authGuard } from '../../../lib/authGuard';
 
 const { Title } = Typography;
 
@@ -23,6 +21,7 @@ interface Mom {
   status?: string;
   can_edit?: boolean;
   can_delete?: boolean;
+  participants_count?: number;
 }
 
 interface ApiResponse {
@@ -38,8 +37,7 @@ const MomList: React.FC = () => {
   const [pageSize, setPageSize] = useState(5);
   const navigate = useNavigate();
 
-  const { message } = App.useApp();
-  const { effectiveTheme } = useTheme();
+  const message = antMessage;
   const {
     showPermissionModal,
     permissionRequest,
@@ -56,16 +54,11 @@ const MomList: React.FC = () => {
 
 
   const fetchMoms = async (navigateToNewItem = false) => {
-    // Check authentication before making API call
-    if (!authGuard.canMakeApiCall()) {
-      console.log('User not authenticated, skipping MOM list fetch');
-      return;
-    }
-
     setLoading(true);
     try {
       const response = await api.get<Mom[] | ApiResponse>('/api/v1/mom/list/');
-      
+      console.log('MOM list response:', response.data);
+
       // Handle different response formats
       let responseData: Mom[];
       if (Array.isArray(response.data)) {
@@ -75,32 +68,25 @@ const MomList: React.FC = () => {
       } else {
         responseData = [];
       }
-      
+
       const momsWithStatus = responseData.map(mom => {
         if (mom?.status) {
           return mom;
         }
-        // Derive status if not present
         const now = moment();
         const meetingTime = moment(mom?.meeting_datetime);
-        if (now.isBefore(meetingTime)) {
-          return { ...mom, status: 'scheduled' };
-        } else {
-          return { ...mom, status: 'live' };
-        }
+        return { ...mom, status: now.isBefore(meetingTime) ? 'scheduled' : 'live' };
       });
 
-      // If navigateToNewItem is true, move to the page containing the newest item
-      if (navigateToNewItem && momsWithStatus.length > moms.length) {
+      if (navigateToNewItem && momsWithStatus.length > 0) {
         const newItemPage = Math.ceil(momsWithStatus.length / pageSize);
         setCurrentPage(newItemPage);
-        message.success(`New meeting added and moved to page ${newItemPage}.`);
       }
 
-      setMoms(momsWithStatus || []);
+      setMoms(momsWithStatus);
     } catch (error: any) {
-      // Only show error message if user is authenticated (to avoid showing errors on login page)
-      if (authGuard.canMakeApiCall()) {
+      console.error('MOM list fetch error:', error?.response?.status, error?.response?.data);
+      if (error?.response?.status !== 401) {
         message.error('Failed to fetch meeting list.');
       }
       setMoms([]);
@@ -114,13 +100,13 @@ const MomList: React.FC = () => {
   }, []);
 
   const handleView = (id: number) => {
-    navigate(`/dashboard/mom/view/${id}`);
+    navigate(`/app/mom/view/${id}`);
   };
 
   const handleEdit = async (mom: Mom) => {
     await executeWithPermission(
       () => {
-        navigate(`/dashboard/mom/edit/${mom.id}`);
+        navigate(`/app/mom/edit/${mom.id}`);
         return Promise.resolve();
       },
       'edit meeting'
@@ -128,12 +114,6 @@ const MomList: React.FC = () => {
   };
 
   const handleDelete = async (mom: Mom) => {
-    console.log('Delete MOM attempt:', {
-      momId: mom.id,
-      momTitle: mom.title,
-      userType: useAuthStore.getState().django_user_type,
-      adminType: useAuthStore.getState().usertype
-    });
     
     await executeWithPermission(
       async () => {
@@ -158,20 +138,21 @@ const MomList: React.FC = () => {
   };
 
   const handleLive = (id: number) => {
-    navigate(`/dashboard/mom/live/${id}`);
+    navigate(`/app/mom/live/${id}`);
   };
 
   const handleModalCancel = () => {
     setIsModalVisible(false);
   };
 
-  const handleFormSuccess = () => {
-    // Calculate which page the new meeting will be on
-    const newMeetingPage = Math.ceil((moms.length + 1) / pageSize);
-    setCurrentPage(newMeetingPage);
-
+  const handleFormSuccess = (newMeeting?: Mom) => {
     setIsModalVisible(false);
-    fetchMoms(true); // Refresh the list and navigate to new meeting
+    if (newMeeting) {
+      // Immediately prepend the new meeting so the list updates without a round-trip
+      setMoms(prev => [newMeeting, ...prev]);
+    }
+    // Also refresh from server to get accurate data
+    fetchMoms(true);
   };
 
   const columns = [
@@ -192,6 +173,12 @@ const MomList: React.FC = () => {
       dataIndex: 'meeting_datetime',
       key: 'meeting_datetime',
       render: (text: string) => text ? moment(text).format('YYYY-MM-DD HH:mm') : 'N/A',
+    },
+    {
+      title: 'Participants',
+      dataIndex: 'participants_count',
+      key: 'participants_count',
+      render: (count: number) => count ?? 0,
     },
     {
       title: 'Status',
@@ -282,7 +269,7 @@ const MomList: React.FC = () => {
         items={[
           {
             title: (
-              <a href="/dashboard" style={{ color: 'inherit', textDecoration: 'none' }}>
+              <a href="/app" style={{ color: 'inherit', textDecoration: 'none' }}>
                 <HomeOutlined />
               </a>
             )
@@ -311,7 +298,7 @@ const MomList: React.FC = () => {
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} meetings`,
-            position: ['bottomRight'],
+            placement: 'bottomRight',
             onChange: handlePaginationChange,
             onShowSizeChange: handlePaginationChange,
             pageSizeOptions: ['5', '10', '20', '50'],

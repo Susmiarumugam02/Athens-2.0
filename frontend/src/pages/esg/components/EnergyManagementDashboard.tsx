@@ -32,7 +32,6 @@ const EnergyManagementDashboard: React.FC = () => {
       const response = await getEnergyManagement();
       setData(response.data.results || response.data || []);
     } catch (error) {
-      console.error('Error fetching energy management data:', error);
     } finally {
       setLoading(false);
     }
@@ -73,7 +72,6 @@ const EnergyManagementDashboard: React.FC = () => {
       setModalVisible(false);
       fetchData();
     } catch (error) {
-      console.error('Error saving energy management data:', error);
     }
   };
 
@@ -82,7 +80,6 @@ const EnergyManagementDashboard: React.FC = () => {
       await deleteEnergyManagement(id);
       fetchData();
     } catch (error) {
-      console.error('Error deleting energy management data:', error);
     }
   };
 
@@ -170,7 +167,7 @@ const EnergyManagementDashboard: React.FC = () => {
               value={totalCost}
               precision={2}
               prefix="$"
-              valueStyle={{ color: '#fa8c16' }}
+              styles={{ content: { color: '#fa8c16' } }}
             />
           </Card>
         </Col>
@@ -181,7 +178,7 @@ const EnergyManagementDashboard: React.FC = () => {
               value={totalEmissions}
               precision={2}
               suffix="kg"
-              valueStyle={{ color: '#f5222d' }}
+              styles={{ content: { color: '#f5222d' } }}
             />
           </Card>
         </Col>
@@ -192,7 +189,7 @@ const EnergyManagementDashboard: React.FC = () => {
               value={avgRenewablePercentage}
               precision={1}
               suffix="%"
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>

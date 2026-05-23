@@ -33,7 +33,6 @@ const AdvancedReports: React.FC = () => {
       })
       setTrendsData(response.data)
     } catch (error) {
-      console.error('Error fetching trends data:', error)
     }
   }
 

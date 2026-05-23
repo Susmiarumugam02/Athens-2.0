@@ -6,6 +6,33 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+@receiver(post_save, sender='control_plane.Tenant')
+def enable_default_services_for_new_tenant(sender, instance, created, **kwargs):
+    """Auto-enable Workforce service for every new tenant."""
+    if not created:
+        return
+    try:
+        from .models import Service
+        service, _ = Service.objects.get_or_create(
+            code='workforce',
+            defaults={
+                'name':         'Workforce Management',
+                'service_type': 'hr_workforce',
+                'base_url':     '/app/workforce',
+                'description':  'Employee, attendance and payroll management',
+                'is_active':    True,
+            }
+        )
+        TenantService.objects.get_or_create(
+            tenant=instance,
+            service=service,
+            defaults={'is_enabled': True, 'tier': 'professional'},
+        )
+        logger.info(f"Workforce service auto-enabled for new tenant: {instance.name}")
+    except Exception as e:
+        logger.error(f"Failed to auto-enable workforce for tenant {instance.name}: {e}")
+
+
 @receiver(post_save, sender=Subscription)
 def sync_service_tiers_on_subscription_change(sender, instance, created, **kwargs):
     """

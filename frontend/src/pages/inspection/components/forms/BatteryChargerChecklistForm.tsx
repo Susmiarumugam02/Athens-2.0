@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Input, Table, Button, message, Checkbox } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { SaveOutlined, DownloadOutlined } from "@ant-design/icons";
-import PageLayout from '../../../components/ui/PageLayout';
+import PageLayout from '../../../../components/ui/PageLayout';
 import { inspectionService } from '../../services/inspectionService';
 
 export default function BatteryChargerChecklistForm() {
@@ -96,7 +96,7 @@ export default function BatteryChargerChecklistForm() {
         await inspectionService.createBatteryChargerChecklistForm(formData);
         message.success('Form created successfully');
       }
-      navigate('/inspection/battery-charger-checklist-forms');
+      navigate('/dashboard/inspection/forms/battery-charger-checklist/list');
     } catch (error) {
       message.error('Failed to save form');
     } finally {
@@ -110,7 +110,7 @@ export default function BatteryChargerChecklistForm() {
 
   const breadcrumbs = [
     { title: 'Inspection', href: '/inspection' },
-    { title: 'Battery Charger Checklist Forms', href: '/inspection/battery-charger-checklist-forms' },
+    { title: 'Battery Charger Checklist Forms', href: '/dashboard/inspection/forms/battery-charger-checklist/list' },
     { title: isEdit ? 'Edit Form' : 'New Form' }
   ];
 

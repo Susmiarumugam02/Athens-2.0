@@ -107,7 +107,6 @@ const Customers: React.FC = () => {
       setShowDetail(false)
       setSelectedCustomerId(null)
     } catch (error: any) {
-      console.error('Error deleting customer:', error)
       toast.error('Failed to delete customer. Please try again.')
     }
   }
@@ -128,7 +127,6 @@ const Customers: React.FC = () => {
       
       setMetrics({ total, active, business, totalCreditLimit })
     } catch (error) {
-      console.error('Error fetching customer metrics:', error)
     }
   }
 

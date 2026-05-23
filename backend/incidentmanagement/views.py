@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db import transaction
 from django.utils import timezone
@@ -34,11 +35,18 @@ from .permissions import CanManageIncidents, CanManage8DProcessElements
 from permissions.decorators import require_permission
 
 
+class IncidentPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
 class IncidentViewSet(TenantScopedViewSet):
     """
     ViewSet for managing incidents with comprehensive filtering and actions
     """
     permission_classes = [IsAuthenticated, CanManageIncidents]
+    pagination_class = IncidentPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['incident_id', 'title', 'description', 'reporter_name', 'location']
     filterset_fields = [
@@ -57,13 +65,22 @@ class IncidentViewSet(TenantScopedViewSet):
         return IncidentSerializer
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        user = self.request.user
 
-        # Optimize queries with select_related and prefetch_related
+        # Superadmin and MasterAdmin bypass project isolation
+        if getattr(user, 'user_type', None) in ['superadmin', 'masteradmin']:
+            queryset = Incident.objects.all()
+        else:
+            queryset = super().get_queryset()
+
         if self.action == 'list':
             queryset = queryset.select_related(
                 'reported_by', 'assigned_investigator'
-            ).prefetch_related('attachments')
+            ).prefetch_related('attachments').only(
+                'id', 'incident_id', 'title', 'incident_type', 'severity_level',
+                'status', 'location', 'department', 'date_time_incident',
+                'reporter_name', 'created_at', 'reported_by_id', 'assigned_investigator_id'
+            )
         else:
             queryset = queryset.select_related(
                 'reported_by', 'assigned_investigator', 'project'

@@ -40,7 +40,6 @@ const PODetailsModal: React.FC<PODetailsModalProps> = ({ poId, onClose, sessionK
       setTaxInvoices(invoiceResponse.data.results || []);
       
     } catch (error: any) {
-      console.error('Error fetching PO details:', error);
       toast.error('Failed to fetch PO details');
     } finally {
       setLoading(false);

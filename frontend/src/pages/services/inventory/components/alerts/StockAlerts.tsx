@@ -90,7 +90,6 @@ const StockAlerts: React.FC = () => {
       const response = await inventoryApi.getStockAlerts(params);
       setAlerts(response.results || response);
     } catch (error) {
-      console.error('Failed to load alerts:', error);
       setAlerts([]);
     } finally {
       setLoading(false);

@@ -54,10 +54,8 @@ export const CRMDashboard: React.FC = () => {
         }, {})
         setOpportunitiesByStage(Object.entries(oppStageCounts).map(([stage, count]) => ({ stage, count })))
       } catch (error) {
-        console.error('Error fetching additional data:', error)
       }
     } catch (error) {
-      console.error('Error fetching dashboard data:', error)
     } finally {
       setLoading(false)
     }

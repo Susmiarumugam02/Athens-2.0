@@ -59,7 +59,6 @@ export const PerformanceReviewModal: React.FC<PerformanceReviewModalProps> = ({
       })
       setEmployees(response.data.results || [])
     } catch (error) {
-      console.error('Error fetching employees:', error)
     }
   }
 
@@ -87,7 +86,6 @@ export const PerformanceReviewModal: React.FC<PerformanceReviewModalProps> = ({
       onSuccess()
       onClose()
     } catch (error: any) {
-      console.error('Error saving review:', error)
       toast.error(error.response?.data?.error || 'Failed to save performance review')
     } finally {
       setLoading(false)

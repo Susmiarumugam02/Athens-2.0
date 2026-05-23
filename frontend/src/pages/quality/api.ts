@@ -103,6 +103,70 @@ export const deleteQualityDefect = (id: number) =>
 export const getQualityDefect = (id: number) => 
   api.get(`/api/v1/quality/defects/${id}/`);
 
+// Quality Observations
+export const getQualityObservations = (params?: {
+  status?: string;
+  severity?: string;
+  category?: string;
+  priority?: string;
+  assigned_to?: string | number;
+  ncr_required?: boolean;
+  search?: string;
+}) => api.get('/api/v1/quality/observations/', { params });
+
+export const createQualityObservation = (data: FormData | Record<string, any>) =>
+  api.post('/api/v1/quality/observations/', data, data instanceof FormData
+    ? { headers: { 'Content-Type': 'multipart/form-data' } }
+    : undefined
+  );
+
+export const updateQualityObservation = (id: number, data: FormData | Record<string, any>) =>
+  api.put(`/api/v1/quality/observations/${id}/`, data, data instanceof FormData
+    ? { headers: { 'Content-Type': 'multipart/form-data' } }
+    : undefined
+  );
+
+export const transitionQualityObservation = (id: number, data: { status: string; verification_notes?: string }) =>
+  api.post(`/api/v1/quality/observations/${id}/transition/`, data);
+
+export const assignQualityFixing = (id: number, data: Record<string, any>) =>
+  api.post(`/api/v1/quality/observations/${id}/assign-fixing/`, data);
+
+export const createDefectFromObservation = (id: number) =>
+  api.post(`/api/v1/quality/observations/${id}/create-defect/`);
+
+export const getQualityObservationStats = () =>
+  api.get('/api/v1/quality/observations/dashboard-stats/');
+
+export const getQualityObservationSuggestions = (data: Record<string, any>) =>
+  api.post('/api/v1/quality/observations/ai-suggest/', data);
+
+// Quality Fixings
+export const getQualityFixings = (params?: {
+  status?: string;
+  finding?: number;
+  assigned_engineer?: string | number;
+  overdue?: boolean;
+}) => api.get('/api/v1/quality/fixings/', { params });
+
+export const createQualityFixing = (data: Record<string, any>) =>
+  api.post('/api/v1/quality/fixings/', data);
+
+export const updateQualityFixing = (id: number, data: Record<string, any>) =>
+  api.put(`/api/v1/quality/fixings/${id}/`, data);
+
+export const transitionQualityFixing = (id: number, data: {
+  approval_status: string;
+  verification_notes?: string;
+  closure_remarks?: string;
+}) => api.post(`/api/v1/quality/fixings/${id}/transition/`, data);
+
+export const getQualityActivityLogs = (params?: {
+  finding?: number;
+  fixing?: number;
+  action?: string;
+}) => api.get('/api/v1/quality/activity-logs/', { params });
+
 // Supplier Quality
 export const getSuppliers = (params?: {
   industry?: string;

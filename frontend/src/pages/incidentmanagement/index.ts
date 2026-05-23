@@ -27,7 +27,50 @@ export { useIncidents, useIncident, useDashboardStats } from './hooks/useInciden
 export { default as incidentApi } from './services/api';
 
 // Types
-export * from './types';
+export type { 
+  Incident,
+  IncidentListItem,
+  IncidentAttachment,
+  IncidentAuditLog,
+  IncidentNotification,
+  IncidentFilters,
+  IncidentFormData,
+  IncidentDashboardStats,
+  PaginatedResponse,
+  ApiError,
+  RiskAssessmentTemplate,
+  IncidentCategory,
+  IncidentMetrics,
+  IncidentWorkflow,
+  IncidentCostCenter,
+  IncidentLearning,
+  IncidentAnalytics,
+  RiskMatrixData,
+  UserPermissions,
+  EnhancedIncidentDashboardStats,
+  EightDProcess,
+  EightDDiscipline,
+  EightDTeam,
+  EightDTeamFormData,
+  EightDContainmentAction,
+  EightDRootCause,
+  EightDCorrectiveAction,
+  EightDPreventionAction,
+} from './types';
+export {
+  INCIDENT_TYPES,
+  SEVERITY_LEVELS,
+  INCIDENT_STATUSES,
+  RISK_LEVELS,
+  BUSINESS_IMPACT_LEVELS,
+  REGULATORY_FRAMEWORKS,
+  COST_CATEGORIES,
+  EIGHT_D_DISCIPLINES,
+  EIGHT_D_STATUSES,
+  TEAM_ROLES,
+  ROOT_CAUSE_ANALYSIS_METHODS,
+  CAUSE_TYPES,
+} from './types';
 
 // Legacy export for backward compatibility - now points to new main page
 export { default as IncidentManagement } from './pages/IncidentManagementPage';

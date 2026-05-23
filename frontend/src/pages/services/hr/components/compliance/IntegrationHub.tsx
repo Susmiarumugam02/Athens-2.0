@@ -56,7 +56,6 @@ const IntegrationHub: React.FC = () => {
       })
       setPortalStatuses(response.data)
     } catch (error) {
-      console.error('Error fetching portal statuses:', error)
     }
   }
 
@@ -70,7 +69,6 @@ const IntegrationHub: React.FC = () => {
       })
       setSubmissions(response.data)
     } catch (error) {
-      console.error('Error fetching submission history:', error)
     }
   }
 

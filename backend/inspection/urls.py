@@ -1,10 +1,11 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import InspectionViewSet, InspectionItemViewSet, InspectionReportViewSet, inspection_users
+from .views import InspectionViewSet, InspectionItemViewSet, InspectionReportViewSet, InspectionTemplateViewSet, inspection_users
 from .views_forms import ACCableInspectionFormViewSet, ACDBChecklistFormViewSet, HTCableChecklistFormViewSet, HTPreCommissionFormViewSet, HTPreCommissionTemplateFormViewSet, CivilWorkChecklistFormViewSet, CementRegisterFormViewSet, ConcretePourCardFormViewSet, PCCChecklistFormViewSet, BarBendingScheduleFormViewSet, BatteryChargerChecklistFormViewSet, BatteryUPSChecklistFormViewSet, BusDuctChecklistFormViewSet, ControlCableChecklistFormViewSet, ControlRoomAuditChecklistFormViewSet, EarthingChecklistFormViewSet
 
 router = DefaultRouter()
-router.register(r'inspections', InspectionViewSet, basename='inspection')
+router.register(r'inspection-templates', InspectionTemplateViewSet, basename='inspection-template')
+
 router.register(r'inspection-items', InspectionItemViewSet, basename='inspection-item')
 router.register(r'inspection-reports', InspectionReportViewSet, basename='inspection-report')
 router.register(r'ac-cable-forms', ACCableInspectionFormViewSet, basename='ac-cable-form')

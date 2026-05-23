@@ -1,7 +1,7 @@
 export interface Inspection {
   id: string;
   project: string;
-  inspection_type: 'safety' | 'quality' | 'environmental' | 'equipment' | 'housekeeping' | 'fire_safety' | 'electrical' | 'structural';
+  inspection_type: 'quality' | 'civil' | 'electrical';
   title: string;
   description: string;
   location: string;

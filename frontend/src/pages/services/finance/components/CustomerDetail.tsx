@@ -68,7 +68,6 @@ const CustomerDetail: React.FC<CustomerDetailProps> = ({
       })
       setCustomer(response.data)
     } catch (error) {
-      console.error('Error fetching customer:', error)
     } finally {
       setLoading(false)
     }

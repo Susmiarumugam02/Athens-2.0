@@ -476,7 +476,7 @@ const IntegrationHub: React.FC = () => {
               title="Active Connections"
               value={integrations.filter(i => i.status === 'connected').length}
               prefix={<LinkOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -486,7 +486,7 @@ const IntegrationHub: React.FC = () => {
               title="Failed Connections"
               value={integrations.filter(i => i.status === 'error').length}
               prefix={<CloseCircleOutlined />}
-              valueStyle={{ color: '#ff4d4f' }}
+              styles={{ content: { color: '#ff4d4f' } }}
             />
           </Card>
         </Col>

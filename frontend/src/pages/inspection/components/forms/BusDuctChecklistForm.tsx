@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Input, Button, message } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { SaveOutlined, DownloadOutlined } from "@ant-design/icons";
-import PageLayout from '../../../components/ui/PageLayout';
+import PageLayout from '../../../../components/ui/PageLayout';
 import { inspectionService } from '../../services/inspectionService';
 
 export default function BusDuctChecklistForm() {
@@ -83,7 +83,7 @@ export default function BusDuctChecklistForm() {
         await inspectionService.createBusDuctChecklistForm(formData);
         message.success('Form created successfully');
       }
-      navigate('/inspection/bus-duct-checklist-forms');
+      navigate('/dashboard/inspection/forms/bus-duct-checklist/list');
     } catch (error) {
       message.error('Failed to save form');
     } finally {
@@ -97,7 +97,7 @@ export default function BusDuctChecklistForm() {
 
   const breadcrumbs = [
     { title: 'Inspection', href: '/inspection' },
-    { title: 'Bus Duct Checklist Forms', href: '/inspection/bus-duct-checklist-forms' },
+    { title: 'Bus Duct Checklist Forms', href: '/dashboard/inspection/forms/bus-duct-checklist/list' },
     { title: isEdit ? 'Edit Form' : 'New Form' }
   ];
 

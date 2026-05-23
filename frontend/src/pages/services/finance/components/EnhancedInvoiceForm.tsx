@@ -79,11 +79,9 @@ const EnhancedInvoiceForm: React.FC<EnhancedInvoiceFormProps> = ({
         setGstCalculation(data)
         toast.success('GST calculated automatically!')
       } else {
-        console.error('GST calculation error:', data.error)
         toast.error('GST calculation failed')
       }
     } catch (error) {
-      console.error('Error calculating GST:', error)
       toast.error('GST calculation failed')
     } finally {
       setGstLoading(false)
@@ -107,7 +105,6 @@ const EnhancedInvoiceForm: React.FC<EnhancedInvoiceFormProps> = ({
       onSave()
       onClose()
     } catch (error: any) {
-      console.error('Error creating invoice:', error)
       toast.error(error.response?.data?.message || 'Failed to create invoice')
     } finally {
       setLoading(false)

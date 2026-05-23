@@ -18,11 +18,6 @@ const LegacyMomRedirect: React.FC = () => {
       const searchString = searchParams.toString();
       const fullPath = searchString ? `${newPath}?${searchString}` : newPath;
 
-      console.log('Legacy MOM redirect:', {
-        oldPath: `/mom/meeting/${momId}/respond`,
-        newPath: fullPath,
-        searchParams: searchString
-      });
       
       // Replace the current history entry to avoid back button issues
       navigate(fullPath, { replace: true });

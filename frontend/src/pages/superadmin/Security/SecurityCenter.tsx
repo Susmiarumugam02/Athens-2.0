@@ -5,6 +5,7 @@ import TwoFactorSettingsForm from '@/components/superadmin/TwoFactorSettingsForm
 import IPRestrictionsList from '@/components/superadmin/IPRestrictionsList';
 import SessionSettingsForm from '@/components/superadmin/SessionSettingsForm';
 import ActiveSessionsList from '@/components/superadmin/ActiveSessionsList';
+import './SecurityCenter.css';
 
 type Tab = 'password' | '2fa' | 'ip' | 'sessions' | 'active-sessions';
 
@@ -56,7 +57,7 @@ export default function SecurityCenter() {
           </div>
 
           {/* Right Content Area */}
-          <div className="flex-1 p-6 overflow-y-auto">
+          <div className="sc-form flex-1 p-6 overflow-y-auto">
             {activeTab === 'password' && <PasswordPolicyForm />}
             {activeTab === '2fa' && <TwoFactorSettingsForm />}
             {activeTab === 'ip' && <IPRestrictionsList />}

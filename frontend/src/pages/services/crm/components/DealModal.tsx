@@ -110,7 +110,6 @@ export const DealModal: React.FC<DealModalProps> = ({
       setContacts(contactsRes.data.results || contactsRes.data)
       setStages(stagesRes.data.results || stagesRes.data)
     } catch (error) {
-      console.error('Error loading data:', error)
       toast.error('Failed to load data')
     }
   }
@@ -172,7 +171,6 @@ export const DealModal: React.FC<DealModalProps> = ({
       onSave()
       onClose()
     } catch (error) {
-      console.error('Error saving deal:', error)
     } finally {
       setLoading(false)
     }

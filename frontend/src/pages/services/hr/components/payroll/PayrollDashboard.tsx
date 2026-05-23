@@ -48,7 +48,6 @@ const PayrollDashboard: React.FC<PayrollDashboardProps> = ({ onCreateCycle, onVi
       })
       setDashboardData(response.data)
     } catch (error) {
-      console.error('Error fetching dashboard data:', error)
       toast.error('Failed to load payroll dashboard')
     } finally {
       setLoading(false)
@@ -68,7 +67,6 @@ const PayrollDashboard: React.FC<PayrollDashboardProps> = ({ onCreateCycle, onVi
       toast.success('Payroll calculated successfully!')
       fetchDashboardData() // Refresh data
     } catch (error: any) {
-      console.error('Error calculating payroll:', error)
       toast.error(error.response?.data?.error || 'Failed to calculate payroll')
     }
   }

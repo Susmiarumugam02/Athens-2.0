@@ -150,7 +150,7 @@ const SafetyObservationLanding: React.FC = () => {
               title="Total Observations"
               value={metrics.total}
               prefix={<SafetyOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -160,7 +160,7 @@ const SafetyObservationLanding: React.FC = () => {
               title="Open"
               value={metrics.open}
               prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -170,7 +170,7 @@ const SafetyObservationLanding: React.FC = () => {
               title="Overdue"
               value={metrics.overdue}
               prefix={<WarningOutlined />}
-              valueStyle={{ color: '#ff4d4f' }}
+              styles={{ content: { color: '#ff4d4f' } }}
             />
           </Card>
         </Col>
@@ -180,7 +180,7 @@ const SafetyObservationLanding: React.FC = () => {
               title="Due Soon"
               value={metrics.dueSoon}
               prefix={<AlertOutlined />}
-              valueStyle={{ color: '#faad14' }}
+              styles={{ content: { color: '#faad14' } }}
             />
           </Card>
         </Col>
@@ -193,7 +193,7 @@ const SafetyObservationLanding: React.FC = () => {
               title="Closed"
               value={metrics.closed}
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -202,7 +202,7 @@ const SafetyObservationLanding: React.FC = () => {
             <Statistic
               title="Closure Rate"
               value={`${metrics.closureRate}%`}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>

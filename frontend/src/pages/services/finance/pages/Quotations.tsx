@@ -145,7 +145,6 @@ const Quotations: React.FC<QuotationsProps> = ({ onCreatePO }) => {
       setInvoiceQuotation(fullQuotationData)
       setShowRaiseInvoiceModal(true)
     } catch (error) {
-      console.error('Error fetching quotation details:', error)
       toast.error('Failed to load quotation details')
     }
   }

@@ -59,7 +59,6 @@ const QualityTemplates: React.FC = () => {
       const response = await getQualityTemplates();
       setTemplates(response.data.results || response.data);
     } catch (error: any) {
-      console.error('Failed to load templates:', error);
       if (error.response?.status === 401) {
         // Don't handle 401 here, let axios interceptor handle it
         return;
@@ -79,7 +78,6 @@ const QualityTemplates: React.FC = () => {
       form.resetFields();
       loadTemplates();
     } catch (error: any) {
-      console.error('Failed to create template:', error);
       if (error.response?.status === 401) {
         return;
       }

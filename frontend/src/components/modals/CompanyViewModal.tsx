@@ -17,7 +17,6 @@ const CompanyViewModal: React.FC<CompanyViewModalProps> = ({
   if (!isOpen || !company) return null
   
   // Debug logging to see what data we have
-  console.log('🔍 DEBUG: Company data in view modal:', company)
 
   const getStatusColor = (status: string) => {
     switch (status) {

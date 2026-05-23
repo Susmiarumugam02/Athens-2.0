@@ -105,7 +105,6 @@ const QuotationList: React.FC<QuotationListProps> = ({ onCreateNew, onView, onCr
 
   const fetchQuotations = async (page = 1) => {
     if (!sessionKey) {
-      console.error('No session key available')
       return
     }
 
@@ -117,8 +116,6 @@ const QuotationList: React.FC<QuotationListProps> = ({ onCreateNew, onView, onCr
       if (debouncedSearchTerm) params.append('search', debouncedSearchTerm)
       if (statusFilter) params.append('status', statusFilter)
 
-      console.log('🔍 DEBUG: Fetching quotations with session key:', sessionKey.substring(0, 10) + '...')
-      console.log('🔍 DEBUG: API URL:', `/api/finance/quotations/?${params.toString()}`)
 
       const response = await apiClient.getFinanceQuotations(Object.fromEntries(params))
 
@@ -139,7 +136,6 @@ const QuotationList: React.FC<QuotationListProps> = ({ onCreateNew, onView, onCr
       
       setMetrics({ total, pending, approved, rejected, totalValue, conversionRate })
     } catch (error) {
-      console.error('Error fetching quotations:', error)
       setQuotations([])
     } finally {
       setLoading(false)
@@ -174,7 +170,6 @@ const QuotationList: React.FC<QuotationListProps> = ({ onCreateNew, onView, onCr
       fetchQuotations(currentPage)
       alert('Quotation deleted successfully!')
     } catch (error) {
-      console.error('Error deleting quotation:', error)
       alert('Failed to delete quotation. Please try again.')
     }
   }
@@ -200,7 +195,6 @@ const QuotationList: React.FC<QuotationListProps> = ({ onCreateNew, onView, onCr
       toast.success('Quotation copied successfully!')
       fetchQuotations(currentPage)
     } catch (error) {
-      console.error('Error copying quotation:', error)
       toast.error('Failed to copy quotation')
     }
   }
@@ -226,7 +220,6 @@ const QuotationList: React.FC<QuotationListProps> = ({ onCreateNew, onView, onCr
       toast.success('Quotation reversed successfully! You can now edit it.')
       fetchQuotations(currentPage)
     } catch (error) {
-      console.error('Error reversing quotation:', error)
       toast.error('Failed to reverse quotation')
     }
   }
@@ -593,7 +586,6 @@ const QuotationList: React.FC<QuotationListProps> = ({ onCreateNew, onView, onCr
                                             sessionStorage.setItem('service_session_key', storeSessionKey)
                                           }
                                         } catch (e) {
-                                          console.warn('Session restoration failed:', e)
                                         }
                                       }
                                       onCreatePO(quotation)

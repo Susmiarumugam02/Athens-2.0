@@ -192,7 +192,7 @@ const ComplianceDashboard: React.FC = () => {
               title="Total Permits"
               value={kpiData.totalPermits}
               prefix={<FileTextOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -202,7 +202,7 @@ const ComplianceDashboard: React.FC = () => {
               title="Active Permits"
               value={kpiData.activePermits}
               prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -213,7 +213,7 @@ const ComplianceDashboard: React.FC = () => {
               value={kpiData.complianceRate}
               suffix="%"
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
             <Progress percent={kpiData.complianceRate} showInfo={false} strokeColor="#52c41a" />
           </Card>
@@ -224,7 +224,7 @@ const ComplianceDashboard: React.FC = () => {
               title="Overdue Permits"
               value={kpiData.overduePermits}
               prefix={<WarningOutlined />}
-              valueStyle={{ color: '#ff4d4f' }}
+              styles={{ content: { color: '#ff4d4f' } }}
             />
             {kpiData.overduePermits > 10 && (
               <Alert message="High overdue count" type="warning" showIcon />
@@ -242,7 +242,7 @@ const ComplianceDashboard: React.FC = () => {
               value={kpiData.averageProcessingTime}
               suffix="hours"
               precision={1}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -253,7 +253,7 @@ const ComplianceDashboard: React.FC = () => {
               value={kpiData.incidentRate}
               suffix="%"
               precision={1}
-              valueStyle={{ color: kpiData.incidentRate > 1 ? '#ff4d4f' : '#52c41a' }}
+              styles={{ content: { color: kpiData.incidentRate > 1 ? '#ff4d4f' : '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -264,7 +264,7 @@ const ComplianceDashboard: React.FC = () => {
               value={kpiData.riskScore}
               suffix="/5"
               precision={1}
-              valueStyle={{ color: kpiData.riskScore > 3 ? '#ff4d4f' : '#52c41a' }}
+              styles={{ content: { color: kpiData.riskScore > 3 ? '#ff4d4f' : '#52c41a' } }}
             />
             <Rate disabled value={kpiData.riskScore} />
           </Card>
@@ -275,7 +275,7 @@ const ComplianceDashboard: React.FC = () => {
               title="Completed Today"
               value={42}
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>

@@ -367,7 +367,6 @@ export const useCRMPerformance = () => {
     const duration = performance.now() - startTime
     setMetrics(prev => ({ ...prev, [metricName]: duration }))
     if (duration > 1000) {
-      console.warn(`Slow CRM operation: ${metricName} took ${duration}ms`)
     }
   }, [])
   

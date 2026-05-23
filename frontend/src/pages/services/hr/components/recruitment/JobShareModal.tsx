@@ -42,7 +42,6 @@ const JobShareModal: React.FC<JobShareModalProps> = ({ isOpen, onClose, job }) =
       })
       setTemplates(response.data || [])
     } catch (error) {
-      console.error('Error fetching templates:', error)
     }
   }
 
@@ -54,7 +53,6 @@ const JobShareModal: React.FC<JobShareModalProps> = ({ isOpen, onClose, job }) =
       })
       setAnalytics(response.data)
     } catch (error) {
-      console.error('Error fetching analytics:', error)
     }
   }
 
@@ -68,7 +66,6 @@ const JobShareModal: React.FC<JobShareModalProps> = ({ isOpen, onClose, job }) =
         session_key: sessionKey
       })
     } catch (error) {
-      console.error('Error tracking share:', error)
     }
   }
 
@@ -286,7 +283,6 @@ Apply now: ${trackingUrl}`
       fetchTemplates()
       toast.success('Template created successfully!')
     } catch (error) {
-      console.error('Error creating template:', error)
       toast.error('Failed to create template')
     }
   }
@@ -299,7 +295,6 @@ Apply now: ${trackingUrl}`
       fetchTemplates()
       toast.success('Template deleted successfully!')
     } catch (error) {
-      console.error('Error deleting template:', error)
       toast.error('Failed to delete template')
     }
   }

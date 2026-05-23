@@ -18,6 +18,8 @@ interface MasterAdmin {
   created_at: string
   tenant_name?: string
   athens_tenant_id?: number
+  subscription_start_date?: string | null
+  subscription_end_date?: string | null
 }
 
 interface Tenant {
@@ -36,8 +38,8 @@ const MastersPage: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [selectedMaster, setSelectedMaster] = useState<MasterAdmin | null>(null)
-  const [createForm, setCreateForm] = useState({ email: '', name: '', surname: '', tenant_id: '', password: '' })
-  const [editForm, setEditForm] = useState({ email: '', name: '', surname: '', tenant_id: '' })
+  const [createForm, setCreateForm] = useState({ email: '', name: '', surname: '', tenant_id: '', password: '', subscription_start_date: '', subscription_end_date: '' })
+  const [editForm, setEditForm] = useState({ email: '', name: '', surname: '', tenant_id: '', subscription_start_date: '', subscription_end_date: '' })
 
   useEffect(() => {
     loadData()
@@ -66,11 +68,19 @@ const MastersPage: React.FC = () => {
       toast.error('Please fill all required fields')
       return
     }
+    if (!createForm.subscription_start_date || !createForm.subscription_end_date) {
+      toast.error('Subscription start and end dates are required')
+      return
+    }
+    if (createForm.subscription_end_date <= createForm.subscription_start_date) {
+      toast.error('Subscription end date must be after start date')
+      return
+    }
     try {
       await apiClient.post('/api/control-plane/masters/', createForm)
       toast.success('Master admin created successfully')
       setShowCreateModal(false)
-      setCreateForm({ email: '', name: '', surname: '', tenant_id: '', password: '' })
+      setCreateForm({ email: '', name: '', surname: '', tenant_id: '', password: '', subscription_start_date: '', subscription_end_date: '' })
       loadData()
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to create master admin')
@@ -86,6 +96,17 @@ const MastersPage: React.FC = () => {
       }
       if (editForm.tenant_id) {
         updateData.athens_tenant_id = parseInt(editForm.tenant_id)
+      }
+      if (editForm.subscription_start_date) {
+        updateData.subscription_start_date = editForm.subscription_start_date
+      }
+      if (editForm.subscription_end_date) {
+        updateData.subscription_end_date = editForm.subscription_end_date
+      }
+      if (editForm.subscription_end_date && editForm.subscription_start_date &&
+          editForm.subscription_end_date <= editForm.subscription_start_date) {
+        toast.error('Subscription end date must be after start date')
+        return
       }
       await apiClient.patch(`/api/control-plane/masters/${selectedMaster.id}/`, updateData)
       toast.success('Master admin updated')
@@ -140,7 +161,9 @@ const MastersPage: React.FC = () => {
       email: master.email,
       name: master.name, 
       surname: master.surname,
-      tenant_id: master.athens_tenant_id?.toString() || ''
+      tenant_id: master.athens_tenant_id?.toString() || '',
+      subscription_start_date: master.subscription_start_date || '',
+      subscription_end_date: master.subscription_end_date || ''
     })
     setShowEditModal(true)
   }
@@ -191,7 +214,7 @@ const MastersPage: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Tenant</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Created</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Subscription</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
                 </tr>
               </thead>
@@ -211,7 +234,9 @@ const MastersPage: React.FC = () => {
                       </Badge>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                      {new Date(master.created_at).toLocaleDateString()}
+                      {master.subscription_start_date && master.subscription_end_date
+                        ? `${master.subscription_start_date} → ${master.subscription_end_date}`
+                        : '-'}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
@@ -254,6 +279,14 @@ const MastersPage: React.FC = () => {
               {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subscription Start Date *</label>
+            <input type="date" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value={createForm.subscription_start_date} onChange={(e) => setCreateForm({ ...createForm, subscription_start_date: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subscription End Date *</label>
+            <input type="date" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value={createForm.subscription_end_date} onChange={(e) => setCreateForm({ ...createForm, subscription_end_date: e.target.value })} />
+          </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={() => setShowCreateModal(false)}>Cancel</Button>
             <Button onClick={handleCreate}>Create</Button>
@@ -269,6 +302,8 @@ const MastersPage: React.FC = () => {
             <div><label className="block text-sm font-medium mb-1">Name</label><Input value={`${selectedMaster.name} ${selectedMaster.surname}`} readOnly /></div>
             <div><label className="block text-sm font-medium mb-1">Tenant</label><Input value={selectedMaster.tenant_name || '-'} readOnly /></div>
             <div><label className="block text-sm font-medium mb-1">Status</label><Input value={selectedMaster.is_active ? 'Active' : 'Inactive'} readOnly /></div>
+            <div><label className="block text-sm font-medium mb-1">Subscription Start</label><Input value={selectedMaster.subscription_start_date || '-'} readOnly /></div>
+            <div><label className="block text-sm font-medium mb-1">Subscription End</label><Input value={selectedMaster.subscription_end_date || '-'} readOnly /></div>
             <div className="flex justify-end pt-4"><Button onClick={() => setShowViewModal(false)}>Close</Button></div>
           </div>
         )}
@@ -286,6 +321,14 @@ const MastersPage: React.FC = () => {
               <option value="">Select tenant</option>
               {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subscription Start Date</label>
+            <input type="date" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value={editForm.subscription_start_date} onChange={(e) => setEditForm({ ...editForm, subscription_start_date: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subscription End Date</label>
+            <input type="date" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value={editForm.subscription_end_date} onChange={(e) => setEditForm({ ...editForm, subscription_end_date: e.target.value })} />
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={() => setShowEditModal(false)}>Cancel</Button>

@@ -66,7 +66,7 @@ const WasteManifestAnalytics: React.FC<WasteManifestAnalyticsProps> = ({ data })
               precision={0}
               suffix="kg"
               prefix={<DeleteOutlined style={{ color: '#fa8c16' }} />}
-              valueStyle={{ color: '#fa8c16' }}
+              styles={{ content: { color: '#fa8c16' } }}
             />
           </Card>
         </Col>
@@ -78,7 +78,7 @@ const WasteManifestAnalytics: React.FC<WasteManifestAnalyticsProps> = ({ data })
               precision={0}
               suffix="kg"
               prefix={<WarningOutlined style={{ color: '#f5222d' }} />}
-              valueStyle={{ color: '#f5222d' }}
+              styles={{ content: { color: '#f5222d' } }}
             />
           </Card>
         </Col>
@@ -90,7 +90,7 @@ const WasteManifestAnalytics: React.FC<WasteManifestAnalyticsProps> = ({ data })
               precision={1}
               suffix="%"
               prefix={<ReloadOutlined style={{ color: '#52c41a' }} />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -102,7 +102,7 @@ const WasteManifestAnalytics: React.FC<WasteManifestAnalyticsProps> = ({ data })
               precision={1}
               suffix="%"
               prefix={<FallOutlined style={{ color: '#1890ff' }} />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>

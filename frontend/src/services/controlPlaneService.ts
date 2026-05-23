@@ -14,14 +14,16 @@ export interface Tenant {
 }
 
 export interface Subscription {
-  id: number
+  id: number | null
   tenant: number
   tenant_name?: string
   plan_name: string
-  status: 'active' | 'trial' | 'past_due' | 'cancelled'
-  valid_from: string
-  valid_until?: string
-  created_at: string
+  status: 'active' | 'trial' | 'past_due' | 'cancelled' | 'none'
+  display_status?: 'active' | 'expired' | 'not_started' | 'none'
+  valid_from: string | null
+  valid_until?: string | null
+  remaining_days?: number | null
+  created_at: string | null
 }
 
 export interface AuditLog {
@@ -40,15 +42,15 @@ export interface AuditLog {
 export const controlPlaneService = {
   // Tenants
   getTenants: () => apiClient.get<Tenant[]>('/api/control-plane/tenants/'),
-  createTenant: (data: { name: string; domain: string }) => 
+  createTenant: (data: { name: string; domain: string }) =>
     apiClient.post<Tenant>('/api/control-plane/tenants/', data),
   updateTenant: (id: number, data: any) =>
     apiClient.patch(`/api/control-plane/tenants/${id}/`, data),
-  disableTenant: (id: number) => 
+  disableTenant: (id: number) =>
     apiClient.post(`/api/control-plane/tenants/${id}/disable/`),
-  enableTenant: (id: number) => 
+  enableTenant: (id: number) =>
     apiClient.post(`/api/control-plane/tenants/${id}/enable/`),
-  deleteTenant: (id: number) => 
+  deleteTenant: (id: number) =>
     apiClient.delete(`/api/control-plane/tenants/${id}/`),
 
   // Subscriptions

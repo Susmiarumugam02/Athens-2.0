@@ -5,7 +5,7 @@ from superadmin.api.users import SuperAdminUserViewSet
 from superadmin.api.roles import RoleViewSet, PermissionViewSet
 from superadmin.api.security import (
     PasswordPolicyView, TwoFactorSettingsView, IPRestrictionViewSet,
-    SessionSettingsView, ActiveSessionsView
+    SessionSettingsView, ActiveSessionsView, NotificationEmailView
 )
 from superadmin.api.audit import AuditLogViewSet
 from superadmin.api.notifications import AnnouncementViewSet, NotificationDeliveryViewSet
@@ -36,6 +36,7 @@ urlpatterns = [
     path('security/2fa-settings/', TwoFactorSettingsView.as_view(), name='2fa-settings'),
     path('security/session-settings/', SessionSettingsView.as_view(), name='session-settings'),
     path('security/active-sessions/', ActiveSessionsView.as_view(), name='active-sessions'),
+    path('security/notification-email/', NotificationEmailView.as_view(), name='notification-email'),
     
     # Settings
     path('settings/system/', SystemSettingsView.as_view(), name='system-settings'),

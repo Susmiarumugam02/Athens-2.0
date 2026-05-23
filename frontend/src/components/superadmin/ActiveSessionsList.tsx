@@ -76,15 +76,15 @@ export default function ActiveSessionsList() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <p className="text-gray-400">Total active sessions: <span className="text-white font-semibold">{count}</span></p>
+          <p className="text-gray-600 dark:text-gray-400">Total active sessions: <span className="text-gray-900 dark:text-white font-semibold">{count}</span></p>
           {sessions.length < count && (
-            <p className="text-xs text-gray-500 mt-1">Showing first 100 sessions</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Showing first 100 sessions</p>
           )}
         </div>
         <div className="flex gap-2">
           <button
             onClick={loadSessions}
-            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
@@ -101,39 +101,39 @@ export default function ActiveSessionsList() {
       </div>
 
       {sessions.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
           No active sessions
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-white/10">
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">User</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">IP Address</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Device</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Last Activity</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Expires</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-gray-400">Actions</th>
+              <tr className="border-b border-gray-200 dark:border-gray-700">
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">User</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">IP Address</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Device</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Last Activity</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Expires</th>
+                <th className="text-right py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Actions</th>
               </tr>
             </thead>
             <tbody>
               {sessions.map((session) => (
-                <tr key={session.id} className="border-b border-white/5 hover:bg-white/5">
+                <tr key={session.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                   <td className="py-3 px-4">
-                    <div className="text-white">{session.user_email}</div>
-                    <div className="text-xs text-gray-500 font-mono">{session.session_key}</div>
+                    <div className="text-gray-900 dark:text-gray-100">{session.user_email}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">{session.session_key}</div>
                   </td>
-                  <td className="py-3 px-4 text-gray-300 font-mono text-sm">{session.ip_address}</td>
-                  <td className="py-3 px-4 text-gray-300 text-sm max-w-xs truncate" title={session.user_agent}>
+                  <td className="py-3 px-4 text-gray-700 dark:text-gray-300 font-mono text-sm">{session.ip_address}</td>
+                  <td className="py-3 px-4 text-gray-700 dark:text-gray-300 text-sm max-w-xs truncate" title={session.user_agent}>
                     {session.user_agent}
                   </td>
-                  <td className="py-3 px-4 text-gray-300 text-sm">{formatDate(session.last_activity)}</td>
-                  <td className="py-3 px-4 text-gray-300 text-sm">{formatDate(session.expires_at)}</td>
+                  <td className="py-3 px-4 text-gray-700 dark:text-gray-300 text-sm">{formatDate(session.last_activity)}</td>
+                  <td className="py-3 px-4 text-gray-700 dark:text-gray-300 text-sm">{formatDate(session.expires_at)}</td>
                   <td className="py-3 px-4 text-right">
                     <button
                       onClick={() => setRevokeIds([session.id])}
-                      className="p-2 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
+                      className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400 rounded-lg transition-colors"
                       title="Revoke session"
                     >
                       <Trash2 className="w-4 h-4" />

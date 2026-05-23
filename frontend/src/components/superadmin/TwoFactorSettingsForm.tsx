@@ -11,14 +11,19 @@ interface TwoFactorSettings {
   backup_codes_count: number;
 }
 
+const inputCls   = 'w-full max-w-xs px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+const labelCls   = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2';
+const hintCls    = 'text-xs text-gray-500 dark:text-gray-400 mt-1';
+const checkCls   = 'w-4 h-4 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 accent-blue-600';
+const titleCls   = 'text-sm font-medium text-gray-800 dark:text-gray-200';
+const subtitleCls = 'text-sm text-gray-500 dark:text-gray-400';
+
 export default function TwoFactorSettingsForm() {
   const [settings, setSettings] = useState<TwoFactorSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
+  useEffect(() => { loadSettings(); }, []);
 
   const loadSettings = async () => {
     try {
@@ -44,13 +49,8 @@ export default function TwoFactorSettingsForm() {
     }
   };
 
-  if (loading) {
-    return <div className="text-gray-400">Loading...</div>;
-  }
-
-  if (!settings) {
-    return <div className="text-gray-400">No settings found</div>;
-  }
+  if (loading) return <div className="text-gray-500 dark:text-gray-400">Loading...</div>;
+  if (!settings) return <div className="text-gray-500 dark:text-gray-400">No settings found</div>;
 
   return (
     <div className="space-y-6">
@@ -60,11 +60,11 @@ export default function TwoFactorSettingsForm() {
             type="checkbox"
             checked={settings.enforce_for_all}
             onChange={(e) => setSettings({ ...settings, enforce_for_all: e.target.checked })}
-            className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-500 focus:ring-2 focus:ring-blue-500"
+            className={checkCls}
           />
           <div>
-            <div className="text-gray-300 font-medium">Enforce 2FA for all users</div>
-            <div className="text-sm text-gray-500">All users must enable 2FA to access the system</div>
+            <div className={titleCls}>Enforce 2FA for all users</div>
+            <div className={subtitleCls}>All users must enable 2FA to access the system</div>
           </div>
         </label>
 
@@ -73,37 +73,33 @@ export default function TwoFactorSettingsForm() {
             type="checkbox"
             checked={settings.allow_backup_codes}
             onChange={(e) => setSettings({ ...settings, allow_backup_codes: e.target.checked })}
-            className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-500 focus:ring-2 focus:ring-blue-500"
+            className={checkCls}
           />
           <div>
-            <div className="text-gray-300 font-medium">Allow backup codes</div>
-            <div className="text-sm text-gray-500">Users can generate backup codes for account recovery</div>
+            <div className={titleCls}>Allow backup codes</div>
+            <div className={subtitleCls}>Users can generate backup codes for account recovery</div>
           </div>
         </label>
       </div>
 
       {settings.allow_backup_codes && (
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Backup Codes Count
-          </label>
+          <label className={labelCls}>Backup Codes Count</label>
           <input
-            type="number"
-            min="5"
-            max="20"
+            type="number" min="5" max="20"
             value={settings.backup_codes_count}
             onChange={(e) => setSettings({ ...settings, backup_codes_count: parseInt(e.target.value) })}
-            className="w-full max-w-xs px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={inputCls}
           />
-          <p className="text-xs text-gray-500 mt-1">Number of backup codes to generate per user</p>
+          <p className={hintCls}>Number of backup codes to generate per user</p>
         </div>
       )}
 
-      <div className="flex justify-end pt-4 border-t border-white/10">
+      <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-lg transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
         >
           <Save className="w-4 h-4" />
           {saving ? 'Saving...' : 'Save Changes'}

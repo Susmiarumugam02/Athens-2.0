@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Typography, Input, Table, Button, Divider, Checkbox, message } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { SaveOutlined, DownloadOutlined } from "@ant-design/icons";
-import PageLayout from '../../../components/ui/PageLayout';
+import PageLayout from '../../../../components/ui/PageLayout';
 import { inspectionService } from '../../services/inspectionService';
 
 const { Title, Text } = Typography;
@@ -72,7 +72,7 @@ export default function PCCChecklistForm() {
         await inspectionService.createPCCChecklistForm(formData);
         message.success('Form created successfully');
       }
-      navigate('/inspection/pcc-checklist-forms');
+      navigate('/dashboard/inspection/forms/pcc-checklist/list');
     } catch (error) {
       message.error('Failed to save form');
     } finally {
@@ -218,7 +218,7 @@ export default function PCCChecklistForm() {
 
   const breadcrumbs = [
     { title: 'Inspection', href: '/inspection' },
-    { title: 'PCC Checklist Forms', href: '/inspection/pcc-checklist-forms' },
+    { title: 'PCC Checklist Forms', href: '/dashboard/inspection/forms/pcc-checklist/list' },
     { title: isEdit ? 'Edit Form' : 'New Form' }
   ];
 

@@ -50,7 +50,6 @@ const LeaveBalances: React.FC = () => {
       })
       setBalances(response.data.results || [])
     } catch (error: any) {
-      console.error('Error fetching balances:', error)
       toast.error('Failed to fetch leave balances')
     } finally {
       setLoading(false)
@@ -67,7 +66,6 @@ const LeaveBalances: React.FC = () => {
       })
       setEmployees(response.data.results || [])
     } catch (error: any) {
-      console.error('Error fetching employees:', error)
       toast.error('Failed to fetch employees')
     }
   }
@@ -96,7 +94,6 @@ const LeaveBalances: React.FC = () => {
       link.click()
       link.remove()
     } catch (error: any) {
-      console.error('Error exporting balances:', error)
       toast.error('Failed to export balances')
     }
   }
@@ -112,7 +109,6 @@ const LeaveBalances: React.FC = () => {
       toast.success('Leave balances initialized successfully')
       fetchBalances()
     } catch (error: any) {
-      console.error('Error initializing balances:', error)
       toast.error('Failed to initialize balances')
     }
   }
@@ -128,7 +124,6 @@ const LeaveBalances: React.FC = () => {
       toast.success('Leave balances recalculated successfully')
       fetchBalances()
     } catch (error: any) {
-      console.error('Error recalculating balances:', error)
       toast.error('Failed to recalculate balances')
     }
   }

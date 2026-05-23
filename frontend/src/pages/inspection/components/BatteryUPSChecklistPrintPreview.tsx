@@ -1,7 +1,6 @@
 import React from 'react';
 import { Button } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
-import { DOCUMENT_CONFIG } from '../../../constants/documentConfig';
 
 interface BatteryUPSChecklistPrintPreviewProps {
   formData: any;
@@ -57,7 +56,7 @@ export default function BatteryUPSChecklistPrintPreview({ formData }: BatteryUPS
             <div class="company-name">PROZEAL GREEN ENERGY PVT LTD</div>
             <div style="font-style: italic; font-size: 12px;">An initiative towards a cleaner tomorrow</div>
             <div class="document-title">BATTERY & UPS PRE-COMMISSIONING CHECKLIST</div>
-            <div style="font-size: 11px;">Document No: ${DOCUMENT_CONFIG.INSPECTION.BATTERY_UPS.documentNumber}</div>
+            <div style="font-size: 11px;">Document No: IMS/FOR/PR/BUPS/001</div>
           </div>
 
           <div class="info-section">

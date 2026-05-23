@@ -75,7 +75,6 @@ const QualityDashboardEnhanced: React.FC = () => {
       setAlerts(alertsResponse.data.results || alertsResponse.data);
 
     } catch (error) {
-      console.error('Failed to load dashboard data:', error);
       // Fallback to empty data on error
       setKpis({
         quality_performance: {
@@ -120,9 +119,9 @@ const QualityDashboardEnhanced: React.FC = () => {
               precision={1}
               suffix="/100"
               prefix={<TrophyOutlined />}
-              valueStyle={{ 
+              styles={{ content: { 
                 color: (kpis?.quality_performance.quality_score_trend || 0) >= 85 ? '#3f8600' : '#cf1322' 
-              }}
+              } }}
             />
             <Progress 
               percent={kpis?.quality_performance.quality_score_trend || 0} 
@@ -139,7 +138,7 @@ const QualityDashboardEnhanced: React.FC = () => {
               precision={1}
               suffix="%"
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#3f8600' }}
+              styles={{ content: { color: '#3f8600' } }}
             />
             <div className="text-xs text-gray-500 mt-2">
               Target: 95% | Trend: <RiseOutlined className="text-green-500" />
@@ -154,7 +153,7 @@ const QualityDashboardEnhanced: React.FC = () => {
               precision={1}
               suffix="%"
               prefix={<DashboardOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
             <div className="text-xs text-gray-500 mt-2">
               Industry Benchmark: 92%
@@ -169,7 +168,7 @@ const QualityDashboardEnhanced: React.FC = () => {
               precision={1}
               suffix="/1K"
               prefix={<ExclamationCircleOutlined />}
-              valueStyle={{ color: '#faad14' }}
+              styles={{ content: { color: '#faad14' } }}
             />
             <div className="text-xs text-gray-500 mt-2">
               Target: &lt;10/1K | Trend: <FallOutlined className="text-green-500" />
@@ -279,7 +278,7 @@ const QualityDashboardEnhanced: React.FC = () => {
             value={kpis?.supplier_performance.supplier_quality_index || 0}
             precision={1}
             suffix="/100"
-            valueStyle={{ color: '#3f8600' }}
+            styles={{ content: { color: '#3f8600' } }}
           />
         </Card>
       </Col>
@@ -290,7 +289,7 @@ const QualityDashboardEnhanced: React.FC = () => {
             value={kpis?.supplier_performance.on_time_delivery_rate || 0}
             precision={1}
             suffix="%"
-            valueStyle={{ color: '#1890ff' }}
+            styles={{ content: { color: '#1890ff' } }}
           />
         </Card>
       </Col>
@@ -301,7 +300,7 @@ const QualityDashboardEnhanced: React.FC = () => {
             value={kpis?.supplier_performance.supplier_defect_rate || 0}
             precision={4}
             suffix="PPM"
-            valueStyle={{ color: '#faad14' }}
+            styles={{ content: { color: '#faad14' } }}
           />
         </Card>
       </Col>
@@ -318,7 +317,7 @@ const QualityDashboardEnhanced: React.FC = () => {
                 <Statistic
                   title="ISO 9001:2015"
                   value="Compliant"
-                  valueStyle={{ color: '#3f8600' }}
+                  styles={{ content: { color: '#3f8600' } }}
                   prefix={<CheckCircleOutlined />}
                 />
                 <div className="text-xs text-gray-500">Next Audit: Mar 2024</div>
@@ -329,7 +328,7 @@ const QualityDashboardEnhanced: React.FC = () => {
                 <Statistic
                   title="IEC 61215"
                   value="Compliant"
-                  valueStyle={{ color: '#3f8600' }}
+                  styles={{ content: { color: '#3f8600' } }}
                   prefix={<CheckCircleOutlined />}
                 />
                 <div className="text-xs text-gray-500">Valid until: Dec 2024</div>
@@ -340,7 +339,7 @@ const QualityDashboardEnhanced: React.FC = () => {
                 <Statistic
                   title="ASTM Standards"
                   value="Review Due"
-                  valueStyle={{ color: '#faad14' }}
+                  styles={{ content: { color: '#faad14' } }}
                   prefix={<ClockCircleOutlined />}
                 />
                 <div className="text-xs text-gray-500">Due: Next Week</div>
@@ -351,7 +350,7 @@ const QualityDashboardEnhanced: React.FC = () => {
                 <Statistic
                   title="UL Certification"
                   value="Compliant"
-                  valueStyle={{ color: '#3f8600' }}
+                  styles={{ content: { color: '#3f8600' } }}
                   prefix={<CheckCircleOutlined />}
                 />
                 <div className="text-xs text-gray-500">Valid until: Jun 2024</div>

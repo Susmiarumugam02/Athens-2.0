@@ -370,7 +370,6 @@ export const inventoryApi = {
         data: dashboard.data
       };
     } catch (error) {
-      console.error('Analytics API error:', error);
       return {
         success: false,
         error: error

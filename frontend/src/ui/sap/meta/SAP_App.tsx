@@ -43,7 +43,6 @@ function App() {
         await initializeAuth()
         // Remove artificial delay that causes timing issues
       } catch (error) {
-        console.error('Auth initialization error:', error)
       } finally {
         setIsInitializing(false)
       }

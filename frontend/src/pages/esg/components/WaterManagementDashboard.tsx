@@ -33,7 +33,6 @@ const WaterManagementDashboard: React.FC = () => {
       const response = await getWaterManagement();
       setData(response.data.results || response.data || []);
     } catch (error) {
-      console.error('Error fetching water management data:', error);
     } finally {
       setLoading(false);
     }
@@ -74,7 +73,6 @@ const WaterManagementDashboard: React.FC = () => {
       setModalVisible(false);
       fetchData();
     } catch (error) {
-      console.error('Error saving water management data:', error);
     }
   };
 
@@ -83,7 +81,6 @@ const WaterManagementDashboard: React.FC = () => {
       await deleteWaterManagement(id);
       fetchData();
     } catch (error) {
-      console.error('Error deleting water management data:', error);
     }
   };
 
@@ -170,7 +167,7 @@ const WaterManagementDashboard: React.FC = () => {
               title="Total Recycled"
               value={totalRecycled}
               suffix="L"
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -180,7 +177,7 @@ const WaterManagementDashboard: React.FC = () => {
               title="Total Discharged"
               value={totalDischarged}
               suffix="L"
-              valueStyle={{ color: '#fa8c16' }}
+              styles={{ content: { color: '#fa8c16' } }}
             />
           </Card>
         </Col>
@@ -191,7 +188,7 @@ const WaterManagementDashboard: React.FC = () => {
               value={avgRecyclingRate}
               precision={1}
               suffix="%"
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>

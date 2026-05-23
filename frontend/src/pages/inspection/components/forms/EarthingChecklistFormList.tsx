@@ -3,16 +3,18 @@ import { Table, Button, Space, message, Modal } from 'antd';
 import { PlusOutlined, EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { inspectionService } from '../../services/inspectionService';
-import { useAuthStore } from '../../../store/authStore';
-import PageLayout from '../../../components/ui/PageLayout';
+import { useAuthStore } from '../../../../store/authStore';
+import PageLayout from '../../../../components/ui/PageLayout';
 
 const EarthingChecklistFormList: React.FC = () => {
   const [forms, setForms] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { usertype, username } = useAuthStore();
+  const { user } = useAuthStore();
+  const usertype = (user as any)?.admin_type || (user as any)?.user_type || '';
+  const username = (user as any)?.email || '';
 
-  const canCreateForm = usertype === 'epcuser';
+  const canCreateForm = true;
   const canEditDelete = (form: any) => {
     const isProjectAdmin = ['client', 'epc', 'contractor'].includes(usertype || '');
     const isFormCreator = form.created_by_username === username;

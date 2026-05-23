@@ -47,7 +47,6 @@ const ApplicationsList: React.FC = () => {
         setFilteredApplications(allApplications)
       }
     } catch (error) {
-      console.error('Error fetching applications:', error)
       toast.error('Failed to load applications')
     } finally {
       setLoading(false)
@@ -79,7 +78,6 @@ const ApplicationsList: React.FC = () => {
       })
       setJobPostings(response.data.results || [])
     } catch (error) {
-      console.error('Error fetching job postings:', error)
     }
   }
 
@@ -106,7 +104,6 @@ const ApplicationsList: React.FC = () => {
       toast.success(`Application ${newStatus} successfully`)
       fetchApplications()
     } catch (error) {
-      console.error('Error updating application status:', error)
       toast.error('Failed to update application status')
     }
   }
@@ -148,7 +145,6 @@ const ApplicationsList: React.FC = () => {
       
       toast.success('Interview invitation resent successfully')
     } catch (error) {
-      console.error('Error resending interview invitation:', error)
       toast.error('Failed to resend interview invitation')
     } finally {
       // Remove from resending set

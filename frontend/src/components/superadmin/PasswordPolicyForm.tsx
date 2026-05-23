@@ -16,14 +16,18 @@ interface PasswordPolicy {
   lockout_duration: number;
 }
 
+const inputCls = 'w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+const labelCls = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2';
+const hintCls  = 'text-xs text-gray-500 dark:text-gray-400 mt-1';
+const checkCls = 'w-4 h-4 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 accent-blue-600';
+const checkLabelCls = 'text-sm text-gray-700 dark:text-gray-300';
+
 export default function PasswordPolicyForm() {
   const [policy, setPolicy] = useState<PasswordPolicy | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadPolicy();
-  }, []);
+  useEffect(() => { loadPolicy(); }, []);
 
   const loadPolicy = async () => {
     try {
@@ -49,142 +53,92 @@ export default function PasswordPolicyForm() {
     }
   };
 
-  if (loading) {
-    return <div className="text-gray-400">Loading...</div>;
-  }
-
-  if (!policy) {
-    return <div className="text-gray-400">No policy found</div>;
-  }
+  if (loading) return <div className="text-gray-500 dark:text-gray-400">Loading...</div>;
+  if (!policy)  return <div className="text-gray-500 dark:text-gray-400">No policy found</div>;
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Minimum Length
-          </label>
+          <label className={labelCls}>Minimum Length</label>
           <input
-            type="number"
-            min="6"
-            max="32"
+            type="number" min="6" max="32"
             value={policy.min_length}
             onChange={(e) => setPolicy({ ...policy, min_length: parseInt(e.target.value) })}
-            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={inputCls}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Password Expiry (days)
-          </label>
+          <label className={labelCls}>Password Expiry (days)</label>
           <input
-            type="number"
-            min="0"
-            max="365"
+            type="number" min="0" max="365"
             value={policy.expiry_days}
             onChange={(e) => setPolicy({ ...policy, expiry_days: parseInt(e.target.value) })}
-            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={inputCls}
           />
-          <p className="text-xs text-gray-500 mt-1">0 = never expires</p>
+          <p className={hintCls}>0 = never expires</p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Password History Count
-          </label>
+          <label className={labelCls}>Password History Count</label>
           <input
-            type="number"
-            min="0"
-            max="24"
+            type="number" min="0" max="24"
             value={policy.history_count}
             onChange={(e) => setPolicy({ ...policy, history_count: parseInt(e.target.value) })}
-            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={inputCls}
           />
-          <p className="text-xs text-gray-500 mt-1">Prevent reuse of last N passwords</p>
+          <p className={hintCls}>Prevent reuse of last N passwords</p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Lockout Threshold
-          </label>
+          <label className={labelCls}>Lockout Threshold</label>
           <input
-            type="number"
-            min="3"
-            max="10"
+            type="number" min="3" max="10"
             value={policy.lockout_threshold}
             onChange={(e) => setPolicy({ ...policy, lockout_threshold: parseInt(e.target.value) })}
-            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={inputCls}
           />
-          <p className="text-xs text-gray-500 mt-1">Failed attempts before lockout</p>
+          <p className={hintCls}>Failed attempts before lockout</p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Lockout Duration (minutes)
-          </label>
+          <label className={labelCls}>Lockout Duration (minutes)</label>
           <input
-            type="number"
-            min="5"
-            max="1440"
+            type="number" min="5" max="1440"
             value={policy.lockout_duration}
             onChange={(e) => setPolicy({ ...policy, lockout_duration: parseInt(e.target.value) })}
-            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={inputCls}
           />
         </div>
       </div>
 
       <div className="space-y-3">
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Complexity Requirements
-        </label>
-        
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={policy.require_uppercase}
-            onChange={(e) => setPolicy({ ...policy, require_uppercase: e.target.checked })}
-            className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-500 focus:ring-2 focus:ring-blue-500"
-          />
-          <span className="text-gray-300">Require uppercase letters (A-Z)</span>
-        </label>
+        <label className={labelCls}>Complexity Requirements</label>
 
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={policy.require_lowercase}
-            onChange={(e) => setPolicy({ ...policy, require_lowercase: e.target.checked })}
-            className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-500 focus:ring-2 focus:ring-blue-500"
-          />
-          <span className="text-gray-300">Require lowercase letters (a-z)</span>
-        </label>
-
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={policy.require_numbers}
-            onChange={(e) => setPolicy({ ...policy, require_numbers: e.target.checked })}
-            className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-500 focus:ring-2 focus:ring-blue-500"
-          />
-          <span className="text-gray-300">Require numbers (0-9)</span>
-        </label>
-
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={policy.require_special_chars}
-            onChange={(e) => setPolicy({ ...policy, require_special_chars: e.target.checked })}
-            className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-500 focus:ring-2 focus:ring-blue-500"
-          />
-          <span className="text-gray-300">Require special characters (!@#$%^&*)</span>
-        </label>
+        {[
+          { key: 'require_uppercase',    label: 'Require uppercase letters (A-Z)' },
+          { key: 'require_lowercase',    label: 'Require lowercase letters (a-z)' },
+          { key: 'require_numbers',      label: 'Require numbers (0-9)' },
+          { key: 'require_special_chars',label: 'Require special characters (!@#$%^&*)' },
+        ].map(({ key, label }) => (
+          <label key={key} className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={policy[key as keyof PasswordPolicy] as boolean}
+              onChange={(e) => setPolicy({ ...policy, [key]: e.target.checked })}
+              className={checkCls}
+            />
+            <span className={checkLabelCls}>{label}</span>
+          </label>
+        ))}
       </div>
 
-      <div className="flex justify-end pt-4 border-t border-white/10">
+      <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-lg transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
         >
           <Save className="w-4 h-4" />
           {saving ? 'Saving...' : 'Save Changes'}

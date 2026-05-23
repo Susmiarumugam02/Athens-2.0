@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   Form, Input, InputNumber, Button, Select, DatePicker, Switch, Steps, Card, Row, Col, 
   App, Spin, Space, Checkbox, Upload, Modal, Result, Badge, Alert, 
-  Progress, Divider, Typography, Tabs, Table, Tag
+  Progress, Divider, Typography, Tabs, Table, Tag, Descriptions
 } from 'antd';
 import {
   UploadOutlined, SaveOutlined, SendOutlined, CloseOutlined, 
@@ -18,7 +18,12 @@ import { useAuthStore } from '../../../store/authStore';
 import { createPermit, updatePermit, getPermitTypes, getPermit, getPermitTypeResolvedTemplate, generatePermitQrCode } from '../api';
 import type { ResolvedPermitTypeTemplateResponse, TemplateSection, TemplateField, TemplateReference } from '../types';
 import PTWPrintPreview from './PTWPrintPreview';
-import PersonnelSelect from './PersonnelSelect';
+import { apiClient } from '../../../lib/api';
+import RiskAssessmentPanel from './RiskAssessmentPanel';
+import RiskAssessmentSection from './RiskAssessmentSection';
+import { usePTWAI } from '../hooks/usePTWAI';
+import { AIAnalysisPanel, VoiceButton } from './AIAssistPanel';
+import type { SmartAutofillResult } from '../../../services/aiService';
 
 const { Option } = Select;
 const { Step } = Steps;
@@ -211,12 +216,75 @@ const EnhancedPermitForm: React.FC = () => {
   const [syncStatus, setSyncStatus] = useState('synced');
   const [permitTypes, setPermitTypes] = useState<any[]>([]);
   const [apiError, setApiError] = useState<string>('');
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [gpsCoordinates, setGpsCoordinates] = useState('');
+  const [location, setLocation] = useState('');
   const [resolvedTemplate, setResolvedTemplate] = useState<ResolvedPermitTypeTemplateResponse | null>(null);
   const [templateLoading, setTemplateLoading] = useState(false);
   const [templateError, setTemplateError] = useState('');
   const [templateEndpointAvailable, setTemplateEndpointAvailable] = useState(true);
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
   const [prefillNotice, setPrefillNotice] = useState('');
+  const [verifierType, setVerifierType] = useState<string | null>(null);
+  const [verifierUsers, setVerifierUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [activeVoiceField, setActiveVoiceField] = useState<string | null>(null);
+  const [smartAutofillOpen, setSmartAutofillOpen] = useState(false);
+  const [smartAutofillResult, setSmartAutofillResult] = useState<SmartAutofillResult | null>(null);
+  const ai = usePTWAI();
+
+  useEffect(() => {
+    if (!verifierType) {
+      setVerifierUsers([]);
+      return;
+    }
+    setLoadingUsers(true);
+    apiClient.get('/api/auth/users/', { params: { admin_type: verifierType } })
+      .then(res => {
+        const users = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+        setVerifierUsers(users);
+      })
+      .catch(() => setVerifierUsers([]))
+      .finally(() => setLoadingUsers(false));
+  }, [verifierType]);
+
+  // Reactive: watch gps_coordinates via state and auto-fill location
+  useEffect(() => {
+    if (!gpsCoordinates) return;
+    const parts = gpsCoordinates.split(',').map(Number);
+    if (parts.length !== 2 || parts.some(isNaN)) return;
+    const [lat, lng] = parts;
+    setGeoLoading(true);
+    reverseGeocode(lat, lng)
+      .then((addr) => {
+        if (!addr) return;
+        setLocation(addr); // 🔥 Update local state
+        form.setFieldValue('location', addr); // 🔥 Update form field
+        setAllFormValues((prev: any) => ({ ...prev, location: addr }));
+      })
+      .catch(() => {})
+      .finally(() => setGeoLoading(false));
+  }, [gpsCoordinates]);
+
+  // Reverse geocode lat,lng → address string using OpenStreetMap (no API key)
+  const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+      { headers: { 'Accept-Language': 'en' } }
+    );
+    if (!res.ok) throw new Error('Geocode request failed');
+    const data = await res.json();
+    // Use city/town/village + state + country for a clean short address
+    const a = data.address || {};
+    const parts = [
+      a.suburb || a.neighbourhood,
+      a.city || a.town || a.village || a.county,
+      a.state,
+      a.country,
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(', ') : data.display_name;
+  };
 
   // Form Steps Configuration
   const steps = [
@@ -376,7 +444,6 @@ const EnhancedPermitForm: React.FC = () => {
           }
           
         } catch (error) {
-          console.error('Failed to load permit data:', error);
           message.error('Failed to load permit data');
         } finally {
           setLoading(false);
@@ -793,6 +860,87 @@ const EnhancedPermitForm: React.FC = () => {
     setAllFormValues(prev => ({ ...prev, permit_parameters: nextParams }));
   };
 
+  const appendEnglishField = (fieldName: string, professional: string) => {
+    const current = form.getFieldValue(fieldName) || '';
+    const value = current ? `${current} ${professional}` : professional;
+    form.setFieldValue(fieldName, value);
+    setFormData(prev => ({ ...prev, [fieldName]: value }));
+    setAllFormValues(prev => ({ ...prev, [fieldName]: value }));
+    message.success('Voice converted to professional English');
+  };
+
+  const handleSmartAutofill = async () => {
+    const values = form.getFieldsValue(true);
+    const selectedType = permitTypes.find(type => type.id === values.permit_type);
+    const result = await ai.autofill({
+      permit_type: selectedType?.category || selectedType?.name || '',
+      location: values.location || '',
+      contractor: values.contractor || '',
+      department: values.department || '',
+      project: projectId ? String(projectId) : '',
+      work_nature: values.work_nature || '',
+      description: values.description || '',
+    });
+    if (!result) {
+      message.error('AI Smart Auto-Fill is unavailable. Please try again.');
+      return;
+    }
+    setSmartAutofillResult(result);
+    setSmartAutofillOpen(true);
+  };
+
+  const applySmartAutofill = () => {
+    if (!smartAutofillResult) return;
+    const result = smartAutofillResult;
+    const currentParams = form.getFieldValue('permit_parameters') || {};
+    const nextParams = {
+      ...currentParams,
+      ai_autofill: {
+        source: result.source,
+        hazards: result.hazards,
+        toolbox_talks: result.toolbox_talks,
+        required_documents: result.required_documents,
+        work_procedures: result.work_procedures,
+        applied_at: new Date().toISOString(),
+      },
+      requires_gas_testing: result.gas_testing_requirements?.length ? true : currentParams.requires_gas_testing,
+      emergency_procedures: result.emergency_contacts || currentParams.emergency_procedures,
+    };
+    const updates: Record<string, any> = { permit_parameters: nextParams };
+
+    if (result.ppe_requirements?.length) updates.ppe_requirements = result.ppe_requirements;
+    if (result.risk_controls?.length) updates.control_measures = result.risk_controls.join('\n');
+    if (result.work_procedures?.length && !form.getFieldValue('description')) {
+      updates.description = result.work_procedures.join(' ');
+    }
+    if (result.emergency_contacts?.length) updates.emergency_contacts = result.emergency_contacts.join('\n');
+    if (result.checklist?.length) {
+      const items = result.checklist.map((label, index) => ({
+        key: `ai_${index}_${label.replace(/\s+/g, '_').toLowerCase()}`,
+        label,
+        required: true,
+        default_checked: false,
+      }));
+      setChecklistItems(items);
+      updates.safety_checklist = buildChecklistValues(items);
+      nextParams.checklist_items = items;
+    }
+
+    form.setFieldsValue(updates);
+    setFormData(prev => ({
+      ...prev,
+      ...updates,
+      hazards: result.hazards || prev.hazards,
+      control_measures: updates.control_measures || prev.control_measures,
+      other_hazards: result.hazards?.join('\n') || prev.other_hazards,
+      emergency_procedures: result.emergency_contacts?.join('\n') || prev.emergency_procedures,
+    }));
+    setAllFormValues(prev => ({ ...prev, ...updates }));
+    setSmartAutofillOpen(false);
+    setAiPanelOpen(true);
+    message.success('AI Smart Auto-Fill applied');
+  };
+
   const renderTemplateField = (field: TemplateField) => {
     const name = ['permit_parameters', field.key];
     const labelContent = (
@@ -945,7 +1093,22 @@ const EnhancedPermitForm: React.FC = () => {
 
   const nextStep = async () => {
     const isValid = await validateStep(currentStep);
-    if (isValid && currentStep < steps.length - 1) {
+    if (!isValid) return;
+    // Extra guard for Risk Assessment step
+    if (currentStep === 1) {
+      const p = allFormValues.probability;
+      const s = allFormValues.severity;
+      const cm = allFormValues.control_measures;
+      if (!p || !s) {
+        message.error('Please select Probability and Severity');
+        return;
+      }
+      if (!cm || cm.trim().length < 10) {
+        message.error('Control Measures must be at least 10 characters');
+        return;
+      }
+    }
+    if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -1083,7 +1246,6 @@ const EnhancedPermitForm: React.FC = () => {
                   {permitTypes.length > 0 && (
                     <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
                       {permitTypes.length} permit types available
-                      {apiError && <span style={{ color: '#ff4d4f' }}> (Using fallback data: {apiError})</span>}
                     </div>
                   )}
                   {isEditing && (
@@ -1128,7 +1290,25 @@ const EnhancedPermitForm: React.FC = () => {
               <Col span={24}>
                 <Form.Item 
                   name="description" 
-                  label="Work Description" 
+                  label={
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      Work Description
+                      <VoiceButton
+                        fieldLabel="Work Description"
+                        voiceActive={activeVoiceField === 'description' && ai.voiceActive}
+                        voiceProcessing={activeVoiceField === 'description' && ai.voiceProcessing}
+                        conversionNote={activeVoiceField === 'description' ? ai.voiceConversionNote : ''}
+                        voiceError={activeVoiceField === 'description' ? ai.voiceError : ''}
+                        recordingSeconds={activeVoiceField === 'description' ? ai.recordingSeconds : 0}
+                        rawTranscript={activeVoiceField === 'description' ? ai.rawTranscript : ''}
+                        onStart={() => {
+                          setActiveVoiceField('description');
+                          ai.startVoice((professional: string) => appendEnglishField('description', professional), 'description');
+                        }}
+                        onStop={ai.stopVoice}
+                      />
+                    </span>
+                  }
                   rules={[
                     { required: true, message: 'Work description is required', whitespace: true },
                     { min: 10, message: 'Work description must be at least 10 characters' },
@@ -1137,11 +1317,70 @@ const EnhancedPermitForm: React.FC = () => {
                 >
                   <TextArea 
                     rows={3} 
-                    placeholder="Detailed work description (minimum 10 characters)" 
+                    placeholder="Detailed work description, or use voice in Tamil/Hindi/English"
                     showCount
                     maxLength={1000}
+                    onBlur={(event) => {
+                      const value = event.target.value;
+                      if (value && value.length >= 5) {
+                        const selectedType = permitTypes.find(type => type.id === form.getFieldValue('permit_type'));
+                        ai.analyze(value, selectedType?.category || '').then(result => {
+                          if (result) setAiPanelOpen(true);
+                        });
+                      }
+                    }}
                   />
                 </Form.Item>
+                <Space style={{ marginBottom: 16 }} wrap>
+                  <Button
+                    icon={<SyncOutlined />}
+                    loading={ai.autofilling}
+                    onClick={handleSmartAutofill}
+                  >
+                    Smart Auto-Fill
+                  </Button>
+                  <Button
+                    icon={<SafetyOutlined />}
+                    type={aiPanelOpen ? 'primary' : 'default'}
+                    onClick={() => setAiPanelOpen(open => !open)}
+                  >
+                    {aiPanelOpen ? 'Hide AI Suggestions' : 'Show AI Suggestions'}
+                  </Button>
+                  {ai.analysis && (
+                    <Tag color={ai.analysis.risk.level === 'Low' ? 'green' : ai.analysis.risk.level === 'Medium' ? 'orange' : 'red'}>
+                      AI Risk: {ai.analysis.risk.level}
+                    </Tag>
+                  )}
+                </Space>
+                {aiPanelOpen && (
+                  <AIAnalysisPanel
+                    analysis={ai.analysis}
+                    analyzing={ai.analyzing}
+                    onApplyHazards={(hazards) => {
+                      setFormData(prev => ({ ...prev, hazards, other_hazards: hazards.join('\n') }));
+                      message.success(`Applied ${hazards.length} hazards`);
+                    }}
+                    onApplyControls={(controls) => {
+                      const value = controls.join('\n');
+                      form.setFieldValue('control_measures', value);
+                      setFormData(prev => ({ ...prev, control_measures: value }));
+                      setAllFormValues(prev => ({ ...prev, control_measures: value }));
+                      message.success(`Applied ${controls.length} controls`);
+                    }}
+                    onApplyPPE={(ppe) => {
+                      form.setFieldValue('ppe_requirements', ppe);
+                      setFormData(prev => ({ ...prev, ppe_requirements: ppe }));
+                      setAllFormValues(prev => ({ ...prev, ppe_requirements: ppe }));
+                      message.success(`Applied ${ppe.length} PPE items`);
+                    }}
+                    onApplyChecklist={(items) => loadChecklistItems(items)}
+                    onApplyRisk={(probability, severity) => {
+                      form.setFieldsValue({ probability, severity });
+                      calculateRisk(probability, severity);
+                      message.success('AI risk score applied');
+                    }}
+                  />
+                )}
               </Col>
             </Row>
 
@@ -1149,14 +1388,18 @@ const EnhancedPermitForm: React.FC = () => {
               <Col span={12}>
                 <Form.Item 
                   name="location" 
-                  label="Location" 
+                  label={<span>Location {geoLoading && <Spin size="small" style={{ marginLeft: 6 }} />}</span>}
                   rules={[
                     { required: true, message: 'Location is required', whitespace: true },
                     { min: 3, message: 'Location must be at least 3 characters' },
                     { max: 255, message: 'Location cannot exceed 255 characters' }
                   ]}
                 >
-                  <Input placeholder="Work location" maxLength={255} />
+                  <Input
+                    placeholder={geoLoading ? 'Fetching address...' : 'Work location'}
+                    maxLength={255}
+                    disabled={geoLoading}
+                  />
                 </Form.Item>
               </Col>
               <Col span={12}>
@@ -1176,23 +1419,29 @@ const EnhancedPermitForm: React.FC = () => {
                       <Button 
                         type="primary" 
                         icon={<EnvironmentOutlined />}
+                        loading={geoLoading}
                         onClick={() => {
-                          if (navigator.geolocation) {
-                            navigator.geolocation.getCurrentPosition(
-                              (position) => {
-                                const { latitude, longitude } = position.coords;
-                                const coordinates = `${latitude.toFixed(6)},${longitude.toFixed(6)}`;
-                                form.setFieldValue('gps_coordinates', coordinates);
-                                message.success('Location fetched successfully');
-                              },
-                              (error) => {
-                                message.error('Failed to get location. Please enable location services.');
-                              },
-                              { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-                            );
-                          } else {
+                          if (!navigator.geolocation) {
                             message.error('Geolocation is not supported by this browser.');
+                            return;
                           }
+                          setGeoLoading(true);
+                          navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                              const { latitude, longitude } = position.coords;
+                              const coordinates = `${latitude.toFixed(6)},${longitude.toFixed(6)}`;
+                              // 🔥 Only set GPS coordinates - useEffect handles the rest
+                              form.setFieldValue('gps_coordinates', coordinates);
+                              setGpsCoordinates(coordinates);
+                              // onValuesChange will also be triggered automatically
+                              setGeoLoading(false);
+                            },
+                            () => {
+                              setGeoLoading(false);
+                              message.error('Failed to get location. Please enable location services.');
+                            },
+                            { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+                          );
                         }}
                       >
                         Get Location
@@ -1282,185 +1531,15 @@ const EnhancedPermitForm: React.FC = () => {
 
       case 1:
         return (
-          <Card title="Risk Assessment" className="step-card">
-            {(() => {
-              const selectedPermitType = form.getFieldValue('permit_type');
-              const selectedType = permitTypes.find(type => type.id === selectedPermitType);
-              const resolvedPrefill = resolvedTemplate?.resolved_prefill || {};
-              const controlSuggestions = Array.isArray(resolvedPrefill.control_measures) && resolvedPrefill.control_measures.length > 0
-                ? resolvedPrefill.control_measures
-                : (selectedType?.control_measures || []);
-              const riskFactorOptions = (resolvedPrefill.risk_factors && resolvedPrefill.risk_factors.length > 0)
-                ? resolvedPrefill.risk_factors
-                : (selectedType?.risk_factors || []);
-              
-              return (
-                <>
-                  {selectedType && (
-                    <Alert
-                      message={`Permit Type: ${selectedType.name}`}
-                      description={`Base Risk Level: ${selectedType.risk_level?.toUpperCase()} | Category: ${selectedType.category?.replace('_', ' ').toUpperCase()}`}
-                      type={selectedType.risk_level === 'low' ? 'success' : selectedType.risk_level === 'medium' ? 'warning' : 'error'}
-                      showIcon
-                      style={{ marginBottom: 16 }}
-                    />
-                  )}
-                  
-                  <Alert
-                    message={`Current Risk Level: ${riskLevel}`}
-                    description={`Risk Score: ${riskScore}/25`}
-                    type={riskLevel === 'Low' ? 'success' : riskLevel === 'Medium' ? 'warning' : 'error'}
-                    showIcon
-                    style={{ marginBottom: 16 }}
-                  />
-                  
-                  <Form.Item name={['permit_parameters', 'risk_factors']} label="Risk Factors">
-                    <Select
-                      mode="tags"
-                      placeholder="Add risk factors"
-                      options={riskFactorOptions.map(item => ({ label: item, value: item }))}
-                    />
-                  </Form.Item>
-                  
-                  <Row gutter={16}>
-                    <Col span={12}>
-                      <Form.Item 
-                        name="probability" 
-                        label="Probability (Likelihood)" 
-                        rules={[
-                          { required: true, message: 'Please select probability level' },
-                          {
-                            validator: (_, value) => {
-                              if (value && (value < 1 || value > 5)) {
-                                return Promise.reject(new Error('Probability must be between 1 and 5'));
-                              }
-                              return Promise.resolve();
-                            }
-                          }
-                        ]}
-                        help="Rate the likelihood of the hazard occurring (1=Rare, 5=Almost Certain)"
-                      >
-                        <Select 
-                          placeholder="Select probability"
-                          onChange={(value) => {
-                            const severity = form.getFieldValue('severity') || 1;
-                            calculateRisk(value, severity);
-                          }}
-                        >
-                          {RISK_MATRIX.probability.map(item => (
-                            <Option key={item.value} value={item.value}>
-                              {item.value} - {item.label}: {item.description}
-                            </Option>
-                          ))}
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                    <Col span={12}>
-                      <Form.Item 
-                        name="severity" 
-                        label="Severity (Consequence)" 
-                        rules={[
-                          { required: true, message: 'Please select severity level' },
-                          {
-                            validator: (_, value) => {
-                              if (value && (value < 1 || value > 5)) {
-                                return Promise.reject(new Error('Severity must be between 1 and 5'));
-                              }
-                              return Promise.resolve();
-                            }
-                          }
-                        ]}
-                        help="Rate the potential consequence if the hazard occurs (1=Insignificant, 5=Catastrophic)"
-                      >
-                        <Select 
-                          placeholder="Select severity"
-                          onChange={(value) => {
-                            const probability = form.getFieldValue('probability') || 1;
-                            calculateRisk(probability, value);
-                          }}
-                        >
-                          {RISK_MATRIX.severity.map(item => (
-                            <Option key={item.value} value={item.value}>
-                              {item.value} - {item.label}: {item.description}
-                            </Option>
-                          ))}
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                  
-                  <div style={{ marginBottom: 16, padding: 12, background: '#f0f5ff', borderRadius: 6 }}>
-                    <Title level={5} style={{ margin: 0, marginBottom: 8 }}>Risk Matrix Result</Title>
-                    <Space>
-                      <Text>Risk Score: <strong>{riskScore}</strong>/25</Text>
-                      <Text>Risk Level: <Tag color={riskLevel === 'Low' ? 'green' : riskLevel === 'Medium' ? 'orange' : riskLevel === 'High' ? 'red' : 'purple'}>{riskLevel}</Tag></Text>
-                    </Space>
-                    <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-                      Risk Score = Probability × Severity | Low: 1-4, Medium: 5-9, High: 10-16, Extreme: 17-25
-                    </div>
-                  </div>
-
-                  <Form.Item name="hazards" label="Identified Hazards" rules={[{ required: true }]}>
-                    <Checkbox.Group onChange={setSelectedHazards}>
-                      {Object.entries(HAZARD_LIBRARY).map(([category, data]) => (
-                        <div key={category} style={{ marginBottom: 16 }}>
-                          <Title level={5}>{data.name}</Title>
-                          {data.hazards.map(hazard => (
-                            <div key={hazard.id} style={{ marginLeft: 16 }}>
-                              <Checkbox value={hazard.id}>{hazard.name}</Checkbox>
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                    </Checkbox.Group>
-                  </Form.Item>
-
-                  <Form.Item name="other_hazards" label="Other Hazards">
-                    <TextArea 
-                      rows={3} 
-                      placeholder="Describe any additional hazards not covered in the standard categories above" 
-                      showCount
-                      maxLength={500}
-                    />
-                  </Form.Item>
-
-
-
-                  <Form.Item 
-                    name="control_measures" 
-                    label="Control Measures" 
-                    rules={[
-                      { required: true, message: 'Control measures are required', whitespace: true },
-                      { min: 10, message: 'Control measures must be at least 10 characters' },
-                      { max: 1000, message: 'Control measures cannot exceed 1000 characters' }
-                    ]}
-                  >
-                    <TextArea 
-                      rows={4} 
-                      placeholder={controlSuggestions.length > 0 ? 
-                        `Suggested: ${controlSuggestions.join(', ')}` : 
-                        "Describe control measures (minimum 10 characters)"}
-                      showCount
-                      maxLength={1000}
-                    />
-                  </Form.Item>
-                  <Form.Item name={['permit_parameters', 'emergency_procedures']} label="Emergency Procedures">
-                    <Select
-                      mode="tags"
-                      placeholder="Add emergency procedures"
-                      options={(resolvedPrefill.emergency_procedures || selectedType?.emergency_procedures || []).map(item => ({
-                        label: item,
-                        value: item,
-                      }))}
-                    />
-                  </Form.Item>
-                </>
-              );
-            })()}
-          </Card>
+          <RiskAssessmentSection
+            permitType={permitTypes.find(t => t.id === form.getFieldValue('permit_type')) || null}
+            onChange={(data) => {
+              calculateRisk(data.probability, data.severity);
+              setFormData((prev: any) => ({ ...prev, ...data }));
+              setAllFormValues((prev: any) => ({ ...prev, ...data }));
+            }}
+          />
         );
-
-
       case 2:
         return (
           <Card title="Safety Measures" className="step-card">
@@ -1627,12 +1706,54 @@ const EnhancedPermitForm: React.FC = () => {
 
                   <Row gutter={16}>
                     <Col span={12}>
-                      <Form.Item name="special_instructions" label="Special Instructions">
+                      <Form.Item
+                        name="special_instructions"
+                        label={
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            Special Instructions
+                            <VoiceButton
+                              fieldLabel="Special Instructions"
+                              voiceActive={activeVoiceField === 'special_instructions' && ai.voiceActive}
+                              voiceProcessing={activeVoiceField === 'special_instructions' && ai.voiceProcessing}
+                              conversionNote={activeVoiceField === 'special_instructions' ? ai.voiceConversionNote : ''}
+                              voiceError={activeVoiceField === 'special_instructions' ? ai.voiceError : ''}
+                              recordingSeconds={activeVoiceField === 'special_instructions' ? ai.recordingSeconds : 0}
+                              rawTranscript={activeVoiceField === 'special_instructions' ? ai.rawTranscript : ''}
+                              onStart={() => {
+                                setActiveVoiceField('special_instructions');
+                                ai.startVoice((professional: string) => appendEnglishField('special_instructions', professional), 'special_instructions');
+                              }}
+                              onStop={ai.stopVoice}
+                            />
+                          </span>
+                        }
+                      >
                         <TextArea rows={3} placeholder="Any special safety instructions or precautions" />
                       </Form.Item>
                     </Col>
                     <Col span={12}>
-                      <Form.Item name="emergency_contacts" label="Emergency Contacts">
+                      <Form.Item
+                        name="emergency_contacts"
+                        label={
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            Emergency Contacts
+                            <VoiceButton
+                              fieldLabel="Emergency Contacts"
+                              voiceActive={activeVoiceField === 'emergency_contacts' && ai.voiceActive}
+                              voiceProcessing={activeVoiceField === 'emergency_contacts' && ai.voiceProcessing}
+                              conversionNote={activeVoiceField === 'emergency_contacts' ? ai.voiceConversionNote : ''}
+                              voiceError={activeVoiceField === 'emergency_contacts' ? ai.voiceError : ''}
+                              recordingSeconds={activeVoiceField === 'emergency_contacts' ? ai.recordingSeconds : 0}
+                              rawTranscript={activeVoiceField === 'emergency_contacts' ? ai.rawTranscript : ''}
+                              onStart={() => {
+                                setActiveVoiceField('emergency_contacts');
+                                ai.startVoice((professional: string) => appendEnglishField('emergency_contacts', professional), 'emergency_contacts');
+                              }}
+                              onStop={ai.stopVoice}
+                            />
+                          </span>
+                        }
+                      >
                         <TextArea rows={3} placeholder="Emergency contact numbers and procedures" />
                       </Form.Item>
                     </Col>
@@ -1733,12 +1854,33 @@ const EnhancedPermitForm: React.FC = () => {
                     </Form.Item>
                   </Col>
                   <Col span={12}>
-                    <Form.Item name="verifier" label="Select Verifier" rules={[{ required: true, message: 'Please select a verifier' }]}>
-                      <PersonnelSelect 
-                        placeholder="Search and select verifier"
-                        userType="epcuser,clientuser"
-                        grade="B,C"
-                        style={{ width: '100%' }}
+                    <Form.Item label="Verifier Type" required>
+                      <Select
+                        placeholder="Select verifier type"
+                        value={verifierType}
+                        onChange={(val) => {
+                          setVerifierType(val);
+                          form.setFieldValue('verifier', null);
+                        }}
+                        options={[
+                          { label: 'EPC', value: 'epc' },
+                          { label: 'Client', value: 'client' }
+                        ]}
+                      />
+                    </Form.Item>
+                    <Form.Item
+                      name="verifier"
+                      label="Select Verifier"
+                      rules={[{ required: true, message: 'Please select a verifier' }]}
+                    >
+                      <Select
+                        placeholder={verifierType ? 'Select verifier' : 'Select verifier type first'}
+                        disabled={!verifierType}
+                        loading={loadingUsers}
+                        options={verifierUsers.map(user => ({
+                          label: `${user.name || user.username} — ${user.designation || 'No Designation'} (${user.admin_type || verifierType})`,
+                          value: user.id
+                        }))}
                       />
                     </Form.Item>
                   </Col>
@@ -1940,7 +2082,6 @@ const EnhancedPermitForm: React.FC = () => {
       permitTypeId = Number(permitTypeId);
       
       if (!permitTypeId || isNaN(permitTypeId) || permitTypeId <= 0) {
-        console.error('Invalid permit type:', values.permit_type, 'converted to:', permitTypeId);
         message.error('Please select a valid permit type');
         setCurrentStep(0);
         return;
@@ -2049,8 +2190,8 @@ const EnhancedPermitForm: React.FC = () => {
             const { submitForVerification } = await import('../api');
             await submitForVerification(response.data.id);
             message.info('Permit submitted for verification');
-          } catch (error) {
-            console.warn('Failed to auto-submit for verification:', error);
+          } catch {
+            // auto-submit for verification failed silently
           }
           sessionStorage.setItem('permitAdded', 'true');
         }
@@ -2062,7 +2203,6 @@ const EnhancedPermitForm: React.FC = () => {
         throw new Error('No response data received');
       }
     } catch (error: any) {
-      console.error('Permit submission error:', error);
       
       // Handle form validation errors
       if (error?.errorFields) {
@@ -2137,8 +2277,10 @@ const EnhancedPermitForm: React.FC = () => {
       {/* Form Content */}
       <Form form={form} layout="vertical" onValuesChange={(changedValues, allValues) => {
         setFormData(allValues);
-        // Update the comprehensive form values state
         setAllFormValues(prev => ({ ...prev, ...changedValues }));
+        if ('gps_coordinates' in changedValues) {
+          setGpsCoordinates(changedValues.gps_coordinates || '');
+        }
       }}>
         {renderStepContent()}
       </Form>
@@ -2228,6 +2370,67 @@ const EnhancedPermitForm: React.FC = () => {
           <Button onClick={() => navigate(`/dashboard/ptw/view/${id}`)}>Back to View</Button>
         )}
       </div>
+
+      <Modal
+        title="Review AI Smart Auto-Fill Suggestions"
+        open={smartAutofillOpen}
+        onCancel={() => setSmartAutofillOpen(false)}
+        onOk={applySmartAutofill}
+        okText="Apply Suggestions"
+        width={760}
+      >
+        {smartAutofillResult ? (
+          <div style={{ display: 'grid', gap: 12 }}>
+            <Alert
+              type="info"
+              showIcon
+              message="AI suggestions are editable after applying."
+              description="Review these recommendations before they are added to the permit."
+            />
+            <Descriptions bordered size="small" column={1}>
+              <Descriptions.Item label="Permit Category">
+                {smartAutofillResult.permit_category || 'Not specified'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Work Nature">
+                {smartAutofillResult.work_nature || 'day'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Hazards">
+                {(smartAutofillResult.hazards || []).map(item => <Tag key={item} color="orange">{item}</Tag>)}
+              </Descriptions.Item>
+              <Descriptions.Item label="PPE">
+                {(smartAutofillResult.ppe_requirements || []).map(item => <Tag key={item} color="blue">{item}</Tag>)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Control Measures">
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {(smartAutofillResult.risk_controls || []).map(item => <li key={item}>{item}</li>)}
+                </ul>
+              </Descriptions.Item>
+              <Descriptions.Item label="Isolation">
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {(smartAutofillResult.isolation_requirements || []).map(item => <li key={item}>{item}</li>)}
+                </ul>
+              </Descriptions.Item>
+              <Descriptions.Item label="Gas Testing">
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {(smartAutofillResult.gas_testing_requirements || []).map(item => <li key={item}>{item}</li>)}
+                </ul>
+              </Descriptions.Item>
+              <Descriptions.Item label="Checklist">
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {(smartAutofillResult.checklist || []).map(item => <li key={item}>{item}</li>)}
+                </ul>
+              </Descriptions.Item>
+              <Descriptions.Item label="Emergency Precautions">
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {(smartAutofillResult.emergency_precautions || smartAutofillResult.emergency_contacts || []).map(item => <li key={item}>{item}</li>)}
+                </ul>
+              </Descriptions.Item>
+            </Descriptions>
+          </div>
+        ) : (
+          <Spin />
+        )}
+      </Modal>
 
       {/* Floating Action Buttons for Mobile */}
       <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1000 }}>

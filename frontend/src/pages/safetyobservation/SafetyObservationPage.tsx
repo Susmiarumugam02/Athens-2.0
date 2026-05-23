@@ -1,9 +1,9 @@
 import React, { useState, useCallback } from 'react';
-import { Tabs, Button, Modal } from 'antd';
+import { Tabs, Button, Modal, App } from 'antd';
 import { PlusOutlined, DashboardOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import SafetyObservationLanding from './SafetyObservationLanding';
 import SafetyObservationList from './SafetyObservationList';
-import SafetyObservationFormPage from './SafetyObservationFormPage';
+import SafetyObservationForm from './components/SafetyObservationForm';
 
 const SafetyObservationPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -71,11 +71,13 @@ const SafetyObservationPage: React.FC = () => {
             key: 'form',
             label: editingId ? 'Edit Observation' : 'Create Observation',
             children: (
-              <SafetyObservationFormPage
-                observationId={editingId}
-                onSuccess={handleFormSuccess}
-                onCancel={handleFormCancel}
-              />
+              <App>
+                <SafetyObservationForm
+                  observationID={editingId ? String(editingId) : undefined}
+                  isEditMode={!!editingId}
+                  onSuccess={handleFormSuccess}
+                />
+              </App>
             )
           }
         ]}

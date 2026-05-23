@@ -3,7 +3,7 @@ import { Input, Button, Checkbox, Form, DatePicker, message } from "antd";
 import { useNavigate } from "react-router-dom";
 import { DownloadOutlined, CloseOutlined } from '@ant-design/icons';
 import { inspectionService } from '../../services/inspectionService';
-import PageLayout from '../../../components/ui/PageLayout';
+import PageLayout from '../../../../components/ui/PageLayout';
 
 const checklistData = [
   "Should be tight fixed and all fasteners are applied",

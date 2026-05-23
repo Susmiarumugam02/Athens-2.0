@@ -34,7 +34,6 @@ const CompanyDeleteModal: React.FC<CompanyDeleteModalProps> = ({
       await onDelete(company.id)
       onOpenChange(false)
     } catch (error) {
-      console.error('Error deleting company:', error)
       setError('Failed to delete company. Please try again.')
     } finally {
       setLoading(false)

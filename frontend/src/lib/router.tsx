@@ -1,9 +1,10 @@
-import React, { Suspense, useEffect } from 'react'
+﻿import React, { Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useServiceUserStore } from '../store/serviceUserStore'
 import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import AthensAccessGuard from '../components/auth/AthensAccessGuard'
+import { hasCompletedInductionAccess } from '../utils/accessState'
 
 // Export all route paths for CI validation
 export const ROUTE_PATHS = [
@@ -12,20 +13,23 @@ export const ROUTE_PATHS = [
   '/superadmin/tenants', '/superadmin/masters', '/superadmin/subscriptions', '/superadmin/audit-logs',
   '/superadmin/configuration', '/superadmin/notifications', '/superadmin/settings',
   '/master-admin', '/master-admin/projects', '/master-admin/admin-users', 
-  '/master-admin/menu-management', '/master-admin/settings',
-  '/app', '/company/detailed-info', '/company/waiting-approval', '/company/services',
+  '/master-admin/admin-attendance', '/master-admin/menu-management', '/master-admin/settings',
+  '/app', '/app/settings', '/app/settings/change-password', '/company/detailed-info', '/company/waiting-approval', '/company/services',
+  '/app/inspection', '/app/inspection/list', '/app/inspection/create',
   '/company', '/company/athens/password-reset', '/company/athens/profile',
   '/company/athens/pending-approval', '/company/athens/induction',
   '/service', '/employee', '/jobs', '/services/finance/dashboard',
   '/services/finance/purchase-orders', '/services/hr/dashboard', '/services/inventory/dashboard',
   '/services/crm', '/services/sustainability/dashboard', '/services/dashboard',
   '/services/procurement/dashboard', '/services/analytics/dashboard',
+  '/user/complete-profile', '/user/approval-pending', '/user/induction-pending', '/user/induction-training', '/user/training',
   '/unauthorized', '/permission-denied'
 ] as const
 
 // Lazy load components
 const LoginPage = React.lazy(() => import('../pages/auth/LoginPage'))
 const TwoFactorPage = React.lazy(() => import('../pages/auth/TwoFactorPage'))
+const DiagnosticPage = React.lazy(() => import('../pages/DiagnosticPage'))
 
 // Layouts
 import SuperadminLayout from '../layouts/SuperadminLayout'
@@ -45,6 +49,7 @@ const SuperadminServices = React.lazy(() => import('../pages/superadmin/Services
 const TenantsPage = React.lazy(() => import('../pages/superadmin/Tenants'))
 const MastersPage = React.lazy(() => import('../pages/superadmin/Masters'))
 const SubscriptionsPage = React.lazy(() => import('../pages/superadmin/Subscriptions'))
+const CompanyApprovalsPage = React.lazy(() => import('../pages/superadmin/CompanyApprovals'))
 
 // Master Admin
 const MasterAdminDashboard = React.lazy(() => import('../pages/masteradmin/Dashboard'))
@@ -55,6 +60,9 @@ const MasterAdminMenuManagement = React.lazy(() => import('../pages/masteradmin/
 const MasterAdminSettings = React.lazy(() => import('../pages/masteradmin/Settings'))
 const MasterAdminServices = React.lazy(() => import('../pages/masteradmin/Services'))
 const MasterAdminErgon = React.lazy(() => import('../pages/masteradmin/Ergon'))
+const MasterAdminAdminAttendance = React.lazy(() => import('../pages/masteradmin/AdminAttendancePage'))
+const CompanySetupPage = React.lazy(() => import('../pages/masteradmin/CompanySetupPage'))
+const WaitingApprovalPage = React.lazy(() => import('../pages/masteradmin/WaitingApprovalPage'))
 // ERGON Components
 const ErgonLanding = React.lazy(() => import('../pages/ergon/ErgonLandingPage'))
 const TaskManagement = React.lazy(() => import('../pages/ergon/TaskManagementPage'))
@@ -79,6 +87,38 @@ const PTWPage = React.lazy(() => import('../pages/ptw/PTWPage'))
 const InspectionDashboard = React.lazy(() => import('../pages/inspection/components/InspectionDashboard'))
 const InspectionList = React.lazy(() => import('../pages/inspection/components/InspectionList'))
 const InspectionCreate = React.lazy(() => import('../pages/inspection/components/InspectionCreate'))
+const CreateACCableTestForm = React.lazy(() => import('../pages/inspection/components/CreateACCableTestForm'))
+const HTCableChecklistFormCreate = React.lazy(() => import('../pages/inspection/components/forms/HTCableChecklistForm'))
+const HTCableFormList = React.lazy(() => import('../pages/inspection/components/forms/HTCableFormList'))
+const ACDBChecklistFormCreate = React.lazy(() => import('../pages/inspection/components/forms/ACDBChecklistForm'))
+const ACDBChecklistFormList = React.lazy(() => import('../pages/inspection/components/forms/ACDBChecklistFormList'))
+const HTPreCommissionForm = React.lazy(() => import('../pages/inspection/components/forms/HTPreCommissionForm'))
+const HTPreCommissionFormList = React.lazy(() => import('../pages/inspection/components/forms/HTPreCommissionFormList'))
+const HTPreCommissionTemplateForm = React.lazy(() => import('../pages/inspection/components/forms/HTPreCommissionTemplateForm'))
+const HTPreCommissionTemplateFormList = React.lazy(() => import('../pages/inspection/components/forms/HTPreCommissionTemplateFormList'))
+const CivilWorkChecklistForm = React.lazy(() => import('../pages/inspection/components/forms/CivilWorkChecklistForm'))
+const CivilWorkChecklistFormList = React.lazy(() => import('../pages/inspection/components/forms/CivilWorkChecklistFormList'))
+const CementRegisterForm = React.lazy(() => import('../pages/inspection/components/forms/CementRegisterForm'))
+const CementRegisterFormList = React.lazy(() => import('../pages/inspection/components/forms/CementRegisterFormList'))
+const ConcretePourCardForm = React.lazy(() => import('../pages/inspection/components/forms/ConcretePourCardForm'))
+const ConcretePourCardFormList = React.lazy(() => import('../pages/inspection/components/forms/ConcretePourCardFormList'))
+const PCCChecklistForm = React.lazy(() => import('../pages/inspection/components/forms/PCCChecklistForm'))
+const PCCChecklistFormList = React.lazy(() => import('../pages/inspection/components/forms/PCCChecklistFormList'))
+const BarBendingScheduleForm = React.lazy(() => import('../pages/inspection/components/forms/BarBendingScheduleForm'))
+const BarBendingScheduleFormList = React.lazy(() => import('../pages/inspection/components/forms/BarBendingScheduleFormList'))
+const BatteryChargerChecklistForm = React.lazy(() => import('../pages/inspection/components/forms/BatteryChargerChecklistForm'))
+const BatteryChargerChecklistFormList = React.lazy(() => import('../pages/inspection/components/forms/BatteryChargerChecklistFormList'))
+const BatteryUPSChecklistForm = React.lazy(() => import('../pages/inspection/components/forms/BatteryUPSChecklistForm'))
+const BatteryUPSChecklistFormList = React.lazy(() => import('../pages/inspection/components/forms/BatteryUPSChecklistFormList'))
+const BusDuctChecklistForm = React.lazy(() => import('../pages/inspection/components/forms/BusDuctChecklistForm'))
+const BusDuctChecklistFormList = React.lazy(() => import('../pages/inspection/components/forms/BusDuctChecklistFormList'))
+const ControlCableChecklistForm = React.lazy(() => import('../pages/inspection/components/forms/ControlCableChecklistForm'))
+const ControlCableChecklistFormList = React.lazy(() => import('../pages/inspection/components/forms/ControlCableChecklistFormList'))
+const ControlRoomAuditChecklistForm = React.lazy(() => import('../pages/inspection/components/forms/ControlRoomAuditChecklistForm'))
+const ControlRoomAuditChecklistFormList = React.lazy(() => import('../pages/inspection/components/forms/ControlRoomAuditChecklistFormList'))
+const EarthingChecklistForm = React.lazy(() => import('../pages/inspection/components/forms/EarthingChecklistForm'))
+const EarthingChecklistFormList = React.lazy(() => import('../pages/inspection/components/forms/EarthingChecklistFormList'))
+const ACCableFormList = React.lazy(() => import('../pages/inspection/components/forms/ACCableFormList'))
 
 // Incident Management
 const IncidentManagementPage = React.lazy(() => import('../pages/incidentmanagement/IncidentManagementPage'))
@@ -90,20 +130,29 @@ const ESGDashboard = React.lazy(() => import('../pages/esg/components/CarbonFoot
 const SafetyObservationRoutes = React.lazy(() => import('../pages/safetyobservation/index'))
 
 // Quality
-const QualityDashboard = React.lazy(() => import('../pages/quality/components/DefectManagement'))
+const QualityDashboard = React.lazy(() => import('../pages/quality/QualityModulePage'))
 
 // MoM
-const MoMList = React.lazy(() => import('../pages/mom/components/MomEdit'))
+const MoMList = React.lazy(() => import('../pages/mom/components/MomList'))
+const MoMEdit = React.lazy(() => import('../pages/mom/components/MomEdit'))
+const MoMView = React.lazy(() => import('../pages/mom/components/MomView'))
+const MoMLive = React.lazy(() => import('../pages/mom/components/MomLive'))
 
 // Training Modules
 const TrainingPage = React.lazy(() => import('../pages/training/TrainingPage'))
+const TrainingManagementPage = React.lazy(() => import('../pages/training/TrainingManagementPage'))
+const AttendanceManagementPage = React.lazy(() => import('../pages/training/AttendanceManagementPage'))
 const TBTPage = React.lazy(() => import('../pages/tbt/TBTPage'))
+const ChatboxPage = React.lazy(() => import('../pages/company/ChatboxPage'))
+const VoiceTranslatorPage = React.lazy(() => import('../pages/company/VoiceTranslatorPage'))
+const AIBotPage = React.lazy(() => import('../pages/company/AIBotPage'))
 
 
 
 // Company
 const CompanyDashboard = React.lazy(() => import('../pages/company/DashboardSimple'))
 const CompanySettings = React.lazy(() => import('../pages/company/CompanySettings'))
+const ChangePasswordPage = React.lazy(() => import('../pages/user/ChangePasswordPage'))
 const DetailedInfoForm = React.lazy(() => import('../pages/company/DetailedInfoForm'))
 const AthensFirstLoginPasswordReset = React.lazy(() => import('../pages/company/AthensFirstLoginPasswordReset'))
 const AthensProfileCompletion = React.lazy(() => import('../pages/company/AthensProfileCompletion'))
@@ -118,10 +167,25 @@ const CRMRoutes = React.lazy(() => import('../pages/services/crm/index'))
 const WaitingApproval = React.lazy(() => import('../pages/company/WaitingApproval'))
 const NotFoundPage = React.lazy(() => import('../pages/NotFoundPage'))
 const PermissionDenied = React.lazy(() => import('../pages/PermissionDenied'))
+const SubscriptionExpired = React.lazy(() => import('../pages/SubscriptionExpired'))
 const EmployeeApp = React.lazy(() => import('../pages/EmployeeApp'))
 const JobPortal = React.lazy(() => import('../pages/public/JobPortal'))
 const JobApplication = React.lazy(() => import('../pages/public/JobApplication'))
 const PublicJobDetail = React.lazy(() => import('../pages/public/PublicJobDetail'))
+
+// User Panel
+import UserLayout from '../layouts/UserLayout'
+const UserDashboard = React.lazy(() => import('../pages/user/Dashboard'))
+const ProfileSetupPage = React.lazy(() => import('../pages/user/ProfileSetupPage'))
+const CompleteProfilePage = React.lazy(() => import('../pages/user/CompleteProfilePage'))
+const UserWaitingApprovalPage = React.lazy(() => import('../pages/user/WaitingApprovalPage'))
+const ApprovalPendingPage = React.lazy(() => import('../pages/user/ApprovalPendingPage'))
+const UserRejectedPage = React.lazy(() => import('../pages/user/WaitingApprovalPage'))
+const InductionPendingPage = React.lazy(() => import('../pages/user/InductionPendingPage'))
+const UserInductionTrainingPage = React.lazy(() => import('../pages/user/InductionTrainingPage'))
+const ProfileManagementAdminPage = React.lazy(() => import('../pages/workforce/ProfileManagementAdminPage'))
+const EmployeeApprovalsPage = React.lazy(() => import('../pages/workforce/ProfileManagementAdminPage'))
+const UserApprovalManagement = React.lazy(() => import('../pages/projectadmin/UserApprovalManagement'))
 
 // DEV-ONLY Routes
 const SapUiPreview = import.meta.env.DEV ? React.lazy(() => import('../pages/__dev__/SapUiPreview')) : null
@@ -144,18 +208,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireApproved = false,
   requireServiceUser = false,
 }) => {
-  const { isAuthenticated, user, firstLoginRequired, approvalPending, isLoading } = useAuthStore()
+  const { isAuthenticated, user, firstLoginRequired, approvalPending, isLoading, hydrated } = useAuthStore()
   const { isAuthenticated: isServiceUserAuthenticated, serviceUser } = useServiceUserStore()
-  
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-      </div>
-    )
-  }
 
-  React.useEffect(() => {
+  // Move the service-user session-key sync to a proper effect (hooks must be called unconditionally)
+  useEffect(() => {
     if (requireServiceUser) {
       const sessionKey = sessionStorage.getItem('service_session_key')
       if (!sessionKey) {
@@ -169,13 +226,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
               return
             }
           }
-        } catch (error) {
-          console.warn('Failed to restore session in ProtectedRoute:', error)
-        }
+        } catch (_) {}
         window.location.replace('/login')
       }
     }
   }, [requireServiceUser])
+
+  // Wait for hydration before making routing decisions
+  if (!hydrated || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+      </div>
+    )
+  }
 
   if (requireServiceUser) {
     if (!isServiceUserAuthenticated || !serviceUser) {
@@ -192,7 +256,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
             }
           }
         } catch (error) {
-          console.warn('Failed to restore session in ProtectedRoute render:', error)
         }
       }
       return <Navigate to="/login" replace />
@@ -221,6 +284,25 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   if (requireCompanyUser && userType !== 'companyuser') {
     return <Navigate to="/permission-denied" replace />
+  }
+
+  const hasCompanyUserFullAccess = hasCompletedInductionAccess(user)
+
+  if (userType === 'companyuser' && (user as any).role_type === 'user') {
+    const currentPath = window.location.pathname
+    if (!hasCompanyUserFullAccess && currentPath.startsWith('/app') && currentPath !== '/app/settings/change-password') {
+      return <Navigate to="/user/induction-training" replace />
+    }
+  }
+
+  // Block role_type=user from admin-only routes — but allow module pages
+  if (userType === 'companyuser' && (user as any).role_type === 'user' && requireApproved) {
+    // Users can access module pages (/app/ptw, /app/training, etc.) but not admin pages
+    const adminOnlyPaths = ['/app/workforce/employees', '/app/workforce/profiles', '/app/workforce/payroll', '/app/settings']
+    const isAdminOnly = adminOnlyPaths.some(p => window.location.pathname.startsWith(p))
+    if (window.location.pathname === '/app/settings/change-password') return <>{children}</>
+    if (isAdminOnly) return <Navigate to={hasCompanyUserFullAccess ? '/app/dashboard' : '/user/induction-training'} replace />
+    // Allow through for module pages
   }
 
   if (userType === 'companyuser' && firstLoginRequired && window.location.pathname !== '/company/detailed-info') {
@@ -258,7 +340,27 @@ const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
       } else if (userType === 'masteradmin') {
         window.location.href = '/master-admin'
       } else if (userType === 'companyuser') {
-        window.location.href = '/app'
+        const roleType = (user as any)?.role_type
+        if (roleType === 'user') {
+          const hasFullAccess = hasCompletedInductionAccess(user)
+          if (hasFullAccess) {
+            window.location.href = '/app/dashboard'
+          } else if (nextRoute && [
+            '/user/complete-profile',
+            '/user/profile-setup',
+            '/user/approval-pending',
+            '/user/waiting-approval',
+            '/user/induction-pending',
+            '/user/induction-training',
+            '/user/rejected',
+          ].includes(nextRoute)) {
+            window.location.href = nextRoute
+          } else {
+            window.location.href = '/user/induction-pending'
+          }
+        } else {
+          window.location.href = '/app'
+        }
       } else if (userType === 'serviceuser') {
         window.location.href = '/service'
       }
@@ -287,7 +389,153 @@ const SuspenseWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) 
   </Suspense>
 )
 
+// Guard that blocks role_type=user from admin-only workforce routes
+const UserWorkforceGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuthStore()
+  if ((user as any)?.role_type === 'user') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-2">Unauthorized</h1>
+          <p className="text-gray-600">You do not have permission to access this page.</p>
+        </div>
+      </div>
+    )
+  }
+  return <>{children}</>
+}
+
+const AdminTrainingGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuthStore()
+  const userType = (user as any)?.user_type
+  const roleType = (user as any)?.role_type
+  const adminRole = (user as any)?.admin_role || (user as any)?.admin_type || (user as any)?.role
+  const path = window.location.pathname
+  const allowedAdminRoles = new Set([
+    'admin',
+    'epc_admin',
+    'safety_admin',
+    'training_admin',
+    'project_admin',
+    'projectadmin',
+  ])
+
+  const isRegularUserWithAccess =
+    userType === 'companyuser' &&
+    roleType === 'user' &&
+    hasCompletedInductionAccess(user)
+
+  if (isRegularUserWithAccess) {
+    const userAllowedTrainingPaths = ['/app/training', '/app/training/all']
+    if (userAllowedTrainingPaths.includes(path)) return <>{children}</>
+    return <Navigate to="/app/training" replace />
+  }
+
+  const isAllowed =
+    userType === 'superadmin' ||
+    userType === 'masteradmin' ||
+    (userType === 'companyuser' && roleType !== 'user' && (allowedAdminRoles.has(String(roleType || '').toLowerCase()) || allowedAdminRoles.has(String(adminRole || '').toLowerCase())))
+
+  if (!isAllowed) {
+    return <Navigate to="/user/induction-training" replace />
+  }
+
+  return <>{children}</>
+}
+
+// Guard for role_type=user — enforces the full onboarding state machine
+const UserGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, user, isLoading, hydrated } = useAuthStore()
+
+  // Wait for auth store to rehydrate from localStorage before making any routing decision
+  if (!hydrated || isLoading) {
+    return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" /></div>
+  }
+
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" replace />
+  }
+
+  const userType = (user as any).user_type
+  const roleType = (user as any)?.role_type
+
+  if (userType !== 'companyuser' || roleType !== 'user') {
+    return <Navigate to="/permission-denied" replace />
+  }
+
+  const userStatus = (user as any).status || 'pending_profile'
+  const accessLevel = (user as any).access_level
+  const trainingStatus = (user as any).training_status
+  const approvalStatus = (user as any).approval_status
+  const workflowApprovalStatus = (user as any).workflow_approval_status
+  const mustChangePassword = (user as any).must_change_password || useAuthStore.getState().mustChangePassword
+  const path = window.location.pathname
+
+  const profileCompleted = Boolean((user as any).profile_completed)
+  const waitingAdminApproval =
+    userStatus === 'pending_approval' ||
+    approvalStatus === 'waiting_admin_approval' ||
+    workflowApprovalStatus === 'waiting_admin_approval'
+  const approvedPendingTraining =
+    approvalStatus === 'approved' &&
+    trainingStatus !== 'completed'
+  const fullAccess = hasCompletedInductionAccess(user)
+
+  if (fullAccess) {
+    const onboardingPaths = [
+      '/user/waiting-approval',
+      '/user/approval-pending',
+      '/user/induction-pending',
+      '/user/induction-training',
+      '/user/training',
+      '/user/profile-setup',
+      '/user/complete-profile',
+      '/user/rejected',
+    ]
+    if (onboardingPaths.includes(path)) {
+      return <Navigate to="/app/dashboard" replace />
+    }
+    return <>{children}</>
+  }
+
+  if (!profileCompleted || userStatus === 'pending_profile') {
+    if (path !== '/user/complete-profile' && path !== '/user/profile-setup') return <Navigate to="/user/complete-profile" replace />
+    return <>{children}</>
+  }
+
+  if (waitingAdminApproval) {
+    if (path !== '/user/approval-pending' && path !== '/user/waiting-approval') return <Navigate to="/user/approval-pending" replace />
+    return <>{children}</>
+  }
+
+  if (approvedPendingTraining || userStatus === 'approved_pending_induction' || accessLevel === 'training_only' || trainingStatus === 'pending_induction') {
+    if (path !== '/user/induction-pending' && path !== '/user/induction-training' && path !== '/user/training') return <Navigate to="/user/induction-training" replace />
+    return <>{children}</>
+  }
+
+  // Post-induction mandatory password change gate
+  if (mustChangePassword || accessLevel === 'pending_password_change') {
+    // AuthWrapper renders the overlay — just allow rendering
+    return <>{children}</>
+  }
+
+  return <Navigate to="/user/complete-profile" replace />
+}
+
 export const AppRouter: React.FC = () => {
+  const { hydrated } = useAuthStore()
+
+  // Block ALL route rendering until the auth store has rehydrated from localStorage.
+  // Without this, guards see user=null on first render and redirect to /login,
+  // then the store rehydrates and redirects back — causing a white-screen flash or loop.
+  if (!hydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+      </div>
+    )
+  }
+
   // DEV-ONLY routes
   const devRoutes = import.meta.env.DEV && SapUiPreview ? [
     <Route
@@ -305,6 +553,18 @@ export const AppRouter: React.FC = () => {
     <Routes>
       {/* DEV-ONLY Routes */}
       {devRoutes}
+
+      {/* Diagnostic Route - SUPERADMIN ONLY for debugging */}
+      <Route
+        path="/__diagnostic"
+        element={
+          <ProtectedRoute requireSuperAdmin>
+            <SuspenseWrapper>
+              <DiagnosticPage />
+            </SuspenseWrapper>
+          </ProtectedRoute>
+        }
+      />
 
       {/* Public Routes */}
       <Route
@@ -358,6 +618,7 @@ export const AppRouter: React.FC = () => {
         <Route path="configuration" element={<SuspenseWrapper><SuperadminConfiguration /></SuspenseWrapper>} />
         <Route path="notifications" element={<SuspenseWrapper><SuperadminNotifications /></SuspenseWrapper>} />
         <Route path="settings" element={<SuspenseWrapper><SuperadminSettings /></SuspenseWrapper>} />
+        <Route path="company-approvals" element={<SuspenseWrapper><CompanyApprovalsPage /></SuspenseWrapper>} />
       </Route>
 
       {/* Master Admin Routes */}
@@ -369,9 +630,17 @@ export const AppRouter: React.FC = () => {
         <Route index element={<SuspenseWrapper><MasterAdminDashboard /></SuspenseWrapper>} />
         <Route path="dashboard" element={<SuspenseWrapper><MasterAdminDashboard /></SuspenseWrapper>} />
         <Route path="analytics" element={<SuspenseWrapper><MasterAdminDashboard /></SuspenseWrapper>} />
+        <Route path="company-setup" element={<SuspenseWrapper><CompanySetupPage /></SuspenseWrapper>} />
+        <Route path="waiting" element={<SuspenseWrapper><WaitingApprovalPage /></SuspenseWrapper>} />
         <Route path="projects" element={<SuspenseWrapper><MasterAdminProjects /></SuspenseWrapper>} />
         <Route path="projects/:projectId/modules" element={<SuspenseWrapper><MasterAdminProjectModules /></SuspenseWrapper>} />
         <Route path="admin-users" element={<SuspenseWrapper><MasterAdminAdminUsers /></SuspenseWrapper>} />
+        <Route path="admin-attendance" element={<SuspenseWrapper><MasterAdminAdminAttendance /></SuspenseWrapper>} />
+        <Route path="training" element={<SuspenseWrapper><TrainingPage /></SuspenseWrapper>} />
+        <Route path="training/create" element={<SuspenseWrapper><TrainingPage /></SuspenseWrapper>} />
+        <Route path="training/all" element={<SuspenseWrapper><TrainingPage /></SuspenseWrapper>} />
+        <Route path="training/admin" element={<SuspenseWrapper><TrainingManagementPage /></SuspenseWrapper>} />
+        <Route path="training/:trainingId/attendance" element={<SuspenseWrapper><AttendanceManagementPage /></SuspenseWrapper>} />
         <Route path="menu-management" element={<SuspenseWrapper><MasterAdminMenuManagement /></SuspenseWrapper>} />
         <Route path="settings" element={<SuspenseWrapper><MasterAdminSettings /></SuspenseWrapper>} />
       </Route>
@@ -387,6 +656,7 @@ export const AppRouter: React.FC = () => {
         <Route index element={<SuspenseWrapper><CompanyDashboard /></SuspenseWrapper>} />
         <Route path="dashboard" element={<SuspenseWrapper><CompanyDashboard /></SuspenseWrapper>} />
         <Route path="settings" element={<SuspenseWrapper><CompanySettings /></SuspenseWrapper>} />
+        <Route path="settings/change-password" element={<SuspenseWrapper><ChangePasswordPage /></SuspenseWrapper>} />
         
         {/* ERGON Category Routes */}
         <Route path="ergon" element={<SuspenseWrapper><ErgonLanding /></SuspenseWrapper>} />
@@ -399,11 +669,15 @@ export const AppRouter: React.FC = () => {
         
         {/* Workforce Category Routes */}
         <Route path="workforce" element={<SuspenseWrapper><WorkforceLanding /></SuspenseWrapper>} />
-        <Route path="workforce/profiles" element={<SuspenseWrapper><ProfileManagementPage /></SuspenseWrapper>} />
+        <Route path="workforce/profiles" element={<SuspenseWrapper><UserWorkforceGuard><ProfileManagementPage /></UserWorkforceGuard></SuspenseWrapper>} />
         <Route path="workforce/attendance" element={<SuspenseWrapper><AttendancePage /></SuspenseWrapper>} />
         <Route path="workforce/leave" element={<SuspenseWrapper><LeaveManagementPage /></SuspenseWrapper>} />
-        <Route path="workforce/employees" element={<SuspenseWrapper><EmployeeManagementPage /></SuspenseWrapper>} />
-        <Route path="workforce/payroll" element={<SuspenseWrapper><PayrollWagesPage /></SuspenseWrapper>} />
+        <Route path="workforce/employees" element={<SuspenseWrapper><UserWorkforceGuard><EmployeeManagementPage /></UserWorkforceGuard></SuspenseWrapper>} />
+        <Route path="workforce/payroll" element={<SuspenseWrapper><UserWorkforceGuard><PayrollWagesPage /></UserWorkforceGuard></SuspenseWrapper>} />
+        
+        {/* Admin: User Approval Management */}
+        <Route path="user-approvals" element={<SuspenseWrapper><UserWorkforceGuard><UserApprovalManagement /></UserWorkforceGuard></SuspenseWrapper>} />
+        <Route path="workforce/employees/pending-approvals" element={<SuspenseWrapper><UserWorkforceGuard><UserApprovalManagement /></UserWorkforceGuard></SuspenseWrapper>} />
         
         {/* PTW Routes */}
         <Route path="ptw" element={<SuspenseWrapper><PTWPage /></SuspenseWrapper>} />
@@ -412,6 +686,13 @@ export const AppRouter: React.FC = () => {
         <Route path="inspection" element={<SuspenseWrapper><InspectionDashboard /></SuspenseWrapper>} />
         <Route path="inspection/list" element={<SuspenseWrapper><InspectionList /></SuspenseWrapper>} />
         <Route path="inspection/create" element={<SuspenseWrapper><InspectionCreate /></SuspenseWrapper>} />
+        <Route path="inspection/forms/ac-cable-testing/create" element={<SuspenseWrapper><CreateACCableTestForm /></SuspenseWrapper>} />
+        <Route path="inspection/forms/ht-cable/list" element={<SuspenseWrapper><HTCableFormList /></SuspenseWrapper>} />
+        <Route path="inspection/forms/ht-cable/create" element={<SuspenseWrapper><HTCableChecklistFormCreate /></SuspenseWrapper>} />
+        <Route path="inspection/forms/acdb-checklist/list" element={<SuspenseWrapper><ACDBChecklistFormList /></SuspenseWrapper>} />
+        <Route path="inspection/forms/acdb-checklist/create" element={<SuspenseWrapper><ACDBChecklistFormCreate /></SuspenseWrapper>} />
+        <Route path="inspection/view/:id" element={<SuspenseWrapper><InspectionList /></SuspenseWrapper>} />
+        <Route path="inspection/edit/:id" element={<SuspenseWrapper><InspectionCreate /></SuspenseWrapper>} />
         
         <Route path="incident-management" element={<SuspenseWrapper><IncidentManagementPage /></SuspenseWrapper>} />
         
@@ -422,10 +703,24 @@ export const AppRouter: React.FC = () => {
         <Route path="quality" element={<SuspenseWrapper><QualityDashboard /></SuspenseWrapper>} />
         
         <Route path="mom" element={<SuspenseWrapper><MoMList /></SuspenseWrapper>} />
+        <Route path="mom/edit/:id" element={<SuspenseWrapper><MoMEdit /></SuspenseWrapper>} />
+        <Route path="mom/view/:id" element={<SuspenseWrapper><MoMView /></SuspenseWrapper>} />
+        <Route path="mom/live/:id" element={<SuspenseWrapper><MoMLive /></SuspenseWrapper>} />
         
-        <Route path="training" element={<SuspenseWrapper><TrainingPage /></SuspenseWrapper>} />
+        <Route path="training" element={<AdminTrainingGuard><SuspenseWrapper><TrainingPage /></SuspenseWrapper></AdminTrainingGuard>} />
+        <Route path="training/create" element={<AdminTrainingGuard><SuspenseWrapper><TrainingPage /></SuspenseWrapper></AdminTrainingGuard>} />
+        <Route path="training/all" element={<AdminTrainingGuard><SuspenseWrapper><TrainingPage /></SuspenseWrapper></AdminTrainingGuard>} />
+        <Route path="training/admin" element={<AdminTrainingGuard><SuspenseWrapper><TrainingManagementPage /></SuspenseWrapper></AdminTrainingGuard>} />
+        <Route path="training/manage" element={<AdminTrainingGuard><SuspenseWrapper><TrainingManagementPage /></SuspenseWrapper></AdminTrainingGuard>} />
+        <Route path="training/:trainingId/attendance" element={<AdminTrainingGuard><SuspenseWrapper><AttendanceManagementPage /></SuspenseWrapper></AdminTrainingGuard>} />
         
         <Route path="tbt" element={<SuspenseWrapper><TBTPage /></SuspenseWrapper>} />
+        
+        <Route path="chatbox" element={<SuspenseWrapper><ChatboxPage /></SuspenseWrapper>} />
+        
+        <Route path="voice-translator" element={<SuspenseWrapper><VoiceTranslatorPage /></SuspenseWrapper>} />
+        
+        <Route path="ai-bot" element={<SuspenseWrapper><AIBotPage /></SuspenseWrapper>} />
         
         <Route path="settings" element={<SuspenseWrapper><MasterAdminSettings /></SuspenseWrapper>} />
       </Route>
@@ -730,9 +1025,350 @@ export const AppRouter: React.FC = () => {
         }
       />
 
+      {/* User Panel Routes (role_type=user) */}
+      <Route path="/user" element={
+        <UserGuard>
+          <UserLayout />
+        </UserGuard>
+      }>
+        <Route index element={<Navigate to="/user/dashboard" replace />} />
+        <Route path="dashboard" element={<SuspenseWrapper><UserDashboard /></SuspenseWrapper>} />
+      </Route>
+
+      <Route
+        path="/user/profile-setup"
+        element={
+          <UserGuard>
+            <SuspenseWrapper>
+              <ProfileSetupPage />
+            </SuspenseWrapper>
+          </UserGuard>
+        }
+      />
+
+      <Route
+        path="/user/complete-profile"
+        element={
+          <UserGuard>
+            <SuspenseWrapper>
+              <CompleteProfilePage />
+            </SuspenseWrapper>
+          </UserGuard>
+        }
+      />
+
+      <Route
+        path="/user/waiting-approval"
+        element={
+          <UserGuard>
+            <SuspenseWrapper>
+              <UserWaitingApprovalPage />
+            </SuspenseWrapper>
+          </UserGuard>
+        }
+      />
+
+      <Route
+        path="/user/approval-pending"
+        element={
+          <UserGuard>
+            <SuspenseWrapper>
+              <ApprovalPendingPage />
+            </SuspenseWrapper>
+          </UserGuard>
+        }
+      />
+
+      <Route
+        path="/user/rejected"
+        element={
+          <UserGuard>
+            <SuspenseWrapper>
+              <UserRejectedPage />
+            </SuspenseWrapper>
+          </UserGuard>
+        }
+      />
+
+      <Route
+        path="/user/induction-pending"
+        element={
+          <UserGuard>
+            <SuspenseWrapper>
+              <InductionPendingPage />
+            </SuspenseWrapper>
+          </UserGuard>
+        }
+      />
+
+      <Route
+        path="/user/induction-training"
+        element={
+          <UserGuard>
+            <SuspenseWrapper>
+              <UserInductionTrainingPage />
+            </SuspenseWrapper>
+          </UserGuard>
+        }
+      />
+
+      <Route
+        path="/user/training"
+        element={
+          <UserGuard>
+            <SuspenseWrapper>
+              <UserInductionTrainingPage />
+            </SuspenseWrapper>
+          </UserGuard>
+        }
+      />
+
       {/* Default Routes */}
       <Route path="/" element={<Navigate to="/login" replace />} />
       
+      {/* /dashboard/inspection/* â†’ mirrors /app/inspection/* (inspection module uses this prefix) */}
+      <Route path="/dashboard" element={
+        <ProtectedRoute requireCompanyUser requireApproved>
+          <CompanyLayout />
+        </ProtectedRoute>
+      }>
+        <Route path="inspection" element={<SuspenseWrapper><InspectionDashboard /></SuspenseWrapper>} />
+        <Route path="inspection/list" element={<SuspenseWrapper><InspectionList /></SuspenseWrapper>} />
+        <Route path="inspection/create" element={<SuspenseWrapper><InspectionCreate /></SuspenseWrapper>} />
+        <Route path="inspection/forms/ac-cable-testing/create" element={<SuspenseWrapper><CreateACCableTestForm /></SuspenseWrapper>} />
+        <Route path="inspection/forms/ht-cable/list" element={<SuspenseWrapper><HTCableFormList /></SuspenseWrapper>} />
+        <Route path="inspection/forms/ht-cable/create" element={<SuspenseWrapper><HTCableChecklistFormCreate /></SuspenseWrapper>} />
+        <Route path="inspection/forms/acdb-checklist/list" element={<SuspenseWrapper><ACDBChecklistFormList /></SuspenseWrapper>} />
+        <Route path="inspection/forms/acdb-checklist/create" element={<SuspenseWrapper><ACDBChecklistFormCreate /></SuspenseWrapper>} />
+        
+        {/* HT Pre-Commission Routes */}
+        <Route path="inspection/forms/ht-precommission/list" element={
+          <SuspenseWrapper>
+            <HTPreCommissionFormList />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/ht-precommission/create" element={
+          <SuspenseWrapper>
+            <HTPreCommissionForm />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/ht-precommission/view/:id" element={
+          <SuspenseWrapper>
+            <HTPreCommissionForm />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/ht-precommission/edit/:id" element={
+          <SuspenseWrapper>
+            <HTPreCommissionForm />
+          </SuspenseWrapper>
+        } />
+        
+        {/* HT Pre-Commission Template Routes */}
+        <Route path="inspection/forms/ht-precommission-template/list" element={
+          <SuspenseWrapper>
+            <HTPreCommissionTemplateFormList />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/ht-precommission-template/create" element={
+          <SuspenseWrapper>
+            <HTPreCommissionTemplateForm />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/ht-precommission-template/view/:id" element={
+          <SuspenseWrapper>
+            <HTPreCommissionTemplateForm />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/ht-precommission-template/edit/:id" element={
+          <SuspenseWrapper>
+            <HTPreCommissionTemplateForm />
+          </SuspenseWrapper>
+        } />
+
+        {/* Civil Work Checklist Routes */}
+        <Route path="inspection/forms/civil-work-checklist/list" element={
+          <SuspenseWrapper>
+            <CivilWorkChecklistFormList />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/civil-work-checklist/create" element={
+          <SuspenseWrapper>
+            <CivilWorkChecklistForm />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/civil-work-checklist/view/:id" element={
+          <SuspenseWrapper>
+            <CivilWorkChecklistForm />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/civil-work-checklist/edit/:id" element={
+          <SuspenseWrapper>
+            <CivilWorkChecklistForm />
+          </SuspenseWrapper>
+        } />
+
+        {/* Cement Register Routes */}
+        <Route path="inspection/forms/cement-register/list" element={
+          <SuspenseWrapper>
+            <CementRegisterFormList />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/cement-register/create" element={
+          <SuspenseWrapper>
+            <CementRegisterForm />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/cement-register/view/:id" element={
+          <SuspenseWrapper>
+            <CementRegisterForm />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/cement-register/edit/:id" element={
+          <SuspenseWrapper>
+            <CementRegisterForm />
+          </SuspenseWrapper>
+        } />
+
+        {/* Concrete Pour Card Routes */}
+        <Route path="inspection/forms/concrete-pour-card/list" element={
+          <SuspenseWrapper>
+            <ConcretePourCardFormList />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/concrete-pour-card/create" element={
+          <SuspenseWrapper>
+            <ConcretePourCardForm />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/concrete-pour-card/view/:id" element={
+          <SuspenseWrapper>
+            <ConcretePourCardForm />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/concrete-pour-card/edit/:id" element={
+          <SuspenseWrapper>
+            <ConcretePourCardForm />
+          </SuspenseWrapper>
+        } />
+
+        {/* PCC Checklist Routes */}
+        <Route path="inspection/forms/pcc-checklist/list" element={
+          <SuspenseWrapper>
+            <PCCChecklistFormList />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/pcc-checklist/create" element={
+          <SuspenseWrapper>
+            <PCCChecklistForm />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/pcc-checklist/view/:id" element={
+          <SuspenseWrapper>
+            <PCCChecklistForm />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/pcc-checklist/edit/:id" element={
+          <SuspenseWrapper>
+            <PCCChecklistForm />
+          </SuspenseWrapper>
+        } />
+
+        {/* Bar Bending Schedule Routes */}
+        <Route path="inspection/forms/bar-bending-schedule/list" element={
+          <SuspenseWrapper>
+            <BarBendingScheduleFormList />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/bar-bending-schedule/create" element={
+          <SuspenseWrapper>
+            <BarBendingScheduleForm />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/bar-bending-schedule/view/:id" element={
+          <SuspenseWrapper>
+            <BarBendingScheduleForm />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/bar-bending-schedule/edit/:id" element={
+          <SuspenseWrapper>
+            <BarBendingScheduleForm />
+          </SuspenseWrapper>
+        } />
+
+        {/* Battery Charger Checklist Routes */}
+        <Route path="inspection/forms/battery-charger-checklist/list" element={
+          <SuspenseWrapper>
+            <BatteryChargerChecklistFormList />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/battery-charger-checklist/create" element={
+          <SuspenseWrapper>
+            <BatteryChargerChecklistForm />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/battery-charger-checklist/view/:id" element={
+          <SuspenseWrapper>
+            <BatteryChargerChecklistForm />
+          </SuspenseWrapper>
+        } />
+        <Route path="inspection/forms/battery-charger-checklist/edit/:id" element={
+          <SuspenseWrapper>
+            <BatteryChargerChecklistForm />
+          </SuspenseWrapper>
+        } />
+
+        {/* Battery UPS Checklist Routes */}
+        <Route path="inspection/forms/battery-ups-checklist/list" element={<SuspenseWrapper><BatteryUPSChecklistFormList /></SuspenseWrapper>} />
+        <Route path="inspection/forms/battery-ups-checklist/create" element={<SuspenseWrapper><BatteryUPSChecklistForm /></SuspenseWrapper>} />
+        <Route path="inspection/forms/battery-ups-checklist/view/:id" element={<SuspenseWrapper><BatteryUPSChecklistForm /></SuspenseWrapper>} />
+        <Route path="inspection/forms/battery-ups-checklist/edit/:id" element={<SuspenseWrapper><BatteryUPSChecklistForm /></SuspenseWrapper>} />
+
+        {/* Bus Duct Checklist Routes */}
+        <Route path="inspection/forms/bus-duct-checklist/list" element={<SuspenseWrapper><BusDuctChecklistFormList /></SuspenseWrapper>} />
+        <Route path="inspection/forms/bus-duct-checklist/create" element={<SuspenseWrapper><BusDuctChecklistForm /></SuspenseWrapper>} />
+        <Route path="inspection/forms/bus-duct-checklist/view/:id" element={<SuspenseWrapper><BusDuctChecklistForm /></SuspenseWrapper>} />
+        <Route path="inspection/forms/bus-duct-checklist/edit/:id" element={<SuspenseWrapper><BusDuctChecklistForm /></SuspenseWrapper>} />
+
+        {/* Control Cable Checklist Routes */}
+        <Route path="inspection/forms/control-cable-checklist/list" element={<SuspenseWrapper><ControlCableChecklistFormList /></SuspenseWrapper>} />
+        <Route path="inspection/forms/control-cable-checklist/create" element={<SuspenseWrapper><ControlCableChecklistForm /></SuspenseWrapper>} />
+        <Route path="inspection/forms/control-cable-checklist/view/:id" element={<SuspenseWrapper><ControlCableChecklistForm /></SuspenseWrapper>} />
+        <Route path="inspection/forms/control-cable-checklist/edit/:id" element={<SuspenseWrapper><ControlCableChecklistForm /></SuspenseWrapper>} />
+
+        {/* Control Room Audit Checklist Routes */}
+        <Route path="inspection/forms/control-room-audit-checklist/list" element={<SuspenseWrapper><ControlRoomAuditChecklistFormList /></SuspenseWrapper>} />
+        <Route path="inspection/forms/control-room-audit-checklist/create" element={<SuspenseWrapper><ControlRoomAuditChecklistForm /></SuspenseWrapper>} />
+        <Route path="inspection/forms/control-room-audit-checklist/view/:id" element={<SuspenseWrapper><ControlRoomAuditChecklistForm /></SuspenseWrapper>} />
+        <Route path="inspection/forms/control-room-audit-checklist/edit/:id" element={<SuspenseWrapper><ControlRoomAuditChecklistForm /></SuspenseWrapper>} />
+
+        {/* Earthing Checklist Routes */}
+        <Route path="inspection/forms/earthing-checklist/list" element={<SuspenseWrapper><EarthingChecklistFormList /></SuspenseWrapper>} />
+        <Route path="inspection/forms/earthing-checklist/create" element={<SuspenseWrapper><EarthingChecklistForm /></SuspenseWrapper>} />
+        <Route path="inspection/forms/earthing-checklist/view/:id" element={<SuspenseWrapper><EarthingChecklistForm /></SuspenseWrapper>} />
+        <Route path="inspection/forms/earthing-checklist/edit/:id" element={<SuspenseWrapper><EarthingChecklistForm /></SuspenseWrapper>} />
+
+        {/* AC Cable Testing Routes */}
+        <Route path="inspection/forms/ac-cable-testing/list" element={<SuspenseWrapper><ACCableFormList /></SuspenseWrapper>} />
+        <Route path="inspection/forms/ac-cable-testing/view/:id" element={<SuspenseWrapper><CreateACCableTestForm /></SuspenseWrapper>} />
+        <Route path="inspection/forms/ac-cable-testing/edit/:id" element={<SuspenseWrapper><CreateACCableTestForm /></SuspenseWrapper>} />
+        
+        <Route path="inspection/view/:id" element={<SuspenseWrapper><InspectionList /></SuspenseWrapper>} />
+        <Route path="inspection/edit/:id" element={<SuspenseWrapper><InspectionCreate /></SuspenseWrapper>} />
+        <Route path="inspection/forms/:formType/create" element={<SuspenseWrapper><InspectionCreate /></SuspenseWrapper>} />
+        <Route path="inspection/forms/:formType/list" element={<SuspenseWrapper><InspectionCreate /></SuspenseWrapper>} />
+        <Route path="inspection/forms/:formType/view/:id" element={<SuspenseWrapper><InspectionCreate /></SuspenseWrapper>} />
+        <Route path="inspection/forms/:formType/edit/:id" element={<SuspenseWrapper><InspectionCreate /></SuspenseWrapper>} />
+      </Route>
+      
+      <Route
+        path="/subscription-expired"
+        element={
+          <SuspenseWrapper>
+            <SubscriptionExpired />
+          </SuspenseWrapper>
+        }
+      />
+
       <Route
         path="/unauthorized"
         element={

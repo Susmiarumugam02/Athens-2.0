@@ -22,9 +22,7 @@ const HRAnalytics: React.FC = () => {
     
     try {
       // API calls will be implemented when backend is ready
-      console.log('Fetching HR analytics data...')
     } catch (error) {
-      console.error('Error fetching analytics data:', error)
     }
   }
 

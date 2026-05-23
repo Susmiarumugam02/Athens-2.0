@@ -38,7 +38,6 @@ const SafetyObservationDetail: React.FC = () => {
       const response = await safetyObservationApi.listAttachments(id!);
       setAttachments(response.data);
     } catch (error) {
-      console.error('Failed to load attachments');
     }
   };
   
@@ -49,7 +48,6 @@ const SafetyObservationDetail: React.FC = () => {
       setAuditLogs(response.data.results);
       setHistoryLoaded(true);
     } catch (error) {
-      console.error('Failed to load audit logs');
     }
   };
   

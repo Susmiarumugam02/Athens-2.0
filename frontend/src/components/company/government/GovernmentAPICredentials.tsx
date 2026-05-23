@@ -64,9 +64,6 @@ const GovernmentAPICredentials: React.FC = () => {
   const summaryData = credentialsSummary?.data || {}
 
   // Debug logging
-  console.log('Credentials response:', credentials)
-  console.log('Processed credentialsData:', credentialsData)
-  console.log('Summary data:', summaryData)
 
   // Toggle credential status mutation
   const toggleStatusMutation = useMutation({

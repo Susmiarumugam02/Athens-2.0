@@ -43,7 +43,6 @@ const CandidatePipeline: React.FC = () => {
         setFilteredApplications(allApplications)
       }
     } catch (error) {
-      console.error('Error fetching applications:', error)
       toast.error('Failed to load applications')
     } finally {
       setLoading(false)
@@ -76,7 +75,6 @@ const CandidatePipeline: React.FC = () => {
       toast.success(`Application ${newStatus} successfully`)
       fetchApplications()
     } catch (error) {
-      console.error('Error updating application status:', error)
       toast.error('Failed to update application status')
     }
   }

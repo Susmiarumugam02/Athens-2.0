@@ -17,7 +17,6 @@ export const useSessionValidation = () => {
           
           if (!storageSessionKey && storeSessionKey) {
             sessionStorage.setItem('service_session_key', storeSessionKey)
-            console.log('🔧 Session key restored on visibility change')
           }
           // Removed aggressive session validation that was causing logouts
         }, 2000) // Longer delay to prevent interference with navigation

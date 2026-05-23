@@ -65,7 +65,7 @@ class Task(models.Model):
     task_type = models.CharField(max_length=20, choices=TASK_TYPE_CHOICES, default='ad-hoc')
     assigned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='ergon_assigned_tasks_by')
     assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='ergon_assigned_tasks')
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tasks')
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tasks', null=True, blank=True)
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
     task_category = models.ForeignKey(TaskCategory, on_delete=models.SET_NULL, null=True, blank=True)
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
@@ -320,14 +320,15 @@ class MachineryAllocation(models.Model):
 # Advance & Expenses
 class Advance(models.Model):
     athens_tenant_id = models.IntegerField(db_index=True)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    employee = models.ForeignKey(User, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True, blank=True)
+    employee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ergon_advances')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     purpose = models.TextField()
     status = models.CharField(max_length=50, default='pending')
     requested_date = models.DateField(auto_now_add=True)
     approved_date = models.DateField(null=True, blank=True)
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='ergon_approved_advances')
+    rejection_reason = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -335,14 +336,15 @@ class Advance(models.Model):
 
 class Expense(models.Model):
     athens_tenant_id = models.IntegerField(db_index=True)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    employee = models.ForeignKey(User, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True, blank=True)
+    employee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ergon_expenses')
     category = models.CharField(max_length=100)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField()
     expense_date = models.DateField()
     status = models.CharField(max_length=50, default='pending')
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='ergon_approved_expenses')
+    rejection_reason = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

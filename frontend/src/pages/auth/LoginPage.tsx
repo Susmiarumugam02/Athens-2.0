@@ -4,12 +4,13 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Eye, EyeOff, Shield, Mail, Lock, Sparkles, Zap, Globe } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
+import { hasCompletedInductionAccess } from '../../utils/accessState'
 import SecurityAlerts from '../../components/auth/SecurityAlerts'
 import AccountLockoutWarning from '../../components/auth/AccountLockoutWarning'
 import PasswordExpiryWarning from '../../components/auth/PasswordExpiryWarning'
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email'),
+  email: z.string().min(1, 'Email or username is required'),
   password: z.string().min(1, 'Required'),
 })
 
@@ -63,19 +64,52 @@ const LoginPage: React.FC = () => {
   useEffect(() => {
     if (isAuthenticated && user && !isLoading) {
       setIsTransitioning(true)
+      // next_route is stored by authStore.login in sessionStorage
       const nextRoute = sessionStorage.getItem('next_route')
-      sessionStorage.removeItem('next_route') // Clear it immediately
+      sessionStorage.removeItem('next_route')
       const userType = (user as any).user_type
-      
+      const roleType = (user as any).role_type
+      const isFirstLogin = (user as any).is_first_login
+      const approvalStatus = (user as any).approval_status
+      const workflowApprovalStatus = (user as any).workflow_approval_status
+      const profileCompleted = Boolean((user as any).profile_completed)
+      const trainingStatus = (user as any).training_status
+      const hasFullAccess = hasCompletedInductionAccess(user)
+
       setTimeout(() => {
-        if (nextRoute && nextRoute !== '/services/athens_sustainability/dashboard') {
+        // next_route from backend takes priority
+        if (nextRoute && nextRoute !== '') {
           window.location.href = nextRoute
-        } else if (userType === 'superadmin') {
+          return
+        }
+        // Fallback routing by user type
+        if (userType === 'superadmin') {
           window.location.href = '/superadmin/dashboard'
         } else if (userType === 'masteradmin') {
           window.location.href = '/master-admin'
         } else if (userType === 'companyuser') {
-          window.location.href = '/app'
+          if (roleType === 'user') {
+            const userStatus = (user as any).status
+            if (!profileCompleted || userStatus === 'pending_profile' || isFirstLogin) {
+              window.location.href = '/user/complete-profile'
+            } else if (
+              userStatus === 'pending_approval' ||
+              approvalStatus === 'waiting_admin_approval' ||
+              workflowApprovalStatus === 'waiting_admin_approval'
+            ) {
+              window.location.href = '/user/approval-pending'
+            } else if (!hasFullAccess && approvalStatus === 'approved' && trainingStatus !== 'completed') {
+              window.location.href = '/user/induction-pending'
+            } else if (approvalStatus === 'rejected') {
+              window.location.href = '/user/rejected'
+            } else if (hasFullAccess) {
+              window.location.href = '/app/dashboard'
+            } else {
+              window.location.href = '/user/induction-pending'
+            }
+          } else {
+            window.location.href = '/app'
+          }
         } else if (userType === 'serviceuser') {
           window.location.href = '/service'
         } else {
@@ -208,15 +242,15 @@ const LoginPage: React.FC = () => {
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-200 mb-1.5">Email</label>
+                    <label className="block text-sm font-medium text-gray-200 mb-1.5">Email or Username</label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         {...register('email')}
-                        type="email"
-                        autoComplete="email"
+                        type="text"
+                        autoComplete="username email"
                         className={`w-full pl-10 pr-4 py-3 bg-white/5 border ${errors.email ? 'border-red-500/50' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all`}
-                        placeholder="you@company.com"
+                        placeholder="Email or username"
                       />
                     </div>
                     {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>}

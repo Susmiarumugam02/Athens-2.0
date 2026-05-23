@@ -175,7 +175,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ employee, onClose, onSave }
       
       setDepartments(Array.isArray(response.data) ? response.data : [])
     } catch (error) {
-      console.error('Error fetching dropdown data:', error)
       toast.error('Failed to load form data')
     } finally {
       setLoadingDropdowns(false)
@@ -192,7 +191,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ employee, onClose, onSave }
       })
       setDesignations(Array.isArray(response.data) ? response.data : [])
     } catch (error) {
-      console.error('Error fetching designations:', error)
     }
   }
 
@@ -263,7 +261,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ employee, onClose, onSave }
       onSave(response.data)
       onClose()
     } catch (error: any) {
-      console.error('Error saving employee:', error)
       toast.error('Failed to save team member')
     } finally {
       setLoading(false)

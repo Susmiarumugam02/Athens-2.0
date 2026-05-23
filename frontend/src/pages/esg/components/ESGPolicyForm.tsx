@@ -71,7 +71,6 @@ const ESGPolicyForm: React.FC<ESGPolicyFormProps> = ({ onSuccess, initialData })
       form.resetFields();
       onSuccess?.();
     } catch (error) {
-      console.error('Error creating ESG policy:', error);
       message.error('Failed to create ESG policy');
     } finally {
       setLoading(false);

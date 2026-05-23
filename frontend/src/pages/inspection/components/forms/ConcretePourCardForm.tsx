@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Typography, Input, Divider, Table, Button, message } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { SaveOutlined, DownloadOutlined } from "@ant-design/icons";
-import PageLayout from '../../../components/ui/PageLayout';
+import PageLayout from '../../../../components/ui/PageLayout';
 import { inspectionService } from '../../services/inspectionService';
 
 const { Title, Text } = Typography;
@@ -80,7 +80,7 @@ export default function ConcretePourCardForm() {
         await inspectionService.createConcretePourCardForm(formData);
         message.success('Form created successfully');
       }
-      navigate('/inspection/concrete-pour-card-forms');
+      navigate('/dashboard/inspection/forms/concrete-pour-card/list');
     } catch (error) {
       message.error('Failed to save form');
     } finally {

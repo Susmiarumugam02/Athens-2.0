@@ -93,7 +93,6 @@ const SafetyObservationList: React.FC = () => {
         setObservations([]);
       }
     } catch (error) {
-      console.error('Fetch observations error:', error);
       setObservations([]);
     } finally {
       setLoading(false);
@@ -119,8 +118,6 @@ const SafetyObservationList: React.FC = () => {
         setViewModalVisible(true);
       }
     } catch (error: any) {
-      console.error('View error:', error);
-      console.error('Observation ID:', observationId);
     }
   };
 
@@ -143,9 +140,6 @@ const SafetyObservationList: React.FC = () => {
       message.success('Safety observation deleted successfully');
       fetchObservations();
     } catch (error: any) {
-      console.error('Delete error:', error);
-      console.error('Observation ID:', record.observationID);
-      console.error('Full record:', record);
       message.error(`Failed to delete safety observation: ${error.response?.status || 'Unknown error'}`);
     }
   };

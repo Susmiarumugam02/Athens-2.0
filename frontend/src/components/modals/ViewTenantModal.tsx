@@ -3,7 +3,7 @@ import { AppDialog, AppDialogHeader, AppDialogTitle, AppDialogBody, AppDialogFoo
 import { Button } from '@/ui/sap/components/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Building, Mail, Phone, Globe, Clock, Calendar } from 'lucide-react'
-import { Tenant } from '@/services/controlPlaneService'
+import type { Tenant } from '@/services/controlPlaneService'
 
 interface ViewTenantModalProps {
   open: boolean

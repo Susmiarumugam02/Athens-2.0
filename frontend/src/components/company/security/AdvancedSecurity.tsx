@@ -250,7 +250,6 @@ const AdvancedSecurity: React.FC<AdvancedSecurityProps> = () => {
                 await apiClient.delete('/api/company-dashboard/advanced-security/clear-sample-data/')
                 queryClient.invalidateQueries({ queryKey: ['enhanced-threats', 'device-management'] })
               } catch (error) {
-                console.error('Failed to clear sample data:', error)
               }
             }}
             variant="outline"
@@ -402,7 +401,6 @@ const AdvancedSecurity: React.FC<AdvancedSecurityProps> = () => {
                 await apiClient.delete('/api/company-dashboard/advanced-security/clear-sample-data/')
                 queryClient.invalidateQueries({ queryKey: ['enhanced-threats', 'device-management'] })
               } catch (error) {
-                console.error('Failed to clear sample data:', error)
               }
             }}
             variant="outline"

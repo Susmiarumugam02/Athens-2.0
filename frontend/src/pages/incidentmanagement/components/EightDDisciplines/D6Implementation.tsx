@@ -205,12 +205,6 @@ const D6Implementation: React.FC<D6ImplementationProps> = ({
       title: 'Actions',
       key: 'actions',
       render: (record: EightDCorrectiveAction) => {
-        console.log('Action render debug:', {
-          id: record.id,
-          status: record.status,
-          progress: record.implementation_progress,
-          shouldShowComplete: record.status === 'in_progress' && (record.implementation_progress || 0) >= 100
-        });
         
         return (
           <Space>

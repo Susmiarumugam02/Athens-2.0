@@ -32,7 +32,6 @@ const Payroll: React.FC = () => {
 
   const handleViewPayslip = (payslip: any) => {
     // This is handled by PayslipList component internally
-    console.log('View payslip:', payslip)
   }
 
   return (

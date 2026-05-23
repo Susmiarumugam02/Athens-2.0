@@ -1,10 +1,42 @@
 import React, { useState } from 'react';
-import { Tabs, Button, Space } from 'antd';
+import { Tabs, Button, Alert } from 'antd';
 import { PlusOutlined, DashboardOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import IncidentList from './components/IncidentList';
 import IncidentForm from './components/IncidentForm';
-import { IncidentListItem } from './types';
+import type { IncidentListItem } from './types';
+
+// Error boundary to prevent white screen
+class IncidentErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: string }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: '' };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error: error?.message || 'Unknown error' };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Alert
+          type="error"
+          message="Incident Management Error"
+          description={this.state.error}
+          style={{ margin: 24 }}
+          action={
+            <Button onClick={() => this.setState({ hasError: false, error: '' })}>
+              Retry
+            </Button>
+          }
+        />
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const IncidentManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -21,8 +53,8 @@ const IncidentManagementPage: React.FC = () => {
   };
 
   const handleViewIncident = (incident: IncidentListItem) => {
-    setEditingIncident(incident);
-    setActiveTab('form');
+    setEditingIncident(null);
+    setActiveTab('list');
   };
 
   const handleFormSuccess = () => {
@@ -47,6 +79,7 @@ const IncidentManagementPage: React.FC = () => {
       <Tabs
         activeKey={activeTab}
         onChange={setActiveTab}
+        destroyInactiveTabPane
         items={[
           {
             key: 'dashboard',
@@ -79,12 +112,11 @@ const IncidentManagementPage: React.FC = () => {
             label: editingIncident ? 'Edit Incident' : 'Create Incident',
             children: (
               <IncidentForm
-                incident={editingIncident}
-                onSuccess={handleFormSuccess}
+                mode={editingIncident ? 'edit' : 'create'}
+                initialData={editingIncident ?? undefined}
                 onCancel={handleFormCancel}
               />
-            ),
-            style: { display: activeTab === 'form' ? 'block' : 'none' }
+            )
           }
         ]}
       />

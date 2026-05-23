@@ -46,7 +46,6 @@ export const InteractionModal: React.FC<InteractionModalProps> = ({ isOpen, onCl
       setContacts(contactsRes.data.results || contactsRes.data)
       setDeals(dealsRes.data.results || dealsRes.data)
     } catch (error) {
-      console.error('Error loading data:', error)
     }
   }
 
@@ -66,7 +65,6 @@ export const InteractionModal: React.FC<InteractionModalProps> = ({ isOpen, onCl
       onSave()
       onClose()
     } catch (error) {
-      console.error('Error saving interaction:', error)
     } finally {
       setLoading(false)
     }

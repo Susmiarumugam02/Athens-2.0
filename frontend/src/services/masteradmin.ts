@@ -50,6 +50,57 @@ export interface AdminUser {
   project_name?: string
   is_active: boolean
   created_at: string
+  users_created_count?: number
+}
+
+export interface CreatedUser {
+  id: number
+  username: string
+  name?: string
+  email?: string
+  company_type?: string
+  role_type?: string
+  role?: string
+  status?: string
+  is_active: boolean
+  approval_status?: string
+  induction_attended?: boolean
+  induction_status?: string
+  module_access_enabled?: boolean
+  attendance_percentage?: number
+  attendance_percent?: number
+  attendance?: number
+  ptw_count?: number
+  permit_count?: number
+  safety_score?: number
+  last_login?: string | null
+  created_at?: string
+  project_name?: string
+}
+
+export interface ProjectWithAnalytics {
+  id: number
+  projectName: string
+  projectCategory: string
+  location: string
+  subscriber_role: string | null
+  commencementDate: string | null
+  deadlineDate: string | null
+  admin_count: number
+  user_count: number
+  active_user_count: number
+  admin_type_counts: Record<string, number>
+}
+
+export interface AdminCreatedUsersResponse {
+  admin_id: number
+  admin_username: string
+  admin_name: string
+  admin_type: string
+  company_name: string
+  project_name: string
+  users: CreatedUser[]
+  total: number
 }
 
 export interface ProjectAdminCreateRequest {
@@ -107,17 +158,30 @@ export const masterAdminService = {
   },
 
   async getProjectAdmins(projectId: number): Promise<{
-    client: AdminUser | null
-    epc: AdminUser | null
-    contractors: AdminUser[]
+    project_id: number
+    project_name: string
+    grouped: Record<string, AdminUser[]>
+    all: AdminUser[]
   }> {
     const response = await apiClient.get(`/api/auth/masteradmin/projects/${projectId}/admins/`)
     return response.data
   },
 
+  async getAdminCreatedUsers(adminId: number): Promise<AdminCreatedUsersResponse> {
+    const response = await apiClient.get(`/api/auth/masteradmin/admin-users/${adminId}/users/`)
+    return response.data
+  },
+
+  async getProjectsWithAnalytics(): Promise<ProjectWithAnalytics[]> {
+    const response = await apiClient.get('/api/auth/masteradmin/projects/analytics/')
+    return response.data
+  },
+
   // Admin Users
-  async getAdminUsers(): Promise<AdminUser[]> {
-    const response = await apiClient.get('/api/auth/masteradmin/admin-users/')
+  async getAdminUsers(adminId?: number): Promise<AdminUser[] | AdminCreatedUsersResponse> {
+    const response = adminId
+      ? await apiClient.get(`/api/auth/masteradmin/admin-users/${adminId}/users/`)
+      : await apiClient.get('/api/auth/masteradmin/admin-users/')
     return response.data
   },
 
@@ -136,6 +200,32 @@ export const masterAdminService = {
 
   async toggleAdminActive(userId: number, isActive: boolean): Promise<void> {
     await apiClient.post(`/api/auth/masteradmin/users/${userId}/toggle-status/`)
+  },
+
+  // Project Modules (Menu Management)
+  async getProjectModules(projectId: number): Promise<Array<{
+    id: number
+    project_id: number
+    module_code: string
+    is_enabled: boolean
+  }>> {
+    const response = await apiClient.get(`/api/control-plane/project-modules/?project_id=${projectId}`)
+    // Safely unwrap: DRF may return array directly or paginated { results: [] }
+    const data = response.data
+    return Array.isArray(data) ? data : (data?.results ?? [])
+  },
+
+  async saveProjectModules(projectId: number, modules: Array<{
+    module_code: string
+    is_enabled: boolean
+  }>): Promise<Array<{ module_code: string; is_enabled: boolean }>> {
+    // Single atomic bulk-save — one request, one DB transaction, no race conditions
+    const response = await apiClient.post('/api/control-plane/project-modules/bulk-save/', {
+      project_id: projectId,
+      modules,
+    })
+    const data = response.data
+    return Array.isArray(data) ? data : (data?.results ?? [])
   },
 
   // Users

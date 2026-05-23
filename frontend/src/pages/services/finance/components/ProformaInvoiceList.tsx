@@ -130,9 +130,9 @@ const ProformaInvoiceList: React.FC<ProformaInvoiceListProps> = ({ sessionKey })
 
       if (statusFilter) params.append('payment_status', statusFilter)
 
-      console.log('Fetching proforma invoices with params:', params.toString()) // Debug log
+ // Debug log
       const response = await apiClient.getFinanceProformaInvoices(Object.fromEntries(new URLSearchParams(params)))
-      console.log('Proforma Invoice API Response:', response.data) // Debug log
+ // Debug log
 
       const invoices = response.data.results || []
       setProformaInvoices(invoices)
@@ -150,10 +150,9 @@ const ProformaInvoiceList: React.FC<ProformaInvoiceListProps> = ({ sessionKey })
       setMetrics({ total, draft, sent, rejected, totalValue, collectionRate })
 
       if (invoices.length === 0 && currentPage === 1) {
-        console.log('No proforma invoices found') // Debug log
+ // Debug log
       }
     } catch (error) {
-      console.error('Error fetching proforma invoices:', error)
       if ((error as any).response?.status === 401) {
         toast.error('Session expired. Please refresh the page.')
       } else {
@@ -210,7 +209,6 @@ const ProformaInvoiceList: React.FC<ProformaInvoiceListProps> = ({ sessionKey })
         setSelectedForEdit(proformaInvoice)
       }
     } catch (error) {
-      console.error('Error fetching complete proforma data:', error)
       setSelectedForEdit(proformaInvoice)
     }
     setShowEditForm(true)
@@ -253,7 +251,6 @@ const ProformaInvoiceList: React.FC<ProformaInvoiceListProps> = ({ sessionKey })
       toast.success('Proforma reversed successfully! You can now edit it.')
       fetchProformaInvoices()
     } catch (error) {
-      console.error('Error reversing proforma:', error)
       toast.error('Failed to reverse proforma')
     }
   }
@@ -274,7 +271,6 @@ const ProformaInvoiceList: React.FC<ProformaInvoiceListProps> = ({ sessionKey })
 
       toast.success('PDF downloaded successfully')
     } catch (error) {
-      console.error('Error downloading PDF:', error)
       toast.error('Failed to download PDF')
     }
   }

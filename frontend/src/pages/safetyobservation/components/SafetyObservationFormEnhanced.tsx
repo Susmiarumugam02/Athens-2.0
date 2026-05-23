@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Form, Input, Select, DatePicker, TimePicker, Button, Card, Checkbox, message, Space, Row, Col } from 'antd';
+import { Form, Input, Select, DatePicker, TimePicker, Button, Card, Checkbox, message, Space, Row, Col, Tag } from 'antd';
 import { SaveOutlined, ClearOutlined, EnvironmentOutlined } from '@ant-design/icons';
 
 const { TextArea } = Input;
@@ -13,6 +13,22 @@ const SafetyObservationFormEnhanced: React.FC<EnhancedSafetyObservationFormProps
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [isEnvironmental, setIsEnvironmental] = useState(false);
+
+  const statusColorMap: Record<string, string> = {
+    open: '#ff4d4f',
+    in_progress: '#fa8c16',
+    pending_verification: '#faad14',
+    closed: '#52c41a',
+    rejected: '#8c8c8c',
+  };
+
+  const observationStatusOptions = [
+    { value: 'open', label: 'Open' },
+    { value: 'in_progress', label: 'In Progress' },
+    { value: 'pending_verification', label: 'Pending Verification' },
+    { value: 'closed', label: 'Closed' },
+    { value: 'rejected', label: 'Rejected' },
+  ];
 
   const environmentalIncidentTypes = [
     { value: 'spill', label: 'Spill' },
@@ -41,7 +57,6 @@ const SafetyObservationFormEnhanced: React.FC<EnhancedSafetyObservationFormProps
       setIsEnvironmental(false);
       onSuccess?.();
     } catch (error) {
-      console.error('Error creating safety observation:', error);
       message.error('Failed to create safety observation');
     } finally {
       setLoading(false);
@@ -58,6 +73,7 @@ const SafetyObservationFormEnhanced: React.FC<EnhancedSafetyObservationFormProps
         layout="vertical"
         onFinish={handleSubmit}
         autoComplete="off"
+        initialValues={{ observation_status: 'open' }}
       >
         <Row gutter={16}>
           <Col span={12}>
@@ -204,6 +220,44 @@ const SafetyObservationFormEnhanced: React.FC<EnhancedSafetyObservationFormProps
             placeholder="Describe the corrective or preventive action required"
           />
         </Form.Item>
+
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              name="correctiveActionAssignedTo"
+              label="Assigned To"
+              rules={[{ required: true, message: 'Please enter assigned person' }]}
+            >
+              <Input placeholder="Enter name of person responsible" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              name="commitmentDate"
+              label="Commitment Date"
+            >
+              <DatePicker style={{ width: '100%' }} placeholder="Select commitment date" />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              name="observation_status"
+              label="Observation Status"
+              rules={[{ required: true, message: 'Please select status' }]}
+            >
+              <Select placeholder="Select status">
+                {observationStatusOptions.map(s => (
+                  <Option key={s.value} value={s.value}>
+                    <Tag color={statusColorMap[s.value]} style={{ marginRight: 4 }}>{s.label}</Tag>
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </Col>
+        </Row>
 
         <Form.Item>
           <Space>

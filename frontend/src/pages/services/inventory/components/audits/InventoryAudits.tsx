@@ -95,7 +95,6 @@ const InventoryAudits: React.FC = () => {
       const data = await inventoryApi.getInventoryAudits(params);
       setAudits(data.results || data);
     } catch (error) {
-      console.error('Failed to load audits:', error);
     } finally {
       setLoading(false);
     }
@@ -110,7 +109,6 @@ const InventoryAudits: React.FC = () => {
       const data = await inventoryApi.getWarehousesDropdown();
       setWarehouses(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('Failed to load warehouses:', error);
       setWarehouses([]);
     }
   };
@@ -137,7 +135,6 @@ const InventoryAudits: React.FC = () => {
       resetForm();
       loadAudits();
     } catch (error) {
-      console.error('Failed to create audit:', error);
       toast.error('Failed to create audit');
     } finally {
       setModalLoading(false);

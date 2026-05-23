@@ -1,6 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import *
+from .views import contractoruser_list
 
 router = DefaultRouter()
 
@@ -28,6 +29,14 @@ router.register(r'leave-types', LeaveTypeViewSet, basename='workforce-leavetype'
 router.register(r'leave-balances', LeaveBalanceViewSet, basename='workforce-leavebalance')
 router.register(r'leave-requests', LeaveRequestViewSet, basename='workforce-leaverequest')
 
+# CONTRACTOR MANAGEMENT
+router.register(r'contractors', ContractorMasterViewSet, basename='workforce-contractor')
+
+# USER SELF-SERVICE ATTENDANCE
+router.register(r'user-attendance', UserAttendanceViewSet, basename='workforce-user-attendance')
+
 urlpatterns = [
     path('', include(router.urls)),
+    path('contractoruser-list/', contractoruser_list, name='contractoruser-list'),
+    path('stats/', workforce_stats, name='workforce-stats'),
 ]

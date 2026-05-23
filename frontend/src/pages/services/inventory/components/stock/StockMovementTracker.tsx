@@ -247,7 +247,6 @@ const StockMovementTracker: React.FC = () => {
       const response = await inventoryApi.getStockMovements(params);
       setMovements(response.results || response);
     } catch (error) {
-      console.error('Failed to load stock movements:', error);
     } finally {
       setLoading(false);
     }
@@ -271,7 +270,6 @@ const StockMovementTracker: React.FC = () => {
       setProducts(productsRes.results || productsRes);
       setWarehouses(warehousesRes.results || warehousesRes);
     } catch (error) {
-      console.error('Failed to load dropdown data:', error);
     }
   };
 
@@ -293,7 +291,6 @@ const StockMovementTracker: React.FC = () => {
       resetForm();
       loadMovements();
     } catch (error) {
-      console.error('Failed to create movement:', error);
       toast.error('Failed to record stock movement');
     } finally {
       setModalLoading(false);
@@ -322,7 +319,6 @@ const StockMovementTracker: React.FC = () => {
   };
 
   const handleExport = () => {
-    console.log('Export movements');
   };
 
   const getMovementStats = () => {

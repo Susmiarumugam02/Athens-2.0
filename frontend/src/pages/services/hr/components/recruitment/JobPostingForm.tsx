@@ -77,7 +77,6 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({ isOpen, onClose, onSucc
       })
       setDepartments(deptResponse.data.results || deptResponse.data || [])
     } catch (error) {
-      console.error('Error fetching departments:', error)
     }
   }
 
@@ -89,7 +88,6 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({ isOpen, onClose, onSucc
       })
       setDesignations(response.data || [])
     } catch (error) {
-      console.error('Error fetching designations:', error)
     }
   }
 
@@ -143,7 +141,6 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({ isOpen, onClose, onSucc
       onClose()
       resetForm()
     } catch (error: any) {
-      console.error('Error saving job posting:', error)
       toast.error(error.response?.data?.detail || 'Failed to save job posting')
     } finally {
       setLoading(false)

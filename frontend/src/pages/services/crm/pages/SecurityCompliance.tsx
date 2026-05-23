@@ -96,7 +96,6 @@ const SecurityCompliance: React.FC = () => {
       setAuditLogs(auditRes.data.results || auditRes.data || []);
       setDashboardData(dashboardRes.data || { open_alerts: 0, critical_alerts: 0, open_violations: 0, today_logs: 0 });
     } catch (error) {
-      console.error('Error loading security data:', error);
       toast.error('Failed to load security data');
       // Fallback to empty data
       setSecurityAlerts([]);
@@ -117,7 +116,6 @@ const SecurityCompliance: React.FC = () => {
       toast.success('Alert resolved successfully');
       loadData(); // Refresh data
     } catch (error) {
-      console.error('Error resolving alert:', error);
       toast.error('Failed to resolve alert');
     }
   };
@@ -130,7 +128,6 @@ const SecurityCompliance: React.FC = () => {
       toast.success('Violation resolved successfully');
       loadData(); // Refresh data
     } catch (error) {
-      console.error('Error resolving violation:', error);
       toast.error('Failed to resolve violation');
     }
   };

@@ -10,6 +10,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('workforce', '0002_payrollsettings_rename_check_in_attendance_in_time_and_more'),
         ('authentication', '0001_initial'),
+        ('projects', '0001_initial'),
     ]
 
     operations = [
@@ -80,7 +81,7 @@ class Migration(migrations.Migration):
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('contractor_compliance', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='deployments', to='workforce.contractorcompliance')),
                 ('employee', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='contract_deployments', to='workforce.employee')),
-                ('project', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='contract_deployments', to='authentication.project')),
+                ('project', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='contract_deployments', to='projects.project')),
             ],
             options={
                 'db_table': 'contract_labour_deployment',

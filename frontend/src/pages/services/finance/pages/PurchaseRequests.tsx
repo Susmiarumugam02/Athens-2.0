@@ -82,7 +82,6 @@ const PurchaseRequests: React.FC<PurchaseRequestsProps> = ({ sessionKey: propSes
       })
       setPurchaseRequests(response.data.results || [])
     } catch (error: any) {
-      console.error('Error fetching purchase requests:', error)
       toast.error('Failed to fetch purchase requests')
     } finally {
       setIsLoading(false)
@@ -98,7 +97,6 @@ const PurchaseRequests: React.FC<PurchaseRequestsProps> = ({ sessionKey: propSes
       })
       setVendors(response.data || [])
     } catch (error: any) {
-      console.error('Error fetching vendors:', error)
     }
   }
 
@@ -111,7 +109,6 @@ const PurchaseRequests: React.FC<PurchaseRequestsProps> = ({ sessionKey: propSes
       })
       setProducts(response.data.results || [])
     } catch (error: any) {
-      console.error('Error fetching products:', error)
     }
   }
 
@@ -152,7 +149,6 @@ const PurchaseRequests: React.FC<PurchaseRequestsProps> = ({ sessionKey: propSes
       resetForm()
       fetchPurchaseRequests()
     } catch (error: any) {
-      console.error('Error saving purchase request:', error)
       toast.error(error.response?.data?.message || 'Failed to save purchase request')
     }
   }
@@ -178,8 +174,6 @@ const PurchaseRequests: React.FC<PurchaseRequestsProps> = ({ sessionKey: propSes
 
   // Handle view
   const handleView = async (request: PurchaseRequest) => {
-    console.log('View clicked for request:', request.id)
-    console.log('Session key available:', !!sessionKey)
     
     if (!sessionKey) {
       toast.error('No session key available')
@@ -187,25 +181,20 @@ const PurchaseRequests: React.FC<PurchaseRequestsProps> = ({ sessionKey: propSes
     }
 
     try {
-      console.log('Making API call to view request:', request.id)
       const response = await api.get(`/api/finance/purchase-requests/${request.id}/`, {
         headers: { Authorization: `Bearer ${sessionKey}` }
       })
       
-      console.log('API response:', response.data)
       // Show detailed view in a modal or alert for now
       const details = response.data
       alert(`Purchase Request Details:\n\nRequest Number: ${details.request_number}\nVendor: ${details.vendor_name}\nStatus: ${details.status}\nTotal Amount: ₹${details.total_amount}\nItems: ${details.item_count}\nCreated: ${new Date(details.created_at).toLocaleDateString()}`)
     } catch (error: any) {
-      console.error('Error fetching purchase request details:', error)
       toast.error('Failed to load purchase request details')
     }
   }
 
   // Handle edit
   const handleEdit = async (request: PurchaseRequest) => {
-    console.log('Edit clicked for request:', request.id)
-    console.log('Session key available:', !!sessionKey)
     
     if (!sessionKey) {
       toast.error('No session key available')
@@ -213,12 +202,10 @@ const PurchaseRequests: React.FC<PurchaseRequestsProps> = ({ sessionKey: propSes
     }
 
     try {
-      console.log('Making API call to edit request:', request.id)
       const response = await api.get(`/api/finance/purchase-requests/${request.id}/`, {
         headers: { Authorization: `Bearer ${sessionKey}` }
       })
       
-      console.log('Edit API response:', response.data)
       const details = response.data
       setFormData({
         vendor: details.vendor.toString(),
@@ -237,7 +224,6 @@ const PurchaseRequests: React.FC<PurchaseRequestsProps> = ({ sessionKey: propSes
       setEditingRequest(request)
       setShowForm(true)
     } catch (error: any) {
-      console.error('Error fetching purchase request for edit:', error)
       toast.error('Failed to load purchase request for editing')
     }
   }
@@ -254,7 +240,6 @@ const PurchaseRequests: React.FC<PurchaseRequestsProps> = ({ sessionKey: propSes
       toast.success('Purchase request deleted successfully')
       fetchPurchaseRequests()
     } catch (error: any) {
-      console.error('Error deleting purchase request:', error)
       toast.error('Failed to delete purchase request')
     }
   }
@@ -393,7 +378,6 @@ const PurchaseRequests: React.FC<PurchaseRequestsProps> = ({ sessionKey: propSes
                     size="sm" 
                     onClick={(e) => {
                       e.stopPropagation()
-                      console.log('View button clicked!')
                       handleView(request)
                     }}
                     title="View Details"
@@ -405,7 +389,6 @@ const PurchaseRequests: React.FC<PurchaseRequestsProps> = ({ sessionKey: propSes
                     size="sm" 
                     onClick={(e) => {
                       e.stopPropagation()
-                      console.log('Edit button clicked!')
                       handleEdit(request)
                     }}
                     title="Edit Request"
@@ -417,7 +400,6 @@ const PurchaseRequests: React.FC<PurchaseRequestsProps> = ({ sessionKey: propSes
                     size="sm" 
                     onClick={(e) => {
                       e.stopPropagation()
-                      console.log('Delete button clicked!')
                       handleDelete(request)
                     }}
                     title="Delete Request"

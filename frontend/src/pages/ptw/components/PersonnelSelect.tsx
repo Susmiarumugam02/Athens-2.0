@@ -48,17 +48,14 @@ const PersonnelSelect: React.FC<PersonnelSelectProps> = ({
 
       setLoading(true);
       try {
-        console.log('PersonnelSelect: Searching for:', searchValue, { userType, grade, projectId: actualProjectId });
         const response = await searchUsers({
           q: searchValue,
           user_type: userType,
           grade: grade,
           project: actualProjectId
         });
-        console.log('PersonnelSelect: Search response:', response.data?.length, 'users found');
         setOptions(response.data || []);
       } catch (error) {
-        console.error('Personnel search failed:', error);
         setOptions([]);
       } finally {
         setLoading(false);

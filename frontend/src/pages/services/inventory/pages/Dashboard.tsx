@@ -79,12 +79,8 @@ const Dashboard: React.FC = () => {
   const fetchCompanyData = async () => {
     try {
       const currentSessionKey = useServiceUserStore.getState().sessionKey;
-      console.log('🔍 DEBUG: fetchCompanyData called');
-      console.log('🔍 DEBUG: serviceUser?.company_id:', serviceUser?.company_id);
-      console.log('🔍 DEBUG: sessionKey from store:', !!currentSessionKey);
 
       if (serviceUser?.company_id && currentSessionKey) {
-        console.log('🔍 DEBUG: Making API call with sessionKey:', currentSessionKey.substring(0, 10) + '...');
 
         const response = await api.get(`/api/auth/service-user/company/${serviceUser.company_id}/`, {
           headers: {
@@ -94,15 +90,10 @@ const Dashboard: React.FC = () => {
             session_key: currentSessionKey
           }
         });
-        console.log('🔍 DEBUG: API call successful, logo data:', response.data);
-        console.log('🔍 DEBUG: Logo URL from response:', response.data.logo);
         setCompanyData(response.data);
       } else {
-        console.log('🔍 DEBUG: Missing required data for API call');
       }
     } catch (error: any) {
-      console.error('🔍 DEBUG: Error fetching company logo:', error);
-      console.error('🔍 DEBUG: Error response:', error.response?.data);
     }
   };
 
@@ -587,8 +578,6 @@ const Dashboard: React.FC = () => {
                   src={companyData.logo}
                   alt={`${companyData.name} logo`}
                   className="h-full w-full object-cover"
-                  onLoad={() => console.log('🔍 DEBUG: Logo loaded successfully:', companyData.logo)}
-                  onError={(e) => console.error('🔍 DEBUG: Logo failed to load:', e, companyData.logo)}
                 />
               ) : (
                 <Building className="h-5 w-5 text-white" />

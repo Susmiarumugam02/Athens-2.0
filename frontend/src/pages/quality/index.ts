@@ -1,5 +1,8 @@
 // Quality Management exports
 export { default as QualityDashboard } from './components/QualityDashboard';
+export { default as QualityModulePage } from './QualityModulePage';
+export { default as QualityFindingsFixingsSystem } from './components/QualityFindingsFixingsSystem';
+export { default as QualityObservations } from './components/QualityObservations';
 export { default as QualityInspectionList } from './components/QualityInspectionList';
 export { default as InspectionForm } from './components/InspectionForm';
 export { default as SupplierQuality } from './components/SupplierQuality';

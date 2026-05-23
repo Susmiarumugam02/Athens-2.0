@@ -91,11 +91,11 @@ class RequireTenantPermission(permissions.BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
         
-        # SuperAdmin has all permissions
-        if getattr(request.user, 'user_type', None) == 'superadmin':
+        # SuperAdmin and MasterAdmin bypass tenant checks
+        if getattr(request.user, 'user_type', None) in ['superadmin', 'masteradmin']:
             return True
         
-        # Attach tenant context
+        # Attach tenant context for other users
         try:
             tenant = TenantResolver.resolve_tenant(request)
             if not tenant:
@@ -106,14 +106,10 @@ class RequireTenantPermission(permissions.BasePermission):
         except Exception:
             raise PermissionDenied({"error": "TENANT_CONTEXT_REQUIRED", "message": "Tenant context missing"})
         
-        # Check permission (simplified for now - can expand with Role/Permission tables later)
         user_type = getattr(request.user, 'user_type', None)
-        
-        # MasterAdmin and ProjectAdmin have most permissions
-        if user_type in ['masteradmin', 'projectadmin']:
+        if user_type in ['projectadmin', 'companyuser', 'adminuser']:
             return True
         
-        # For other users, deny by default (expand with granular permissions later)
         return False
 
 

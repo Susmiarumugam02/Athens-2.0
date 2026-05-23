@@ -51,7 +51,6 @@ const LeaveReports: React.FC = () => {
       })
       setStats(response.data)
     } catch (error: any) {
-      console.error('Error fetching stats:', error)
       toast.error('Failed to fetch statistics')
     } finally {
       setLoading(false)
@@ -84,7 +83,6 @@ const LeaveReports: React.FC = () => {
       link.remove()
       window.URL.revokeObjectURL(url)
     } catch (error: any) {
-      console.error('Error exporting report:', error)
       toast.error('Failed to export report')
     }
   }

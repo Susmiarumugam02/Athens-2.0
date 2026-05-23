@@ -19,7 +19,6 @@ const JobPortal: React.FC = () => {
       })
       setJobs(response.data.results || [])
     } catch (error) {
-      console.error('Error fetching jobs:', error)
     } finally {
       setLoading(false)
     }

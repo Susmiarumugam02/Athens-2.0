@@ -1,20 +1,14 @@
 import { apiClient as api } from '../../../lib/api';
-import {
+import type {
   Incident,
   IncidentListItem,
   IncidentAttachment,
-  
   IncidentAuditLog,
   IncidentNotification,
   IncidentFormData,
-  
- 
   IncidentFilters,
- 
-
   PaginatedResponse,
   IncidentDashboardStats,
-  // Commercial grade imports
   IncidentCategory,
   RiskAssessmentTemplate,
   IncidentMetrics,
@@ -25,7 +19,6 @@ import {
   RiskMatrixData,
   EnhancedIncidentDashboardStats,
   UserPermissions,
-  // 8D Methodology imports
   EightDProcess,
   EightDDiscipline,
   EightDTeam,
@@ -37,7 +30,7 @@ import {
 
 // Use the shared API client with proper authentication and interceptors
 const apiClient = api;
-const API_BASE_PATH = '/api/v1/incidentmanagement';
+const API_BASE_PATH = '/api/incidentmanagement';
 
 // Incident Management API
 export const incidentApi = {

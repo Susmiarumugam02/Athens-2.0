@@ -46,7 +46,6 @@ const AttendanceRecords: React.FC = () => {
       setEmployees(empResponse.data.results || [])
       setDepartments(Array.isArray(deptResponse.data) ? deptResponse.data : deptResponse.data.results || [])
     } catch (error) {
-      console.error('Error fetching initial data:', error)
     }
   }
 
@@ -65,7 +64,6 @@ const AttendanceRecords: React.FC = () => {
       
       setRecords(response.data.results || [])
     } catch (error) {
-      console.error('Error fetching records:', error)
       toast.error('Failed to load attendance records')
     } finally {
       setLoading(false)

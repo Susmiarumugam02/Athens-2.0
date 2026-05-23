@@ -118,8 +118,10 @@ export const superadminApi = {
     getSessionSettings: () => apiClient.get('/api/superadmin/security/session-settings/'),
     updateSessionSettings: (data: any) => apiClient.put('/api/superadmin/security/session-settings/', data),
     getActiveSessions: () => apiClient.get('/api/superadmin/security/active-sessions/'),
-    revokeSessions: (session_ids?: number[]) => 
-      apiClient.post('/api/superadmin/security/active-sessions/', { session_ids }),
+    revokeSessions: (session_ids?: number[]) =>
+      apiClient.post('/api/superadmin/security/active-sessions/', 
+        session_ids?.length ? { session_ids } : {}
+      ),
     listIPRestrictions: () => apiClient.get('/api/superadmin/security/ip-restrictions/'),
     createIPRestriction: (data: any) => apiClient.post('/api/superadmin/security/ip-restrictions/', data),
     deleteIPRestriction: (id: number) => apiClient.delete(`/api/superadmin/security/ip-restrictions/${id}/`),

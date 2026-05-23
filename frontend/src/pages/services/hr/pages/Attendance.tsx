@@ -56,7 +56,6 @@ const Attendance: React.FC = () => {
       setStats(statsResponse.data)
       setAttendanceSystem(systemResponse.data.results?.[0] || null)
     } catch (error) {
-      console.error('Error fetching attendance data:', error)
       toast.error('Failed to load attendance data')
     } finally {
       setLoading(false)

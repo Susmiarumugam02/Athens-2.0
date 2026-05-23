@@ -25,7 +25,8 @@ import {
   AudioOutlined,
   PlusOutlined,
 } from '@ant-design/icons';
-import { IncidentFormData, INCIDENT_TYPES, SEVERITY_LEVELS } from '../types';
+import type { IncidentFormData } from '../types';
+import { INCIDENT_TYPES, SEVERITY_LEVELS } from '../types';
 import api from '../services/api';
 import dayjs from 'dayjs';
 

@@ -147,7 +147,6 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onAddInvoice, sessionKey }) =
       
       setMetrics({ total, paid, outstanding: outstandingAmount, rejected, totalAmount, paymentRate });
     } catch (error: any) {
-      console.error('Error fetching invoices:', error);
       toast.error('Failed to fetch invoices');
     } finally {
       setLoading(false);
@@ -202,7 +201,6 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onAddInvoice, sessionKey }) =
       toast.success('Invoice reversed successfully! You can now edit it.');
       fetchInvoices();
     } catch (error) {
-      console.error('Error reversing invoice:', error);
       toast.error('Failed to reverse invoice');
     }
   };
@@ -226,7 +224,6 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onAddInvoice, sessionKey }) =
 
       toast.success('PDF downloaded successfully');
     } catch (error: any) {
-      console.error('Error downloading PDF:', error);
       toast.error('Failed to download PDF');
     }
   };
@@ -544,7 +541,6 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onAddInvoice, sessionKey }) =
                                       setSelectedForEdit(invoice)
                                     }
                                   } catch (error) {
-                                    console.error('Error fetching complete invoice data:', error)
                                     setSelectedForEdit(invoice)
                                   }
                                   setShowEditForm(true)

@@ -79,7 +79,6 @@ const FormHistory: React.FC = () => {
       
       toast.success('PDF exported successfully!')
     } catch (error: any) {
-      console.error('PDF Export Error:', error)
       toast.error('Failed to export PDF')
     }
   }

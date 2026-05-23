@@ -75,12 +75,10 @@ export const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, ticke
           await createDefaultCategories()
         }
       } catch (categoryError) {
-        console.error('Error fetching categories:', categoryError)
         // Try to create default categories
         await createDefaultCategories()
       }
     } catch (error) {
-      console.error('Error fetching data:', error)
     }
   }
 
@@ -101,14 +99,12 @@ export const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, ticke
           const response = await crmApi.createTicketCategory(sessionKey!, category)
           createdCategories.push(response.data)
         } catch (error) {
-          console.error('Error creating category:', category.name, error)
         }
       }
       if (createdCategories.length > 0) {
         setCategories(createdCategories)
       }
     } catch (error) {
-      console.error('Error creating default categories:', error)
     }
   }
 

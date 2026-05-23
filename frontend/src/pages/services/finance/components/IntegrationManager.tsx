@@ -28,7 +28,6 @@ const IntegrationManager: React.FC = () => {
       const data = await integrationApi.getIntegrationDashboard();
       setDashboardData(data);
     } catch (error) {
-      console.error('Error loading dashboard:', error);
     }
   };
 
@@ -39,7 +38,6 @@ const IntegrationManager: React.FC = () => {
       const config = await integrationApi.getMobileAppConfig();
       setMobileConfig(config);
     } catch (error) {
-      console.error('Error loading mobile config:', error);
     }
   };
 

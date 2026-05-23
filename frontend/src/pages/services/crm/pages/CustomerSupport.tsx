@@ -39,7 +39,6 @@ const CustomerSupport: React.FC = () => {
       setTickets(ticketsRes.data.results || ticketsRes.data || [])
       setStats(statsRes.data)
     } catch (error) {
-      console.error('Error fetching support data:', error)
       toast.error('Failed to load support data')
     } finally {
       setLoading(false)

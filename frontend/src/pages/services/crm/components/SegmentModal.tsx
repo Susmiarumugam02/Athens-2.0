@@ -33,7 +33,6 @@ export const SegmentModal: React.FC<SegmentModalProps> = ({ isOpen, onClose, onS
       onSave()
       onClose()
     } catch (error) {
-      console.error('Error saving segment:', error)
     } finally {
       setLoading(false)
     }

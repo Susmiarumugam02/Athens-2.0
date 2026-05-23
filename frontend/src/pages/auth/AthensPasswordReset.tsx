@@ -47,14 +47,12 @@ const AthensPasswordReset: React.FC = () => {
       }
 
       const sessionData = JSON.parse(athensSession)
-      console.log('Session data:', sessionData)
       
       const requestBody = {
         username: sessionData.username,
         old_password: formData.oldPassword,
         new_password: formData.newPassword
       }
-      console.log('Request body:', requestBody)
       
       const response = await fetch('/api/athens-sust/auth/first-login-reset/', {
         method: 'POST',

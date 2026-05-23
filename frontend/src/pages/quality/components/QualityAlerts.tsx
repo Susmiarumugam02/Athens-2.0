@@ -33,7 +33,6 @@ const QualityAlerts: React.FC = () => {
       const response = await getQualityAlerts();
       setAlerts(response.data.results || response.data);
     } catch (error) {
-      console.error('Failed to load quality alerts:', error);
       message.error('UpatePro: Failed to load quality alerts');
     } finally {
       setLoading(false);
@@ -46,7 +45,6 @@ const QualityAlerts: React.FC = () => {
       message.success('UpatePro: Quality alert acknowledged successfully');
       loadAlerts();
     } catch (error) {
-      console.error('Failed to acknowledge alert:', error);
       message.error('UpatePro: Failed to acknowledge alert');
     }
   };
@@ -74,7 +72,7 @@ const QualityAlerts: React.FC = () => {
               title="Critical Alerts"
               value={criticalAlerts}
               prefix={<ExclamationCircleOutlined />}
-              valueStyle={{ color: '#cf1322' }}
+              styles={{ content: { color: '#cf1322' } }}
             />
           </Card>
         </Col>
@@ -84,7 +82,7 @@ const QualityAlerts: React.FC = () => {
               title="Active Alerts"
               value={activeAlerts}
               prefix={<AlertOutlined />}
-              valueStyle={{ color: '#fa8c16' }}
+              styles={{ content: { color: '#fa8c16' } }}
             />
           </Card>
         </Col>
@@ -94,7 +92,7 @@ const QualityAlerts: React.FC = () => {
               title="Overdue Actions"
               value={overdueAlerts}
               prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: '#cf1322' }}
+              styles={{ content: { color: '#cf1322' } }}
             />
           </Card>
         </Col>
@@ -104,7 +102,7 @@ const QualityAlerts: React.FC = () => {
               title="Resolved Today"
               value={0}
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#3f8600' }}
+              styles={{ content: { color: '#3f8600' } }}
             />
           </Card>
         </Col>

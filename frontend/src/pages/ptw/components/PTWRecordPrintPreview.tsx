@@ -1,9 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Tooltip, Spin } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
-import { DOCUMENT_CONFIG } from '../../../constants/documentConfig';
 import * as Types from '../types';
 import { getPermitTbt } from '../api';
+
+const DOCUMENT_CONFIG = {
+  PTW: {
+    ELECTRICAL_WORK: {
+      documentName: 'Electrical Work Permit',
+      documentNumber: 'PTW-ELEC',
+      formatNumber: 'FRM-PTW-001',
+      issueNumber: '01',
+      revisionNumber: '00',
+    },
+    HOT_WORK: {
+      documentName: 'Hot Work Permit',
+      documentNumber: 'PTW-HOT',
+      formatNumber: 'FRM-PTW-002',
+      issueNumber: '01',
+      revisionNumber: '00',
+    },
+  },
+};
 
 interface PTWRecordPrintPreviewProps {
   permitData: Types.Permit;
@@ -20,7 +38,6 @@ export default function PTWRecordPrintPreview({ permitData }: PTWRecordPrintPrev
         const response = await getPermitTbt(permitData.id);
         setTbtData(response.data);
       } catch (error) {
-        console.error('Failed to fetch TBT:', error);
       } finally {
         setLoading(false);
       }
@@ -98,31 +115,6 @@ export default function PTWRecordPrintPreview({ permitData }: PTWRecordPrintPrev
     }
     
     return null;
-  };
-
-  // JSON-only signature rendering - no legacy image support
-    if (!value) return emptyText;
-    if (Array.isArray(value)) {
-      const items = value
-        .map((item) => {
-          if (typeof item === 'string' || typeof item === 'number') {
-            return String(item);
-          }
-          if (item && typeof item === 'object') {
-            return item.label || item.name || item.key || item.text || '';
-          }
-          return '';
-        })
-        .filter(Boolean);
-      if (items.length === 0) return emptyText;
-      return items.map(item => escapeHtml(item)).join(', ');
-    }
-    if (typeof value === 'object') {
-      const keys = Object.keys(value);
-      if (keys.length === 0) return emptyText;
-      return keys.map(key => escapeHtml(key)).join(', ');
-    }
-    return escapeHtml(String(value));
   };
 
   const formatChecklist = (value: any) => {

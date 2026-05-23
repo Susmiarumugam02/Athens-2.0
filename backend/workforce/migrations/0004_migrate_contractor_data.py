@@ -8,7 +8,7 @@ def migrate_contractor_data(apps, schema_editor):
     Extract contractor_company_ids and epc_company_ids from Project JSON fields
     and create ContractorMaster records (treating EPC as contractors for compliance)
     """
-    Project = apps.get_model('authentication', 'Project')
+    Project = apps.get_model('projects', 'Project')
     ContractorMaster = apps.get_model('workforce', 'ContractorMaster')
     
     contractor_map = {}  # Track created contractors to avoid duplicates

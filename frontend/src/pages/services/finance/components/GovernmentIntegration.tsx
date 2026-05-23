@@ -22,7 +22,6 @@ export const GovernmentIntegration: React.FC = () => {
       const status = await governmentApiService.getComplianceStatus()
       setComplianceStatus(status)
     } catch (error) {
-      console.error('Failed to load compliance status:', error)
     } finally {
       setLoading(false)
     }
@@ -36,7 +35,6 @@ export const GovernmentIntegration: React.FC = () => {
       const result = await governmentApiService.validateGSTIN(gstinInput)
       setValidationResults((prev: any) => ({ ...prev, gstin: result }))
     } catch (error) {
-      console.error('GSTIN validation failed:', error)
     } finally {
       setLoading(false)
     }
@@ -50,7 +48,6 @@ export const GovernmentIntegration: React.FC = () => {
       const result = await governmentApiService.validatePAN(panInput)
       setValidationResults((prev: any) => ({ ...prev, pan: result }))
     } catch (error) {
-      console.error('PAN validation failed:', error)
     } finally {
       setLoading(false)
     }
@@ -63,7 +60,6 @@ export const GovernmentIntegration: React.FC = () => {
       const result = await governmentApiService.fileGSTR1(gstinInput, currentMonth)
       setFilingResults((prev: any) => ({ ...prev, gstr1: result }))
     } catch (error) {
-      console.error('GSTR-1 filing failed:', error)
     } finally {
       setLoading(false)
     }
@@ -77,7 +73,6 @@ export const GovernmentIntegration: React.FC = () => {
       const result = await governmentApiService.fileTDSReturn(currentQuarter, financialYear)
       setFilingResults((prev: any) => ({ ...prev, tds: result }))
     } catch (error) {
-      console.error('TDS filing failed:', error)
     } finally {
       setLoading(false)
     }

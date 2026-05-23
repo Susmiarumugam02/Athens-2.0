@@ -1,131 +1,810 @@
-import { useState } from 'react'
-import { Clock, Calendar, CheckCircle, XCircle, TrendingUp, TrendingDown, User, MapPin } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import {
+  Clock, MapPin, CheckCircle, AlertCircle, LogOut, Calendar,
+  Loader2, Users, UserCheck, UserX, Timer, Search, RefreshCw, History,
+} from 'lucide-react'
+import { apiClient } from '../../lib/api'
+import { useAuthStore } from '../../store/authStore'
+import toast from 'react-hot-toast'
 
-interface KPICardProps {
-  title: string
-  value: number | string
-  subtitle?: string
-  icon: React.ReactNode
-  trend?: { value: number; isUp: boolean }
-  onClick?: () => void
-  color?: string
-}
+// ── Constants ─────────────────────────────────────────────────────────────────
+const CHECKIN_THRESHOLD_HOUR = 9
+const CHECKIN_THRESHOLD_MIN  = 0
 
-const KPICard: React.FC<KPICardProps> = ({ title, value, subtitle, icon, trend, onClick, color = 'text-primary' }) => (
-  <div onClick={onClick} className={`bg-card border border-border rounded-xl p-3 ${onClick ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}`}>
-    <div className="flex items-start justify-between mb-2">
-      <div className={`p-2 rounded-lg bg-accent ${color}`}>{icon}</div>
-      {trend && (
-        <div className={`flex items-center gap-1 text-xs ${trend.isUp ? 'text-green-600' : 'text-red-600'}`}>
-          {trend.isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-          {Math.abs(trend.value)}%
-        </div>
-      )}
-    </div>
-    <div className="text-2xl font-bold text-foreground mb-0.5">{value}</div>
-    <div className="text-xs font-medium text-foreground mb-0.5">{title}</div>
-    {subtitle && <div className="text-xs text-muted-foreground">{subtitle}</div>}
-  </div>
-)
+// ── Types ─────────────────────────────────────────────────────────────────────
+type AttendanceStatus = 'present' | 'late' | 'half_day' | 'absent' | 'checked_out' | 'not_marked' | null
 
-interface AttendanceRecord {
+interface TodayRecord {
   id: number
-  employeeName: string
   date: string
-  checkIn: string
-  checkOut: string | null
-  status: 'present' | 'absent' | 'half_day' | 'late'
-  location: string
-  workHours: number
+  check_in_time: string | null
+  check_out_time: string | null
+  status: AttendanceStatus
+  latitude: number | null
+  longitude: number | null
 }
 
-export default function AttendancePage() {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
-  const [filterStatus, setFilterStatus] = useState<string>('all')
+interface DashboardRecord {
+  id: number | null
+  employee_id: number
+  employee_code: string
+  name: string
+  email: string
+  department: string
+  designation: string
+  check_in_time: string | null
+  check_out_time: string | null
+  status: string
+  work_hours: string | null
+  is_late: boolean
+  latitude: number | null
+  longitude: number | null
+  has_record: boolean
+}
 
-  const mockAttendance: AttendanceRecord[] = [
-    { id: 1, employeeName: 'Rajesh Kumar', date: selectedDate, checkIn: '09:00', checkOut: '18:00', status: 'present', location: 'Mumbai Office', workHours: 9 },
-    { id: 2, employeeName: 'Priya Sharma', date: selectedDate, checkIn: '09:15', checkOut: '18:15', status: 'late', location: 'Delhi Office', workHours: 9 },
-    { id: 3, employeeName: 'Amit Patel', date: selectedDate, checkIn: '09:00', checkOut: '13:00', status: 'half_day', location: 'Pune Office', workHours: 4 },
-    { id: 4, employeeName: 'Suresh Reddy', date: selectedDate, checkIn: '', checkOut: null, status: 'absent', location: '', workHours: 0 }
-  ]
+interface DashboardData {
+  date: string
+  summary: { total: number; present: number; late: number; half_day: number; absent: number; checked_out?: number; not_marked?: number }
+  records: DashboardRecord[]
+}
 
-  const metrics = {
-    total: mockAttendance.length,
-    present: mockAttendance.filter(a => a.status === 'present').length,
-    absent: mockAttendance.filter(a => a.status === 'absent').length,
-    late: mockAttendance.filter(a => a.status === 'late').length,
-    avgHours: (mockAttendance.reduce((sum, a) => sum + a.workHours, 0) / mockAttendance.filter(a => a.workHours > 0).length).toFixed(1)
-  }
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const fmt = (t: string | null) => {
+  if (!t) return '—'
+  return (t.includes('T') ? t.split('T')[1] : t).slice(0, 5)
+}
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'present': return 'bg-green-100 text-green-800'
-      case 'absent': return 'bg-red-100 text-red-800'
-      case 'late': return 'bg-yellow-100 text-yellow-800'
-      default: return 'bg-blue-100 text-blue-800'
+const statusMeta: Record<string, { label: string; color: string; bg: string }> = {
+  present:  { label: 'Present',  color: 'text-green-700 dark:text-green-300',   bg: 'bg-green-100 dark:bg-green-900/30' },
+  late:     { label: 'Late',     color: 'text-yellow-700 dark:text-yellow-300', bg: 'bg-yellow-100 dark:bg-yellow-900/30' },
+  half_day: { label: 'Half Day', color: 'text-blue-700 dark:text-blue-300',     bg: 'bg-blue-100 dark:bg-blue-900/30' },
+  absent:   { label: 'Absent',   color: 'text-red-700 dark:text-red-300',       bg: 'bg-red-100 dark:bg-red-900/30' },
+  checked_out: { label: 'Checked Out', color: 'text-slate-700 dark:text-slate-300', bg: 'bg-slate-100 dark:bg-slate-700/50' },
+  not_marked: { label: 'Not Marked', color: 'text-gray-700 dark:text-gray-300', bg: 'bg-gray-100 dark:bg-gray-700/50' },
+}
+
+function getCurrentPosition(): Promise<GeolocationPosition> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) { reject(new Error('Geolocation not supported')); return }
+    navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 })
+  })
+}
+
+// ── User Self-Service Panel ───────────────────────────────────────────────────
+function UserAttendancePanel() {
+  const { user } = useAuthStore()
+  const username = (user as any)?.username || user?.email?.split('@')[0] || 'User'
+
+  const [today]    = useState(new Date().toISOString().split('T')[0])
+  const [record, setRecord]     = useState<TodayRecord | null>(null)
+  const [loading, setLoading]   = useState(true)
+  const [busy, setBusy]         = useState(false)
+  const [locError, setLocError] = useState<string | null>(null)
+  const [liveTime, setLiveTime] = useState(new Date())
+
+  useEffect(() => {
+    const id = setInterval(() => setLiveTime(new Date()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  const fetchToday = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await apiClient.get('/api/workforce/user-attendance/today/')
+      setRecord(res.data ?? null)
+    } catch (err: any) {
+      if (err?.response?.status === 404) setRecord(null)
+      else toast.error('Could not load attendance status.')
+    } finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { fetchToday() }, [fetchToday])
+
+  const getLocation = async (): Promise<{ latitude: number; longitude: number } | null> => {
+    setLocError(null)
+    try {
+      const pos = await getCurrentPosition()
+      return { latitude: pos.coords.latitude, longitude: pos.coords.longitude }
+    } catch (err: any) {
+      setLocError(
+        err?.code === 1 ? 'Location permission denied. Please enable location access.' :
+        err?.code === 2 ? 'Location unavailable. Check your device settings.' :
+        err?.code === 3 ? 'Location request timed out. Try again.' :
+        'Unable to get location. Please enable location.'
+      )
+      return null
     }
   }
 
-  const filteredAttendance = mockAttendance.filter(a => filterStatus === 'all' || a.status === filterStatus)
+  const handleCheckIn = async () => {
+    setBusy(true)
+    const loc = await getLocation()
+    if (!loc) { setBusy(false); return }
+    const now = new Date()
+    const isLate = now.getHours() > CHECKIN_THRESHOLD_HOUR ||
+      (now.getHours() === CHECKIN_THRESHOLD_HOUR && now.getMinutes() > CHECKIN_THRESHOLD_MIN)
+    try {
+      const res = await apiClient.post('/api/workforce/user-attendance/', {
+        date: today,
+        check_in_time: now.toTimeString().slice(0, 8),
+        latitude: loc.latitude, longitude: loc.longitude,
+        status: isLate ? 'late' : 'present',
+      })
+      setRecord(res.data)
+      toast.success(isLate ? 'Checked in — marked Late' : 'Attendance marked — Present!')
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || err?.response?.data?.error || 'Failed to mark attendance.')
+    } finally { setBusy(false) }
+  }
+
+  const handleCheckOut = async () => {
+    if (!record) return
+    setBusy(true)
+    const loc = await getLocation()
+    if (!loc) { setBusy(false); return }
+    const now = new Date()
+    try {
+      const res = await apiClient.patch(`/api/workforce/user-attendance/${record.id}/checkout/`, {
+        check_out_time: now.toTimeString().slice(0, 8),
+        latitude: loc.latitude, longitude: loc.longitude,
+      })
+      setRecord(res.data)
+      toast.success('Clocked out successfully!')
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || err?.response?.data?.error || 'Failed to clock out.')
+    } finally { setBusy(false) }
+  }
+
+  const checkedIn  = !!record?.check_in_time
+  const checkedOut = !!record?.check_out_time
+  const status     = record?.status ?? null
+
+  const workHours = (() => {
+    if (!record?.check_in_time || !record?.check_out_time) return null
+    const [ih, im] = record.check_in_time.slice(0, 5).split(':').map(Number)
+    const [oh, om] = record.check_out_time.slice(0, 5).split(':').map(Number)
+    const mins = (oh * 60 + om) - (ih * 60 + im)
+    return mins > 0 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : null
+  })()
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <Clock className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold text-foreground">Attendance Management</h1>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6">
+      <div className="max-w-lg mx-auto space-y-5">
+        <div className="flex items-center gap-3">
+          <Clock className="h-7 w-7 text-primary shrink-0" />
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">My Attendance</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {liveTime.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
           </div>
-          <p className="text-muted-foreground">Track employee attendance and work hours</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" />
-          <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Mark Attendance</button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <KPICard title="Total Employees" value={metrics.total} subtitle="Registered" icon={<User className="h-5 w-5" />} />
-        <KPICard title="Present" value={metrics.present} subtitle="Today" icon={<CheckCircle className="h-5 w-5" />} color="text-green-600" />
-        <KPICard title="Absent" value={metrics.absent} subtitle="Today" icon={<XCircle className="h-5 w-5" />} color="text-red-600" />
-        <KPICard title="Late" value={metrics.late} subtitle="Today" icon={<Clock className="h-5 w-5" />} color="text-yellow-600" />
-        <KPICard title="Avg Hours" value={metrics.avgHours} subtitle="Per employee" icon={<TrendingUp className="h-5 w-5" />} color="text-blue-600" />
-      </div>
-
-      <div className="bg-card border border-border rounded-xl p-6">
-        <div className="flex items-center gap-4 mb-6">
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
-            <option value="all">All Status</option>
-            <option value="present">Present</option>
-            <option value="absent">Absent</option>
-            <option value="late">Late</option>
-            <option value="half_day">Half Day</option>
-          </select>
         </div>
 
-        <div className="space-y-3">
-          {filteredAttendance.map((record) => (
-            <div key={record.id} className="flex items-center gap-3 p-4 bg-accent rounded-lg hover:bg-accent/80">
-              <User className="w-5 h-5 text-primary" />
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-semibold text-foreground">{record.employeeName}</h3>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(record.status)}`}>{record.status.replace('_', ' ')}</span>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 text-center shadow-sm">
+          <div className="text-5xl font-mono font-bold text-gray-900 dark:text-white tracking-tight">
+            {liveTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+          </div>
+          <div className="mt-1 text-sm text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1.5">
+            <Calendar className="h-3.5 w-3.5" />{today}
+          </div>
+          <div className="mt-2 text-sm font-medium text-primary">👤 {username}</div>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+        ) : (
+          <>
+            {checkedIn && (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Today's Status</span>
+                  {status && (
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusMeta[status]?.bg} ${statusMeta[status]?.color}`}>
+                      {statusMeta[status]?.label}
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{record.date}</span>
-                  {record.checkIn && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />In: {record.checkIn}</span>}
-                  {record.checkOut && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />Out: {record.checkOut}</span>}
-                  {record.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{record.location}</span>}
-                  {record.workHours > 0 && <span>Hours: {record.workHours}h</span>}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3">
+                    <p className="text-xs text-gray-500 mb-0.5">Check-in</p>
+                    <p className="text-lg font-bold text-green-700 dark:text-green-300">{fmt(record?.check_in_time ?? null)}</p>
+                  </div>
+                  <div className={`rounded-xl p-3 ${checkedOut ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-gray-100 dark:bg-gray-700/40'}`}>
+                    <p className="text-xs text-gray-500 mb-0.5">Check-out</p>
+                    <p className={`text-lg font-bold ${checkedOut ? 'text-blue-700 dark:text-blue-300' : 'text-gray-400'}`}>
+                      {checkedOut ? fmt(record?.check_out_time ?? null) : '—'}
+                    </p>
+                  </div>
+                </div>
+                {workHours && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    Work hours: <span className="font-semibold text-gray-900 dark:text-white">{workHours}</span>
+                  </div>
+                )}
+                {record?.latitude && (
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <MapPin className="h-3.5 w-3.5" />
+                    {record.latitude.toFixed(5)}, {record.longitude?.toFixed(5)}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {locError && (
+              <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-red-700 dark:text-red-300">Location Required</p>
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">{locError}</p>
                 </div>
               </div>
-              <button className="px-3 py-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 text-sm">Edit</button>
+            )}
+
+            <div className="flex flex-col items-center gap-3">
+              {!checkedIn && (
+                <button onClick={handleCheckIn} disabled={busy}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-primary text-primary-foreground rounded-2xl text-base font-semibold shadow-md hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                  {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <MapPin className="h-5 w-5" />}
+                  {busy ? 'Getting location…' : 'Mark Attendance'}
+                </button>
+              )}
+              {checkedIn && !checkedOut && (
+                <button onClick={handleCheckOut} disabled={busy}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-red-600 text-white rounded-2xl text-base font-semibold shadow-md hover:bg-red-700 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                  {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogOut className="h-5 w-5" />}
+                  {busy ? 'Getting location…' : 'Clock Out'}
+                </button>
+              )}
+              {checkedIn && checkedOut && (
+                <div className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-2xl text-base font-semibold">
+                  <CheckCircle className="h-5 w-5 text-green-500" /> Attendance Complete for Today
+                </div>
+              )}
+              <p className="text-xs text-gray-400 text-center">
+                {!checkedIn && 'Location will be captured automatically on click.'}
+                {checkedIn && !checkedOut && 'Click Clock Out when you leave for the day.'}
+                {checkedIn && checkedOut && 'See you tomorrow!'}
+              </p>
             </div>
-          ))}
+          </>
+        )}
+
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 text-xs text-blue-700 dark:text-blue-300 space-y-1">
+          <p>📍 Location is required to mark attendance.</p>
+          <p>⏰ Check-in after {CHECKIN_THRESHOLD_HOUR}:00 AM is marked as <strong>Late</strong>.</p>
+          <p>🕐 No clock-out by end of day is marked as <strong>Half Day</strong>.</p>
         </div>
       </div>
+
+      {/* History Modal — belongs to AdminAttendanceDashboard, not here */}
     </div>
   )
+}
+
+function AdminSelfAttendancePanel({ onRefresh }: { onRefresh: () => void }) {
+  const { user } = useAuthStore()
+  const [today] = useState(new Date().toISOString().split('T')[0])
+  const [record, setRecord] = useState<TodayRecord | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [locError, setLocError] = useState<string | null>(null)
+  const [liveTime, setLiveTime] = useState(new Date())
+
+  useEffect(() => {
+    const id = setInterval(() => setLiveTime(new Date()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  const fetchRecord = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await apiClient.get('/api/workforce/user-attendance/today/')
+      setRecord(res.data ?? null)
+    } catch (err: any) {
+      if (err?.response?.status === 404) {
+        setRecord(null)
+      } else {
+        toast.error('Could not load your attendance.')
+      }
+    } finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { fetchRecord() }, [fetchRecord])
+
+  const getLocation = async (): Promise<{ latitude: number; longitude: number } | null> => {
+    setLocError(null)
+    try {
+      const pos = await getCurrentPosition()
+      return { latitude: pos.coords.latitude, longitude: pos.coords.longitude }
+    } catch (err: any) {
+      setLocError(
+        err?.code === 1 ? 'Location permission denied. Please enable location access.' :
+        err?.code === 2 ? 'Location unavailable. Check your device settings.' :
+        err?.code === 3 ? 'Location request timed out. Try again.' :
+        'Unable to get location. Please enable location.'
+      )
+      return null
+    }
+  }
+
+  const handleCheckIn = async () => {
+    setBusy(true)
+    const loc = await getLocation()
+    if (!loc) { setBusy(false); return }
+    const now = new Date()
+    const isLate = now.getHours() > CHECKIN_THRESHOLD_HOUR || (now.getHours() === CHECKIN_THRESHOLD_HOUR && now.getMinutes() > CHECKIN_THRESHOLD_MIN)
+    try {
+      const res = await apiClient.post('/api/workforce/user-attendance/', {
+        date: today,
+        check_in_time: now.toTimeString().slice(0, 8),
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        status: isLate ? 'late' : 'present',
+      })
+      setRecord(res.data)
+      toast.success(isLate ? 'Checked in — marked Late' : 'Attendance marked — Present!')
+      onRefresh()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || err?.response?.data?.error || 'Failed to mark attendance.')
+    } finally { setBusy(false) }
+  }
+
+  const handleCheckOut = async () => {
+    if (!record) return
+    setBusy(true)
+    const loc = await getLocation()
+    if (!loc) { setBusy(false); return }
+    const now = new Date()
+    try {
+      const res = await apiClient.patch(`/api/workforce/user-attendance/${record.id}/checkout/`, {
+        check_out_time: now.toTimeString().slice(0, 8),
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+      })
+      setRecord(res.data)
+      toast.success('Clocked out successfully!')
+      onRefresh()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || err?.response?.data?.error || 'Failed to clock out.')
+    } finally { setBusy(false) }
+  }
+
+  const checkedIn = !!record?.check_in_time
+  const checkedOut = !!record?.check_out_time
+  const status = record?.status ?? null
+  const workHours = (() => {
+    if (!record?.check_in_time || !record?.check_out_time) return null
+    const [ih, im] = record.check_in_time.slice(0, 5).split(':').map(Number)
+    const [oh, om] = record.check_out_time.slice(0, 5).split(':').map(Number)
+    const mins = (oh * 60 + om) - (ih * 60 + im)
+    return mins > 0 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : null
+  })()
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <div className="flex items-center gap-2 text-primary"><Clock className="h-5 w-5" /> <span className="text-sm font-semibold">My Attendance</span></div>
+          <h2 className="mt-2 text-xl font-bold text-gray-900 dark:text-white">{(user as any)?.name || (user as any)?.username || 'Admin'}</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-5xl font-mono font-bold text-gray-900 dark:text-white tracking-tight">{new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Today: {today}</p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-3xl border border-gray-100 dark:border-gray-700 p-5 bg-gray-50 dark:bg-gray-900/60">
+            <p className="text-xs text-gray-500 uppercase tracking-wide">Check-In</p>
+            <p className="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{fmt(record?.check_in_time ?? null)}</p>
+          </div>
+          <div className="rounded-3xl border border-gray-100 dark:border-gray-700 p-5 bg-gray-50 dark:bg-gray-900/60">
+            <p className="text-xs text-gray-500 uppercase tracking-wide">Check-Out</p>
+            <p className="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{fmt(record?.check_out_time ?? null)}</p>
+          </div>
+          <div className="rounded-3xl border border-gray-100 dark:border-gray-700 p-5 bg-gray-50 dark:bg-gray-900/60">
+            <p className="text-xs text-gray-500 uppercase tracking-wide">Status</p>
+            <p className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">{statusMeta[status ?? 'not_marked']?.label || 'Not Marked'}</p>
+          </div>
+          <div className="rounded-3xl border border-gray-100 dark:border-gray-700 p-5 bg-gray-50 dark:bg-gray-900/60">
+            <p className="text-xs text-gray-500 uppercase tracking-wide">Working Hours</p>
+            <p className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">{workHours ?? '—'}</p>
+          </div>
+        </div>
+      )}
+
+      {locError && (
+        <div className="rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 text-sm text-red-700 dark:text-red-300">
+          {locError}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        {!checkedIn && (
+          <button onClick={handleCheckIn} disabled={busy}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed">
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+            {busy ? 'Processing…' : 'Clock In'}
+          </button>
+        )}
+        {checkedIn && !checkedOut && (
+          <button onClick={handleCheckOut} disabled={busy}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed">
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+            {busy ? 'Processing…' : 'Clock Out'}
+          </button>
+        )}
+        {checkedIn && checkedOut && (
+          <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 px-5 py-3 text-sm font-medium text-gray-600 dark:text-gray-300">Attendance complete for today</div>
+        )}
+      </div>
+
+      <p className="text-xs text-gray-400">
+        {!checkedIn && 'Location will be captured automatically when you clock in.'}
+        {checkedIn && !checkedOut && 'Clock out when your shift ends to complete attendance.'}
+        {checkedIn && checkedOut && 'Your attendance is recorded for today.'}
+      </p>
+    </div>
+  )
+}
+
+// ── Admin Dashboard Panel ─────────────────────────────────────────────────────
+function AdminAttendanceDashboard() {
+  const [date, setDate]         = useState(new Date().toISOString().split('T')[0])
+  const [filterRange, setFilterRange] = useState<'day'|'week'|'month'|'custom'>('day')
+  const [historyEmployee, setHistoryEmployee] = useState<DashboardRecord | null>(null)
+  const [historyRecords, setHistoryRecords] = useState<any[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [search, setSearch]     = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [data, setData]         = useState<DashboardData | null>(null)
+  const [loading, setLoading]   = useState(true)
+  const [actionBusy, setActionBusy] = useState<number | null>(null)
+
+  const fetchDashboard = useCallback(async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({ date })
+      if (search)       params.set('search', search)
+      if (statusFilter) params.set('status', statusFilter)
+      const res = await apiClient.get(`/api/workforce/user-attendance/dashboard/?${params}`)
+      setData(res.data)
+    } catch (err: any) {
+      const status = err?.response?.status
+      if (status === 401) {
+        toast.error('Session expired. Please log in again.')
+      } else if (status === 403) {
+        toast.error('Access denied. Admin privileges required.')
+      } else if (err?.code !== 'NO_VALID_AUTH_TOKEN') {
+        toast.error('Failed to load attendance dashboard.')
+      }
+    } finally { setLoading(false) }
+  }, [date, search, statusFilter])
+
+  useEffect(() => { fetchDashboard() }, [fetchDashboard])
+
+  const currentTime = () => new Date().toTimeString().slice(0, 5)
+
+  const runAttendanceAction = async (record: DashboardRecord, action: 'checkin' | 'checkout' | 'override') => {
+    setActionBusy(record.employee_id)
+    try {
+      if (action === 'checkin') {
+        await apiClient.post('/api/workforce/user-attendance/admin_checkin/', {
+          employee_id: record.employee_id,
+          date,
+          check_in_time: currentTime(),
+        })
+        toast.success(`Checked in ${record.name}`)
+      } else if (action === 'checkout') {
+        await apiClient.post('/api/workforce/user-attendance/admin_checkout/', {
+          employee_id: record.employee_id,
+          date,
+          check_out_time: currentTime(),
+        })
+        toast.success(`Checked out ${record.name}`)
+      } else {
+        const checkIn = window.prompt('Check-in time (HH:mm)', record.check_in_time || '09:00')
+        if (checkIn === null) return
+        const checkOut = window.prompt('Check-out time (HH:mm, optional)', record.check_out_time || '')
+        if (checkOut === null) return
+        await apiClient.post('/api/workforce/user-attendance/admin_checkin/', {
+          employee_id: record.employee_id,
+          date,
+          check_in_time: checkIn,
+          check_out_time: checkOut || null,
+        })
+        toast.success(`Corrected attendance for ${record.name}`)
+      }
+      await fetchDashboard()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || 'Attendance action failed.')
+    } finally {
+      setActionBusy(null)
+    }
+  }
+
+  const summary = data?.summary
+  const records = (() => {
+    // Client-side dedup: deduplicate by employee_id, keeping first occurrence
+    const seen = new Set<number>()
+    return (data?.records ?? []).filter(r => {
+      if (seen.has(r.employee_id)) return false
+      seen.add(r.employee_id)
+      return true
+    })
+  })()
+
+  const closeHistory = useCallback(() => {
+    setHistoryEmployee(null)
+    setHistoryRecords([])
+  }, [])
+
+  useEffect(() => {
+    if (!historyEmployee) return
+    let cancelled = false
+    setHistoryRecords([])
+    setHistoryLoading(true)
+    const end = new Date()
+    const start = new Date()
+    start.setDate(end.getDate() - 30)
+    apiClient
+      .get(`/api/workforce/user-attendance/history/?employee_id=${historyEmployee.employee_id}&start=${start.toISOString().split('T')[0]}&end=${end.toISOString().split('T')[0]}`)
+      .then(res => { if (!cancelled) setHistoryRecords(Array.isArray(res.data) ? res.data : []) })
+      .catch(() => { if (!cancelled) toast.error('Failed to load attendance history') })
+      .finally(() => { if (!cancelled) setHistoryLoading(false) })
+    return () => { cancelled = true }
+  }, [historyEmployee?.employee_id])
+
+  const kpis = [
+    { label: 'Total',    value: summary?.total    ?? 0, icon: <Users className="h-5 w-5" />,     color: 'text-blue-600',   bg: 'bg-blue-50 dark:bg-blue-900/20' },
+    { label: 'Present',  value: summary?.present  ?? 0, icon: <UserCheck className="h-5 w-5" />, color: 'text-green-600',  bg: 'bg-green-50 dark:bg-green-900/20' },
+    { label: 'Absent',   value: summary?.absent   ?? 0, icon: <UserX className="h-5 w-5" />,     color: 'text-red-600',    bg: 'bg-red-50 dark:bg-red-900/20' },
+    { label: 'Late',     value: summary?.late     ?? 0, icon: <Clock className="h-5 w-5" />,     color: 'text-yellow-600', bg: 'bg-yellow-50 dark:bg-yellow-900/20' },
+    { label: 'Half Day', value: summary?.half_day ?? 0, icon: <Timer className="h-5 w-5" />,     color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+    { label: 'Checked Out', value: summary?.checked_out ?? 0, icon: <LogOut className="h-5 w-5" />, color: 'text-slate-600', bg: 'bg-slate-50 dark:bg-slate-900/20' },
+  ]
+
+  return (
+    <div className="p-4 sm:p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <Clock className="h-7 w-7 text-primary" />
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Attendance Dashboard</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Real-time employee attendance overview</p>
+          </div>
+        </div>
+        <button onClick={fetchDashboard} disabled={loading}
+          className="flex items-center gap-2 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50">
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+        </button>
+      </div>
+
+      
+
+      {/* Current Date Header & Quick Filters */}
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <div className="text-sm text-gray-500">{new Date(date).toLocaleDateString('en-IN', { weekday: 'long' })}, <span className="font-semibold">{new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span></div>
+          <div className="text-xs text-gray-400 mt-1">Shift: {new Date().getHours() < 14 ? 'Morning Session' : 'Evening Session'}</div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setDate(new Date().toISOString().split('T')[0]); setFilterRange('day') }} className="px-3 py-1 rounded-md border bg-white">Today</button>
+          <button onClick={() => { const d = new Date(); d.setDate(d.getDate()-1); setDate(d.toISOString().split('T')[0]); setFilterRange('day') }} className="px-3 py-1 rounded-md border bg-white">Yesterday</button>
+          <button onClick={() => { const start = new Date(); start.setDate(start.getDate()- (start.getDay())); setDate(start.toISOString().split('T')[0]); setFilterRange('week') }} className="px-3 py-1 rounded-md border bg-white">This Week</button>
+          <button onClick={() => { const start = new Date(); start.setDate(1); setDate(start.toISOString().split('T')[0]); setFilterRange('month') }} className="px-3 py-1 rounded-md border bg-white">This Month</button>
+          <div className="border rounded-md px-3 py-1 bg-white">
+            <input type="date" value={date} onChange={e => { setDate(e.target.value); setFilterRange('day') }} className="text-sm bg-transparent" />
+          </div>
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {kpis.map(k => (
+          <div key={k.label} className={`rounded-xl p-4 border border-gray-200 dark:border-gray-700 ${k.bg}`}>
+            <div className={`${k.color} mb-2`}>{k.icon}</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{k.value}</div>
+            <div className="text-xs font-medium text-gray-500 dark:text-gray-400">{k.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-800">
+          <Calendar className="h-4 w-4 text-gray-400" />
+          <input type="date" value={date} onChange={e => setDate(e.target.value)}
+            className="text-sm bg-transparent focus:outline-none text-gray-900 dark:text-white" />
+        </div>
+        <div className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 flex-1 min-w-[180px]">
+          <Search className="h-4 w-4 text-gray-400 shrink-0" />
+          <input type="text" placeholder="Search employee…" value={search} onChange={e => setSearch(e.target.value)}
+            className="text-sm bg-transparent focus:outline-none text-gray-900 dark:text-white w-full" />
+        </div>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+          className="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none">
+          <option value="">All Status</option>
+          <option value="present">Present</option>
+          <option value="late">Late</option>
+          <option value="half_day">Half Day</option>
+          <option value="absent">Absent</option>
+          <option value="checked_out">Checked Out</option>
+          <option value="not_marked">Not Marked</option>
+        </select>
+      </div>
+
+      <AdminSelfAttendancePanel onRefresh={fetchDashboard} />
+
+      {/* Table */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {loading ? (
+          <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+        ) : records.length === 0 ? (
+          <div className="text-center py-16 text-gray-400 dark:text-gray-500">
+            No employees match the selected filters for {date}.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700" style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+                <tr>
+                  {['Employee Name', 'Employee ID', 'Department', 'Designation', 'Attendance Date', 'Check-In', 'Check-Out', 'Status', 'Hours', 'Late', 'Action'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                {records.map(rec => {
+                  const statusKey = rec.status ?? 'not_marked'
+                  const s = statusMeta[statusKey] ?? statusMeta.absent
+                  return (
+                    <tr key={`emp-${rec.employee_id}`} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-gray-900 dark:text-white">{rec.name}</div>
+                        <div className="text-xs text-gray-400">{rec.email ?? '—'}</div>
+                      </td>
+                      <td className="px-4 py-3 font-mono text-gray-700 dark:text-gray-300">{rec.employee_id ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{rec.department ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{rec.designation ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{rec.attendance_date || data?.date || date}</td>
+                      <td className="px-4 py-3 font-mono text-gray-700 dark:text-gray-300">{rec.check_in_time ?? <span className="text-gray-400">—</span>}</td>
+                      <td className="px-4 py-3 font-mono text-gray-700 dark:text-gray-300">{rec.check_out_time ?? <span className="text-gray-400">—</span>}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${s.bg} ${s.color}`}>{s.label}</span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{rec.work_hours ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{rec.is_late ? 'Late' : '—'}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          {!rec.check_in_time && (
+                            <button onClick={() => runAttendanceAction(rec, 'checkin')} disabled={actionBusy === rec.employee_id}
+                              className="rounded-full border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 text-xs font-semibold text-blue-700 dark:text-blue-200 hover:bg-blue-100 dark:hover:bg-blue-800 disabled:opacity-50">
+                              Check In
+                            </button>
+                          )}
+                          {rec.check_in_time && !rec.check_out_time && (
+                            <button onClick={() => runAttendanceAction(rec, 'checkout')} disabled={actionBusy === rec.employee_id}
+                              className="rounded-full border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-200 hover:bg-emerald-100 dark:hover:bg-emerald-800 disabled:opacity-50">
+                              Check Out
+                            </button>
+                          )}
+                          <button onClick={() => runAttendanceAction(rec, 'override')} disabled={actionBusy === rec.employee_id}
+                            className="rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/20 px-3 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50">
+                            Override
+                          </button>
+                          <button onClick={() => setHistoryEmployee(rec)}
+                            className="rounded-full border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-800">
+                            View History
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      {/* Attendance History Modal */}
+      {historyEmployee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+          <div className="absolute inset-0 bg-black/50" onClick={closeHistory} />
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
+              <div className="flex items-center gap-3">
+                <History className="h-5 w-5 text-indigo-600" />
+                <div>
+                  <h2 className="text-base font-bold text-gray-900 dark:text-white">
+                    Attendance History — {historyEmployee.name}
+                  </h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Employee ID: {historyEmployee.employee_id} · Last 30 days
+                  </p>
+                </div>
+              </div>
+              <button onClick={closeHistory}
+                className="rounded-full p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="overflow-y-auto flex-1 px-6 py-4">
+              {historyLoading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+                </div>
+              ) : historyRecords.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-gray-500 gap-2">
+                  <Calendar className="h-10 w-10 opacity-40" />
+                  <p className="text-sm font-medium">No attendance history found</p>
+                  <p className="text-xs">No records in the last 30 days for this employee.</p>
+                </div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-white dark:bg-gray-800">
+                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                      {['Date', 'Check-In', 'Check-Out', 'Hours', 'Status', 'Late'].map(h => (
+                        <th key={h} className="pb-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide pr-4">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {historyRecords.map(r => {
+                      const s = statusMeta[r.status ?? 'not_marked'] ?? statusMeta.absent
+                      return (
+                        <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                          <td className="py-2.5 pr-4 font-medium text-gray-900 dark:text-white">{r.date}</td>
+                          <td className="py-2.5 pr-4 font-mono text-gray-700 dark:text-gray-300">{r.check_in_time ?? '—'}</td>
+                          <td className="py-2.5 pr-4 font-mono text-gray-700 dark:text-gray-300">{r.check_out_time ?? '—'}</td>
+                          <td className="py-2.5 pr-4 text-gray-700 dark:text-gray-300">{r.work_hours ?? '—'}</td>
+                          <td className="py-2.5 pr-4">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${s.bg} ${s.color}`}>{s.label}</span>
+                          </td>
+                          <td className="py-2.5 text-gray-700 dark:text-gray-300">
+                            {r.is_late ? <span className="text-yellow-600 dark:text-yellow-400 font-medium">Late</span> : '—'}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700 shrink-0 flex justify-between items-center">
+              <span className="text-xs text-gray-400">{historyRecords.length} record{historyRecords.length !== 1 ? 's' : ''} found</span>
+              <button onClick={closeHistory}
+                className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Root: role-based render ───────────────────────────────────────────────────
+export default function AttendancePage() {
+  const { user } = useAuthStore()
+  const u = user as any
+  const isAdmin =
+    u?.user_type === 'superadmin' ||
+    u?.user_type === 'masteradmin' ||
+    u?.role_type === 'admin' ||
+    u?.admin_type != null ||
+    u?.company_type != null
+  return isAdmin ? <AdminAttendanceDashboard /> : <UserAttendancePanel />
 }

@@ -56,7 +56,6 @@ export const EInvoiceManager: React.FC<EInvoiceManagerProps> = ({ className = ''
       const response = await financeApi.getInvoices({ page: 1, page_size: 100 })
       setInvoices(response.results)
     } catch (error) {
-      console.error('Failed to load invoices:', error)
     } finally {
       setLoading(false)
     }
@@ -66,10 +65,8 @@ export const EInvoiceManager: React.FC<EInvoiceManagerProps> = ({ className = ''
     try {
       setLoading(true)
       // TODO: Implement E-Invoice generation API
-      console.log('Generate E-Invoice for:', invoiceId)
       alert('E-Invoice generation will be implemented')
     } catch (error) {
-      console.error('Failed to generate E-Invoice:', error)
     } finally {
       setLoading(false)
     }
@@ -79,13 +76,11 @@ export const EInvoiceManager: React.FC<EInvoiceManagerProps> = ({ className = ''
     try {
       setBulkGenerating(true)
       // TODO: Implement bulk E-Invoice generation API
-      console.log('Bulk E-Invoice generation for:', selectedInvoices)
       alert('Bulk E-Invoice generation will be implemented')
       setSelectedInvoices([])
       loadInvoices()
       
     } catch (error) {
-      console.error('Failed to bulk generate E-Invoices:', error)
     } finally {
       setBulkGenerating(false)
     }
@@ -179,7 +174,6 @@ export const EInvoiceManager: React.FC<EInvoiceManagerProps> = ({ className = ''
               variant="outline"
               onClick={() => {
                 // Show QR code or download
-                console.log('View E-Invoice details')
               }}
             >
               <Eye className="w-4 h-4" />
@@ -332,7 +326,6 @@ export const EInvoiceManager: React.FC<EInvoiceManagerProps> = ({ className = ''
               </Button>
               <Button onClick={() => {
                 // Download E-Invoice
-                console.log('Download E-Invoice')
               }}>
                 <Download className="w-4 h-4 mr-2" />
                 Download

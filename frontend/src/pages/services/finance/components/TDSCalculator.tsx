@@ -43,7 +43,6 @@ const TDSCalculator: React.FC<TDSCalculatorProps> = ({ sessionKey }) => {
       const data = await response.json()
       setTdsSections(data.tds_sections || [])
     } catch (error) {
-      console.error('Error fetching TDS sections:', error)
     }
   }
 
@@ -65,10 +64,8 @@ const TDSCalculator: React.FC<TDSCalculatorProps> = ({ sessionKey }) => {
       if (response.ok) {
         setCalculation(data)
       } else {
-        console.error('TDS calculation error:', data.error)
       }
     } catch (error) {
-      console.error('Error calculating TDS:', error)
     } finally {
       setLoading(false)
     }

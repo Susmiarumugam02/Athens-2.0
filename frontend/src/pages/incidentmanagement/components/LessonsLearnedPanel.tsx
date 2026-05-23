@@ -23,7 +23,7 @@ import {
   EditOutlined,
   SaveOutlined,
 } from '@ant-design/icons';
-import { IncidentLearning } from '../types';
+import type { IncidentLearning } from '../types';
 import api from '../services/api';
 
 const { TextArea } = Input;

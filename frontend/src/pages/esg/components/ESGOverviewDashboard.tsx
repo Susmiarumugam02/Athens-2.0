@@ -36,7 +36,7 @@ import {
   ScatterChart, Scatter, Treemap, Sankey, FunnelChart, Funnel, LabelList
 } from 'recharts';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } // from '../../../contexts/ThemeContext' // DISABLED;
+import { useTheme } from '../../../contexts/ThemeContext';
 import { 
   getEnvironmentAspects, 
   getGenerationData, 
@@ -331,11 +331,11 @@ const ESGOverviewDashboard: React.FC = () => {
                     title="ESG Performance Score"
                     value={comprehensiveData.executive_summary.esg_score}
                     suffix="/100"
-                    valueStyle={{ 
+                    styles={{ content: { 
                       color: '#059669', 
                       fontSize: '2.5rem', 
                       fontWeight: 'bold' 
-                    }}
+                    } }}
                   />
                   <Progress 
                     percent={comprehensiveData.executive_summary.esg_score} 
@@ -359,7 +359,7 @@ const ESGOverviewDashboard: React.FC = () => {
                     value={comprehensiveData.executive_summary.carbon_footprint_avoided}
                     precision={1}
                     suffix="tCO₂"
-                    valueStyle={{ color: '#0891b2', fontSize: '2.5rem', fontWeight: 'bold' }}
+                    styles={{ content: { color: '#0891b2', fontSize: '2.5rem', fontWeight: 'bold' } }}
                   />
                   <div className="mt-3">
                     <Text className="text-sm text-gray-600">
@@ -382,7 +382,7 @@ const ESGOverviewDashboard: React.FC = () => {
                     value={comprehensiveData.executive_summary.sustainability_progress}
                     precision={1}
                     suffix="%"
-                    valueStyle={{ color: '#c026d3', fontSize: '2.5rem', fontWeight: 'bold' }}
+                    styles={{ content: { color: '#c026d3', fontSize: '2.5rem', fontWeight: 'bold' } }}
                   />
                   <Progress 
                     percent={comprehensiveData.executive_summary.sustainability_progress} 
@@ -408,7 +408,7 @@ const ESGOverviewDashboard: React.FC = () => {
                     value={comprehensiveData.executive_summary.risk_management_score}
                     precision={1}
                     suffix="%"
-                    valueStyle={{ color: '#ea580c', fontSize: '2.5rem', fontWeight: 'bold' }}
+                    styles={{ content: { color: '#ea580c', fontSize: '2.5rem', fontWeight: 'bold' } }}
                   />
                   <div className="mt-3">
                     <Text className="text-sm text-gray-600">
@@ -446,7 +446,7 @@ const ESGOverviewDashboard: React.FC = () => {
                     title="Energy Generation"
                     value={comprehensiveData.real_time_metrics.current_energy_generation}
                     suffix="kW"
-                    valueStyle={{ color: '#059669', fontSize: '1.5rem' }}
+                    styles={{ content: { color: '#059669', fontSize: '1.5rem' } }}
                   />
                   <Progress percent={94.6} size="small" strokeColor="#10b981" showInfo={false} />
                 </Card>
@@ -459,7 +459,7 @@ const ESGOverviewDashboard: React.FC = () => {
                     title="Air Quality"
                     value={comprehensiveData.environmental.air_quality_index}
                     suffix="AQI"
-                    valueStyle={{ color: '#0891b2', fontSize: '1.5rem' }}
+                    styles={{ content: { color: '#0891b2', fontSize: '1.5rem' } }}
                   />
                   <Tag color="green">{comprehensiveData.real_time_metrics.air_quality_now}</Tag>
                 </Card>
@@ -472,7 +472,7 @@ const ESGOverviewDashboard: React.FC = () => {
                     title="Waste Today"
                     value={comprehensiveData.real_time_metrics.waste_generated_today}
                     suffix="kg"
-                    valueStyle={{ color: '#c026d3', fontSize: '1.5rem' }}
+                    styles={{ content: { color: '#c026d3', fontSize: '1.5rem' } }}
                   />
                   <Progress percent={89.4} size="small" strokeColor="#d946ef" showInfo={false} />
                 </Card>
@@ -485,7 +485,7 @@ const ESGOverviewDashboard: React.FC = () => {
                     title="Noise Level"
                     value={comprehensiveData.real_time_metrics.noise_level_now}
                     suffix="dB"
-                    valueStyle={{ color: '#ea580c', fontSize: '1.5rem' }}
+                    styles={{ content: { color: '#ea580c', fontSize: '1.5rem' } }}
                   />
                   <Tag color="green">Within Limits</Tag>
                 </Card>

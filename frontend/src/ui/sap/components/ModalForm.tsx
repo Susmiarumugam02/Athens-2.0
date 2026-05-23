@@ -1,5 +1,5 @@
 import React from 'react'
-import { UseFormReturn, FieldValues } from 'react-hook-form'
+import { type UseFormReturn, type FieldValues } from 'react-hook-form'
 import { AppDialog, AppDialogHeader, AppDialogTitle, AppDialogDescription, AppDialogBody, AppDialogFooter, AppDialogCloseButton } from './AppDialog'
 import { Button } from './Button'
 
@@ -50,7 +50,7 @@ export function ModalForm<T extends FieldValues>({
       loading={loading}
       closeOnOutsideClick={!loading || !preventCloseOnLoading}
     >
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
         <AppDialogHeader>
           <div className="flex-1">
             <AppDialogTitle>{title}</AppDialogTitle>

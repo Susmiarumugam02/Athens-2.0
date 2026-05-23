@@ -58,7 +58,6 @@ const RaiseInvoiceModal: React.FC<RaiseInvoiceModalProps> = ({
 
   const handleGenerate = () => {
     if (loading) {
-      console.log('Already processing, preventing double click')
       return
     }
     

@@ -27,7 +27,6 @@ const QualityDashboard: React.FC = () => {
       setSupplierStats(supplierRes.data || {});
       setRecentInspections(inspectionsRes.data?.results || inspectionsRes.data || []);
     } catch (error: any) {
-      console.error('Failed to load dashboard data:', error);
       if (error.response?.status === 401) {
         // Don't handle 401 here, let axios interceptor handle it
         return;
@@ -129,7 +128,7 @@ const QualityDashboard: React.FC = () => {
               value={stats.pass_rate || 0}
               suffix="%"
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: stats.pass_rate >= 95 ? '#3f8600' : '#cf1322' }}
+              styles={{ content: { color: stats.pass_rate >= 95 ? '#3f8600' : '#cf1322' } }}
             />
           </Card>
         </Col>
@@ -139,7 +138,7 @@ const QualityDashboard: React.FC = () => {
               title="In Progress"
               value={stats.by_status?.in_progress || 0}
               prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: '#faad14' }}
+              styles={{ content: { color: '#faad14' } }}
             />
           </Card>
         </Col>
@@ -149,7 +148,7 @@ const QualityDashboard: React.FC = () => {
               title="Completed"
               value={stats.by_status?.completed || 0}
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#3f8600' }}
+              styles={{ content: { color: '#3f8600' } }}
             />
           </Card>
         </Col>
@@ -206,7 +205,7 @@ const QualityDashboard: React.FC = () => {
                 <Statistic
                   title="Approved Suppliers"
                   value={supplierStats.approved_suppliers || 0}
-                  valueStyle={{ color: '#3f8600' }}
+                  styles={{ content: { color: '#3f8600' } }}
                 />
               </Col>
             </Row>

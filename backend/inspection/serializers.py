@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Inspection, InspectionItem, InspectionReport
+from .models import Inspection, InspectionItem, InspectionReport, InspectionTemplate
 
 class InspectionSerializer(serializers.ModelSerializer):
     inspector_name = serializers.CharField(source='inspector.get_full_name', read_only=True)
@@ -25,6 +25,23 @@ class InspectionItemSerializer(serializers.ModelSerializer):
             'compliance_status', 'findings', 'recommendations', 'photo', 'created_at'
         ]
         read_only_fields = ['id', 'created_at']
+
+class InspectionTemplateSerializer(serializers.ModelSerializer):
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    total_items = serializers.SerializerMethodField()
+
+    class Meta:
+        model = InspectionTemplate
+        fields = [
+            'id', 'name', 'category', 'category_display', 'description',
+            'sections', 'header_fields', 'is_sample', 'is_active',
+            'version', 'total_items', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_total_items(self, obj):
+        return sum(len(s.get('items', [])) for s in (obj.sections or []))
+
 
 class InspectionReportSerializer(serializers.ModelSerializer):
     inspection_title = serializers.CharField(source='inspection.title', read_only=True)

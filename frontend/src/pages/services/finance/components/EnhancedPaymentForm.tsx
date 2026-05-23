@@ -67,7 +67,6 @@ const EnhancedPaymentForm: React.FC<EnhancedPaymentFormProps> = ({
       const data = await response.json()
       setTdsSections(data.tds_sections || [])
     } catch (error) {
-      console.error('Error fetching TDS sections:', error)
     }
   }
 
@@ -93,11 +92,9 @@ const EnhancedPaymentForm: React.FC<EnhancedPaymentFormProps> = ({
           toast.success('TDS calculated automatically!')
         }
       } else {
-        console.error('TDS calculation error:', data.error)
         toast.error('TDS calculation failed')
       }
     } catch (error) {
-      console.error('Error calculating TDS:', error)
       toast.error('TDS calculation failed')
     } finally {
       setTdsLoading(false)
@@ -127,7 +124,6 @@ const EnhancedPaymentForm: React.FC<EnhancedPaymentFormProps> = ({
       onSave()
       onClose()
     } catch (error: any) {
-      console.error('Error creating payment:', error)
       toast.error(error.response?.data?.message || 'Failed to record payment')
     } finally {
       setLoading(false)

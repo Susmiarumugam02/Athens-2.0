@@ -50,7 +50,6 @@ const ComplianceDashboard: React.FC = () => {
       })
       setDashboardData(response.data)
     } catch (error) {
-      console.error('Error fetching dashboard data:', error)
     }
   }
 
@@ -64,7 +63,6 @@ const ComplianceDashboard: React.FC = () => {
       })
       setAlerts(response.data)
     } catch (error) {
-      console.error('Error fetching alerts:', error)
     }
   }
 
@@ -79,7 +77,6 @@ const ComplianceDashboard: React.FC = () => {
       setScorecard(response.data)
       setLoading(false)
     } catch (error) {
-      console.error('Error fetching scorecard:', error)
       setLoading(false)
     }
   }

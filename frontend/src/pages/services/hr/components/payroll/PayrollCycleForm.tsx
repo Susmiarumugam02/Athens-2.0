@@ -45,7 +45,6 @@ const PayrollCycleForm: React.FC<PayrollCycleFormProps> = ({ onSuccess, onCancel
       toast.success('Payroll cycle created successfully')
       onSuccess()
     } catch (error: any) {
-      console.error('Error creating payroll cycle:', error)
       toast.error(error.response?.data?.error || 'Failed to create payroll cycle')
     } finally {
       setSaving(false)

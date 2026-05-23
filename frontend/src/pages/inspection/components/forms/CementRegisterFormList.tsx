@@ -3,9 +3,9 @@ import { Table, Button, Space, Popconfirm, message, Tag } from 'antd';
 import { EditOutlined, DeleteOutlined, PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import type { ColumnType } from 'antd/es/table';
-import PageLayout from '../../../components/ui/PageLayout';
+import PageLayout from '../../../../components/ui/PageLayout';
 import { inspectionService } from '../../services/inspectionService';
-import { useAuthStore } from '../../../store/authStore';
+import { useAuthStore } from '../../../../store/authStore';
 
 interface CementRegisterFormData {
   id: string;
@@ -20,17 +20,18 @@ interface CementRegisterFormData {
 
 export default function CementRegisterFormList() {
   const navigate = useNavigate();
-  const { usertype: admin_type, username } = useAuthStore();
-  const user = { admin_type, username };
+  const { user } = useAuthStore();
+  const userType = (user as any)?.admin_type || (user as any)?.user_type || '';
+  const username = (user as any)?.email || '';
+  const user_obj = { admin_type: userType, username };
   const [forms, setForms] = useState<CementRegisterFormData[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const userType = user?.admin_type;
-  const canCreate = userType === 'epcuser';
-  const canEdit = (record: CementRegisterFormData) => 
-    ['client', 'epc', 'contractor'].includes(userType || '') && record.created_by_username === user?.username;
-  const canDelete = (record: CementRegisterFormData) => 
-    ['client', 'epc', 'contractor'].includes(userType || '') && record.created_by_username === user?.username;
+  const canCreate = true; // All authenticated users can create
+  const canEdit = (record: CementRegisterFormData) =>
+    ['client', 'epc', 'contractor'].includes(userType || '') && record.created_by_username === username;
+  const canDelete = (record: CementRegisterFormData) =>
+    ['client', 'epc', 'contractor'].includes(userType || '') && record.created_by_username === username;
 
   useEffect(() => {
     fetchForms();
@@ -103,14 +104,14 @@ export default function CementRegisterFormList() {
           <Button
             type="text"
             icon={<EyeOutlined />}
-            onClick={() => navigate(`/inspection/cement-register-forms/${record.id}`)}
+            onClick={() => navigate(`/dashboard/inspection/forms/cement-register/view/${record.id}`)}
             title="View"
           />
           {canEdit(record) && (
             <Button
               type="text"
               icon={<EditOutlined />}
-              onClick={() => navigate(`/inspection/cement-register-forms/${record.id}/edit`)}
+              onClick={() => navigate(`/dashboard/inspection/forms/cement-register/edit/${record.id}`)}
               title="Edit"
             />
           )}
@@ -144,7 +145,7 @@ export default function CementRegisterFormList() {
       key="create"
       type="primary"
       icon={<PlusOutlined />}
-      onClick={() => navigate('/inspection/cement-register-forms/new')}
+      onClick={() => navigate('/dashboard/inspection/forms/cement-register/create')}
     >
       New Form
     </Button>

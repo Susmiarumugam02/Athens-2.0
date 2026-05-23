@@ -19,8 +19,40 @@ class Tenant(models.Model):
     industry = models.CharField(max_length=100, blank=True, null=True)
     timezone = models.CharField(max_length=100, default='UTC')
     
+    # Company profile fields (filled by MasterAdmin on first login)
+    address = models.TextField(blank=True, null=True)
+    company_type = models.CharField(max_length=50, blank=True, null=True)
+    contact_name = models.CharField(max_length=100, blank=True, null=True)
+    contact_designation = models.CharField(max_length=100, blank=True, null=True)
+    profile_submitted = models.BooleanField(default=False)
+
+    # Approval workflow
+    APPROVAL_PENDING = 'pending'
+    APPROVAL_APPROVED = 'approved'
+    APPROVAL_REJECTED = 'rejected'
+    APPROVAL_STATUS_CHOICES = [
+        (APPROVAL_PENDING, 'Pending'),
+        (APPROVAL_APPROVED, 'Approved'),
+        (APPROVAL_REJECTED, 'Rejected'),
+    ]
+    approval_status = models.CharField(
+        max_length=20,
+        choices=APPROVAL_STATUS_CHOICES,
+        default=APPROVAL_APPROVED,  # existing tenants stay approved
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        'authentication.User', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='approved_tenants'
+    )
+    rejection_reason = models.TextField(blank=True, null=True)
+
     is_active = models.BooleanField(default=True)
     
+    # Subscription window — controls access for ALL users under this tenant
+    subscription_start_date = models.DateField(null=True, blank=True)
+    subscription_end_date = models.DateField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey("authentication.User", on_delete=models.SET_NULL, null=True, related_name="created_tenants")

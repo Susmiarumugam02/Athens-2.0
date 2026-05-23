@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { message } from 'antd';
-import {
+import type {
   Incident,
   IncidentListItem,
   IncidentFormData,
@@ -133,13 +133,13 @@ export const useIncidents = (options: UseIncidentsOptions = {}): UseIncidentsRet
   const createIncident = useCallback(async (data: IncidentFormData): Promise<Incident | null> => {
     setLoading(true);
     try {
-      // Mock success
-      message.success('Incident created successfully');
-      const newIncident = { id: String(Date.now()), ...data } as any;
+      const createdIncident = await incidentApi.createIncident(data);
       await refetch();
-      return newIncident;
+      message.success('Incident created successfully');
+      return createdIncident;
     } catch (err: any) {
-      message.error('Failed to create incident');
+      const errorMessage = err.response?.data?.detail || err.message || 'Failed to create incident';
+      message.error(errorMessage);
       return null;
     } finally {
       setLoading(false);
@@ -149,11 +149,13 @@ export const useIncidents = (options: UseIncidentsOptions = {}): UseIncidentsRet
   const updateIncident = useCallback(async (id: string, data: Partial<IncidentFormData>): Promise<Incident | null> => {
     setLoading(true);
     try {
-      message.success('Incident updated successfully');
+      const updatedIncident = await incidentApi.updateIncident(id, data);
       await refetch();
-      return { id, ...data } as any;
+      message.success('Incident updated successfully');
+      return updatedIncident;
     } catch (err: any) {
-      message.error('Failed to update incident');
+      const errorMessage = err.response?.data?.detail || err.message || 'Failed to update incident';
+      message.error(errorMessage);
       return null;
     } finally {
       setLoading(false);

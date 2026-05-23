@@ -48,7 +48,6 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ onSettingsUpdate }) => {
       setEmailSettings(response.data)
       setFormData({ ...formData, ...response.data })
     } catch (error: any) {
-      console.error('Failed to load email settings:', error)
       if (error.response?.status === 403) {
         toast.error('Access denied. Please ensure you are logged in as a company user.')
       } else {
@@ -62,7 +61,6 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ onSettingsUpdate }) => {
       const response = await apiClient.getEmailProviderTemplates()
       setProviders(response.data)
     } catch (error: any) {
-      console.error('Failed to load providers:', error)
       if (error.response?.status === 403) {
         toast.error('Access denied. Please ensure you are logged in as a company user.')
       }
@@ -76,7 +74,6 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ onSettingsUpdate }) => {
       const response = await apiClient.getEmailUsageStats()
       setUsage(response.data)
     } catch (error: any) {
-      console.error('Failed to load usage stats:', error)
       if (error.response?.status === 403) {
         toast.error('Access denied. Please ensure you are logged in as a company user.')
       }
@@ -128,7 +125,6 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ onSettingsUpdate }) => {
     setIsTesting(true)
     try {
       const response = await apiClient.testCompanyEmailConfiguration()
-      console.log('Test email response:', response.data)
       
       // Check for success in multiple possible response formats
       if (response.data.success === true || response.data.status === 'success' || response.status === 200) {
@@ -138,7 +134,6 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ onSettingsUpdate }) => {
       }
       loadUsage()
     } catch (error: any) {
-      console.error('Test email error:', error)
       
       // If it's a 200 response but caught as error, it might still be successful
       if (error.response?.status === 200) {

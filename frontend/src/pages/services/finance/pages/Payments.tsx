@@ -52,7 +52,6 @@ const Payments: React.FC<PaymentsProps> = ({ sessionKey }) => {
         setStats(response.data);
       }
     } catch (error: any) {
-      console.error('Error fetching payment stats:', error);
       toast.error('Failed to fetch payment statistics');
     } finally {
       setLoading(false);

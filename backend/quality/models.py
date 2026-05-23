@@ -316,6 +316,205 @@ class QualityDefect(models.Model):
             models.Index(fields=['inspection', 'category'])
         ]
 
+
+class QualityObservation(models.Model):
+    """AI-assisted quality observation and NCR workflow."""
+
+    OBSERVATION_TYPE_CHOICES = [
+        ('defect', 'Defect'),
+        ('non_conformance', 'Non-Conformance'),
+        ('process_deviation', 'Process Deviation'),
+        ('inspection_finding', 'Inspection Finding'),
+        ('customer_complaint', 'Customer Complaint'),
+        ('supplier_issue', 'Supplier Issue'),
+        ('audit_finding', 'Audit Finding'),
+    ]
+
+    SEVERITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
+    ]
+
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('normal', 'Normal'),
+        ('high', 'High'),
+        ('urgent', 'Urgent'),
+        ('critical', 'Critical'),
+    ]
+
+    CATEGORY_CHOICES = [
+        ('surface_defect', 'Surface Defect'),
+        ('paint_defect', 'Paint Defect'),
+        ('welding_defect', 'Welding Defect'),
+        ('dimensional', 'Dimensional Issue'),
+        ('alignment', 'Alignment Issue'),
+        ('corrosion', 'Corrosion'),
+        ('leakage', 'Leakage'),
+        ('material', 'Material Non-Conformance'),
+        ('documentation', 'Documentation Issue'),
+        ('process_deviation', 'Process Deviation'),
+        ('functional', 'Functional Failure'),
+        ('packaging', 'Packaging / Handling'),
+    ]
+
+    STATUS_CHOICES = [
+        ('open', 'Open'),
+        ('reported', 'Reported'),
+        ('under_review', 'Under Review'),
+        ('assigned', 'Assigned'),
+        ('in_progress', 'In Progress'),
+        ('pending_verification', 'Pending Verification'),
+        ('root_cause_analysis', 'Root Cause Analysis'),
+        ('corrective_action', 'Corrective Action'),
+        ('verified', 'Verified'),
+        ('closed', 'Closed'),
+    ]
+
+    observation_id = models.CharField(max_length=50, unique=True)
+    observation_type = models.CharField(max_length=30, choices=OBSERVATION_TYPE_CHOICES, default='defect')
+    defect_title = models.CharField(max_length=200)
+    product_asset = models.CharField(max_length=200)
+    department = models.CharField(max_length=150)
+    inspection_area = models.CharField(max_length=200)
+    observation_datetime = models.DateTimeField()
+    reporter = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='quality_observations')
+    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_quality_findings')
+    severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES, default='medium')
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='normal')
+    defect_category = models.CharField(max_length=30, choices=CATEGORY_CHOICES)
+    defect_description = models.TextField()
+    root_cause = models.TextField(blank=True)
+    immediate_action = models.TextField(blank=True)
+    recommended_fix = models.TextField(blank=True)
+    corrective_action = models.TextField(blank=True)
+    preventive_action = models.TextField(blank=True)
+    ncr_required = models.BooleanField(default=False)
+    ncr_number = models.CharField(max_length=60, blank=True)
+    capa_owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='quality_capa_observations')
+    target_completion_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='reported')
+    verification_notes = models.TextField(blank=True)
+    quality_risk_score = models.PositiveSmallIntegerField(default=1, validators=[MinValueValidator(1), MaxValueValidator(16)])
+    ai_recommendations = models.JSONField(default=list, blank=True)
+    ai_analysis = models.JSONField(default=dict, blank=True)
+    voice_transcript = models.TextField(blank=True)
+    translated_text = models.TextField(blank=True)
+    language_detected = models.CharField(max_length=30, blank=True)
+    media_evidence = models.JSONField(default=list, blank=True)
+    attachments = models.JSONField(default=list, blank=True)
+    project = models.ForeignKey(
+        'authentication.Project',
+        on_delete=models.CASCADE,
+        related_name='quality_observations',
+        null=True,
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    closed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='closed_quality_observations')
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['project', 'status']),
+            models.Index(fields=['severity', 'defect_category']),
+            models.Index(fields=['assigned_to', 'status']),
+            models.Index(fields=['observation_datetime']),
+        ]
+
+    def __str__(self):
+        return f"{self.observation_id} - {self.defect_title}"
+
+
+class QualityObservationImage(models.Model):
+    observation = models.ForeignKey(QualityObservation, related_name='images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='quality_observations/%Y/%m/%d/')
+    caption = models.CharField(max_length=255, blank=True)
+    ai_findings = models.JSONField(default=list, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+
+class QualityFixing(models.Model):
+    """Corrective/preventive action workflow linked to a quality finding."""
+
+    APPROVAL_STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('assigned', 'Assigned'),
+        ('in_progress', 'In Progress'),
+        ('submitted', 'Submitted for Verification'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('closed', 'Closed'),
+    ]
+
+    fixing_id = models.CharField(max_length=50, unique=True)
+    finding = models.ForeignKey(QualityObservation, on_delete=models.CASCADE, related_name='fixings')
+    assigned_engineer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='quality_fixings')
+    corrective_action = models.TextField()
+    preventive_action = models.TextField(blank=True)
+    due_date = models.DateField(null=True, blank=True)
+    completion_date = models.DateTimeField(null=True, blank=True)
+    verification_notes = models.TextField(blank=True)
+    approval_status = models.CharField(max_length=20, choices=APPROVAL_STATUS_CHOICES, default='assigned')
+    closure_remarks = models.TextField(blank=True)
+    before_evidence = models.JSONField(default=list, blank=True)
+    after_evidence = models.JSONField(default=list, blank=True)
+    escalation_count = models.PositiveSmallIntegerField(default=0)
+    project = models.ForeignKey(
+        'authentication.Project',
+        on_delete=models.CASCADE,
+        related_name='quality_fixings',
+        null=True,
+        blank=True,
+    )
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_quality_fixings')
+    verified_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='verified_quality_fixings')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['project', 'approval_status']),
+            models.Index(fields=['assigned_engineer', 'approval_status']),
+            models.Index(fields=['due_date']),
+        ]
+
+    def __str__(self):
+        return f"{self.fixing_id} - {self.finding_id}"
+
+
+class QualityActivityLog(models.Model):
+    """Audit trail for findings, fixings, NCR and CAPA workflow actions."""
+
+    finding = models.ForeignKey(QualityObservation, on_delete=models.CASCADE, null=True, blank=True, related_name='activity_logs')
+    fixing = models.ForeignKey(QualityFixing, on_delete=models.CASCADE, null=True, blank=True, related_name='activity_logs')
+    action = models.CharField(max_length=80)
+    from_status = models.CharField(max_length=40, blank=True)
+    to_status = models.CharField(max_length=40, blank=True)
+    notes = models.TextField(blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='quality_activity_logs')
+    project = models.ForeignKey(
+        'authentication.Project',
+        on_delete=models.CASCADE,
+        related_name='quality_activity_logs',
+        null=True,
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['project', 'created_at']),
+            models.Index(fields=['action']),
+        ]
+
 class SupplierQuality(models.Model):
     SUPPLIER_TYPES = [
         ('manufacturer', 'Manufacturer'),

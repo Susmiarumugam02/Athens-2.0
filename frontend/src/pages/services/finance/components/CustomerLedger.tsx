@@ -82,7 +82,6 @@ const CustomerLedger: React.FC<CustomerLedgerProps> = ({ sessionKey }) => {
         totalCreditLimit
       });
     } catch (error: any) {
-      console.error('Error fetching customers:', error);
       toast.error('Failed to fetch customers');
     }
   };
@@ -106,7 +105,6 @@ const CustomerLedger: React.FC<CustomerLedgerProps> = ({ sessionKey }) => {
 
       setLedgerData(response.data);
     } catch (error: any) {
-      console.error('Error fetching ledger data:', error);
       toast.error('Failed to fetch ledger data');
     } finally {
       setLoading(false);

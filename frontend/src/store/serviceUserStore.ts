@@ -107,7 +107,6 @@ export const useServiceUserStore = create<ServiceUserState>()(
           try {
             await apiClient.serviceUserLogout(sessionKey)
           } catch (error) {
-            console.error('Logout error:', error)
           }
         }
 
@@ -150,7 +149,6 @@ export const useServiceUserStore = create<ServiceUserState>()(
           set({ sessionExpiry, lastActivity: Date.now() })
           return true
         } catch (error) {
-          console.error('Session refresh failed:', error)
           await get().logout()
           return false
         }
@@ -216,7 +214,6 @@ export const useServiceUserStore = create<ServiceUserState>()(
         
         // Only logout if we have no session key anywhere AND we're authenticated
         if (!sessionKey && !storeSessionKey && isAuthenticated) {
-          console.warn('No session key found, logging out')
           get().logout()
           return false
         }
@@ -235,7 +232,6 @@ export const useServiceUserStore = create<ServiceUserState>()(
         const isValid = now < sessionExpiry
 
         if (!isValid) {
-          console.warn('Session expired, logging out')
           get().logout()
           toast.error('Session expired. Please log in again.')
         }
@@ -246,7 +242,6 @@ export const useServiceUserStore = create<ServiceUserState>()(
       // Session monitoring methods (not persisted)
       startSessionMonitoring: () => {
         // Completely disabled to prevent navigation issues
-        console.log('Session monitoring disabled to prevent navigation logout issues')
       },
 
       stopSessionMonitoring: () => {

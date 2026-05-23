@@ -39,7 +39,6 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
       
       setEmployees(response.data.results || [])
     } catch (error) {
-      console.error('Error fetching employees:', error)
       toast.error('Failed to fetch team members')
     } finally {
       setLoading(false)
@@ -61,7 +60,6 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
       setEmployees(prev => prev.filter(emp => emp.id !== employee.id))
       toast.success('Team member deleted successfully')
     } catch (error) {
-      console.error('Error deleting employee:', error)
       toast.error('Failed to delete team member')
       fetchEmployees()
     }
@@ -86,7 +84,6 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
       toast.success('Team member terminated successfully')
       fetchEmployees()
     } catch (error) {
-      console.error('Error terminating employee:', error)
       toast.error('Failed to terminate team member')
     }
   }

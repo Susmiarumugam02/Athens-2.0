@@ -53,7 +53,7 @@ const BiodiversityEventAnalytics: React.FC<BiodiversityEventAnalyticsProps> = ({
               title="Total Events"
               value={totalEvents}
               prefix={<BugOutlined style={{ color: '#1890ff' }} />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -63,7 +63,7 @@ const BiodiversityEventAnalytics: React.FC<BiodiversityEventAnalyticsProps> = ({
               title="This Month"
               value={monthlyEvents}
               prefix={<EnvironmentOutlined style={{ color: '#52c41a' }} />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -73,7 +73,7 @@ const BiodiversityEventAnalytics: React.FC<BiodiversityEventAnalyticsProps> = ({
               title="High Severity"
               value={highSeverityEvents}
               prefix={<AlertOutlined style={{ color: '#f5222d' }} />}
-              valueStyle={{ color: '#f5222d' }}
+              styles={{ content: { color: '#f5222d' } }}
             />
           </Card>
         </Col>
@@ -85,7 +85,7 @@ const BiodiversityEventAnalytics: React.FC<BiodiversityEventAnalyticsProps> = ({
               precision={1}
               suffix="%"
               prefix={<FallOutlined style={{ color: '#722ed1' }} />}
-              valueStyle={{ color: '#722ed1' }}
+              styles={{ content: { color: '#722ed1' } }}
             />
           </Card>
         </Col>
