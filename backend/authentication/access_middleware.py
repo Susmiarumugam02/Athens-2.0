@@ -15,6 +15,7 @@ class OnboardingAccessMiddleware:
         '/api/auth/login/',
         '/api/auth/token/refresh/',
         '/api/auth/logout/',
+        '/api/auth/me/',
         '/api/user/profile/submit',
         '/api/auth/projectadmin/status/',
         '/api/auth/training/status/',
@@ -23,25 +24,33 @@ class OnboardingAccessMiddleware:
     )
     PROFILE_ALLOWED_PREFIXES = (
         '/api/user/profile/submit',
+        '/api/auth/me/',
         '/api/auth/projectadmin/profile/',
         '/api/auth/projectadmin/status/',
         '/api/auth/training/status/',
     )
     WAITING_ALLOWED_PREFIXES = (
         '/api/auth/projectadmin/status/',
+        '/api/auth/me/',
         '/api/auth/training/status/',
         '/api/auth/training/accessible-modules/',
         '/api/auth/logout/',
     )
     TRAINING_ALLOWED_PREFIXES = (
         '/api/training/my-induction/',
+        '/api/training/attendance-status',
         '/api/training/complete/',
+        '/api/training/trainings/',
+        '/api/training/validate-qr',
+        '/api/training/mark-attendance',
         '/api/auth/training/',
         '/api/auth/projectadmin/status/',
+        '/api/auth/me/',
         '/api/auth/logout/',
     )
     PASSWORD_CHANGE_ALLOWED_PREFIXES = (
         '/api/auth/training/change-password/',
+        '/api/auth/me/',
         '/api/auth/training/status/',
         '/api/auth/logout/',
     )
@@ -88,6 +97,8 @@ class OnboardingAccessMiddleware:
         # Block all modules if password change is pending after induction
         must_change_password = getattr(user, 'must_change_password', False)
         if must_change_password or access_level == 'pending_password_change':
+            if (status == 'approved_pending_induction' or access_level == 'training_only') and path.startswith(self.TRAINING_ALLOWED_PREFIXES):
+                return None
             if path.startswith(self.PASSWORD_CHANGE_ALLOWED_PREFIXES):
                 return None
             return JsonResponse({

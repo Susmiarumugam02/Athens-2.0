@@ -32,6 +32,41 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
   const menuRef = useRef<HTMLDivElement>(null)
   
   const closeDropdown = () => setIsOpen(false)
+  const calculatePosition = () => {
+    if (!triggerRef.current) return position
+
+    const rect = triggerRef.current.getBoundingClientRect()
+    const menuWidth = 220
+    const menuHeight = 250
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+    const scrollY = window.scrollY
+    const scrollX = window.scrollX
+    const padding = 16
+
+    let top = rect.bottom + scrollY + 8
+    let left = align === 'right'
+      ? rect.right + scrollX - menuWidth
+      : rect.left + scrollX
+
+    if (left + menuWidth > viewportWidth + scrollX - padding) {
+      left = rect.right + scrollX - menuWidth
+    }
+    if (left < scrollX + padding) {
+      left = scrollX + padding
+    }
+
+    const spaceBelow = viewportHeight + scrollY - rect.bottom
+    const spaceAbove = rect.top
+
+    if (spaceBelow < menuHeight + padding && spaceAbove > menuHeight + padding) {
+      top = rect.top + scrollY - menuHeight - 8
+    } else if (spaceBelow < menuHeight + padding) {
+      top = Math.max(scrollY + padding, viewportHeight + scrollY - menuHeight - padding)
+    }
+
+    return { top, left }
+  }
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -59,46 +94,6 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
       document.addEventListener('mousedown', handleClickOutside)
       document.addEventListener('keydown', handleEscape)
       document.addEventListener('scroll', handleScroll, true)
-      
-      // Calculate position with better viewport handling
-      if (triggerRef.current) {
-        const rect = triggerRef.current.getBoundingClientRect()
-        const menuWidth = 220
-        const menuHeight = 250
-        const viewportWidth = window.innerWidth
-        const viewportHeight = window.innerHeight
-        const scrollY = window.scrollY
-        const scrollX = window.scrollX
-        const padding = 16
-        
-        // Default position below trigger
-        let top = rect.bottom + scrollY + 8
-        let left = align === 'right' 
-          ? rect.right + scrollX - menuWidth
-          : rect.left + scrollX
-        
-        // Adjust horizontal position if menu would go off-screen
-        if (left + menuWidth > viewportWidth + scrollX - padding) {
-          left = rect.right + scrollX - menuWidth
-        }
-        if (left < scrollX + padding) {
-          left = scrollX + padding
-        }
-        
-        // Adjust vertical position if menu would go off-screen
-        const spaceBelow = viewportHeight + scrollY - rect.bottom
-        const spaceAbove = rect.top + scrollY - scrollY
-        
-        if (spaceBelow < menuHeight + padding && spaceAbove > menuHeight + padding) {
-          // Show above if there's more space above
-          top = rect.top + scrollY - menuHeight - 8
-        } else if (spaceBelow < menuHeight + padding) {
-          // If not enough space above or below, position to fit in viewport
-          top = Math.max(scrollY + padding, viewportHeight + scrollY - menuHeight - padding)
-        }
-        
-        setPosition({ top, left })
-      }
     }
 
     return () => {
@@ -111,7 +106,10 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
   const handleTriggerClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setIsOpen(!isOpen)
+    if (!isOpen) {
+      setPosition(calculatePosition())
+    }
+    setIsOpen((open) => !open)
   }
 
   return (
@@ -123,7 +121,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
         createPortal(
           <div
             ref={menuRef}
-            className={`fixed min-w-[220px] max-w-[280px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl py-2 ${className}`}
+            className={`theme-popover fixed min-w-[220px] max-w-[280px] rounded-xl py-2 ${className}`}
             style={{
               top: position.top,
               left: position.left,
@@ -150,8 +148,8 @@ export const DropdownMenuItem: React.FC<DropdownMenuItemProps> = ({
   const context = useContext(DropdownContext)
   const baseClasses = 'w-full px-4 py-3 text-left text-sm transition-all duration-200 flex items-center gap-3 font-medium'
   const variantClasses = {
-    default: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white',
-    danger: 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300'
+    default: 'theme-menu-item',
+    danger: 'theme-menu-item-danger'
   }
   const disabledClasses = 'opacity-50 cursor-not-allowed'
 
@@ -177,5 +175,5 @@ export const DropdownMenuItem: React.FC<DropdownMenuItemProps> = ({
 }
 
 export const DropdownMenuSeparator: React.FC = () => (
-  <div className="h-px bg-gray-200 dark:bg-gray-700 my-2 mx-2" />
+  <div className="h-px bg-border my-2 mx-2" />
 )

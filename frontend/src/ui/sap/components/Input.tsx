@@ -36,10 +36,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             type={type}
             className={cn(
-              'block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-900 placeholder-gray-500 transition-colors duration-200',
-              'focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500',
-              'dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400',
-              'dark:focus:border-blue-400 dark:focus:ring-blue-400',
+              'theme-control block w-full rounded-lg px-3 py-2.5 transition-colors duration-200',
               'disabled:cursor-not-allowed disabled:opacity-50',
               icon && 'pl-10',
               rightIcon && 'pr-10',

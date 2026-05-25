@@ -11,7 +11,7 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined
 } from '@ant-design/icons';
-import { ColumnsType } from 'antd/es/table';
+import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import PageLayout from '../../../components/ui/PageLayout';
 import { 

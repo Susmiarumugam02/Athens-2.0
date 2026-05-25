@@ -28,6 +28,14 @@ class Employee(models.Model):
     STATUS_CHOICES = [('active', 'Active'), ('inactive', 'Inactive')]
     
     athens_tenant_id = models.IntegerField(db_index=True)
+    user = models.OneToOneField(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='workforce_employee',
+        help_text='Login account provisioned for this employee'
+    )
     employee_code = models.CharField(max_length=50)
     full_name = models.CharField(max_length=200)
     father_or_husband_name = models.CharField(max_length=200, blank=True)

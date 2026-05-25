@@ -16,6 +16,8 @@ export const ROUTE_PATHS = [
   '/master-admin/admin-attendance', '/master-admin/menu-management', '/master-admin/settings',
   '/app', '/app/settings', '/app/settings/change-password', '/company/detailed-info', '/company/waiting-approval', '/company/services',
   '/app/inspection', '/app/inspection/list', '/app/inspection/create',
+  '/app/finance/expenses', '/app/finance/expenses/create', '/app/finance/expenses/:id',
+  '/app/finance/advances', '/app/finance/advances/create', '/app/finance/advances/:id',
   '/company', '/company/athens/password-reset', '/company/athens/profile',
   '/company/athens/pending-approval', '/company/athens/induction',
   '/service', '/employee', '/jobs', '/services/finance/dashboard',
@@ -68,9 +70,9 @@ const ErgonLanding = React.lazy(() => import('../pages/ergon/ErgonLandingPage'))
 const TaskManagement = React.lazy(() => import('../pages/ergon/TaskManagementPage'))
 const DailyPlanner = React.lazy(() => import('../pages/ergon/DailyPlannerPage'))
 const FollowupsPage = React.lazy(() => import('../pages/ergon/FollowupsPage'))
-const AdvanceExpensesPage = React.lazy(() => import('../pages/ergon/AdvanceExpensesPage'))
 const ManpowerMachineryPage = React.lazy(() => import('../pages/ergon/ManpowerMachineryPage'))
 const FinancialLedgerPage = React.lazy(() => import('../pages/ergon/FinancialLedgerPage'))
+const AdvanceExpenseModule = React.lazy(() => import('../pages/finance/expenses/AdvanceExpenseModule'))
 
 // Workforce Components
 const WorkforceLanding = React.lazy(() => import('../pages/workforce/WorkforceLandingPage'))
@@ -662,8 +664,19 @@ export const AppRouter: React.FC = () => {
         <Route path="ergon" element={<SuspenseWrapper><ErgonLanding /></SuspenseWrapper>} />
         <Route path="ergon/tasks" element={<SuspenseWrapper><TaskManagement /></SuspenseWrapper>} />
         <Route path="ergon/planner" element={<SuspenseWrapper><DailyPlanner /></SuspenseWrapper>} />
+        <Route path="workflow/daily-planner" element={<SuspenseWrapper><DailyPlanner /></SuspenseWrapper>} />
         <Route path="ergon/followups" element={<SuspenseWrapper><FollowupsPage /></SuspenseWrapper>} />
-        <Route path="ergon/advance" element={<SuspenseWrapper><AdvanceExpensesPage /></SuspenseWrapper>} />
+        <Route path="followups" element={<SuspenseWrapper><FollowupsPage /></SuspenseWrapper>} />
+        <Route path="followups/create" element={<SuspenseWrapper><FollowupsPage /></SuspenseWrapper>} />
+        <Route path="followups/:id" element={<SuspenseWrapper><FollowupsPage /></SuspenseWrapper>} />
+        <Route path="followups/edit/:id" element={<SuspenseWrapper><FollowupsPage /></SuspenseWrapper>} />
+        <Route path="ergon/advance" element={<SuspenseWrapper><AdvanceExpenseModule mode="overview" /></SuspenseWrapper>} />
+        <Route path="finance/expenses" element={<SuspenseWrapper><AdvanceExpenseModule mode="expenses" /></SuspenseWrapper>} />
+        <Route path="finance/expenses/create" element={<SuspenseWrapper><AdvanceExpenseModule mode="create-expense" /></SuspenseWrapper>} />
+        <Route path="finance/expenses/:id" element={<SuspenseWrapper><AdvanceExpenseModule mode="detail" /></SuspenseWrapper>} />
+        <Route path="finance/advances" element={<SuspenseWrapper><AdvanceExpenseModule mode="advances" /></SuspenseWrapper>} />
+        <Route path="finance/advances/create" element={<SuspenseWrapper><AdvanceExpenseModule mode="create-advance" /></SuspenseWrapper>} />
+        <Route path="finance/advances/:id" element={<SuspenseWrapper><AdvanceExpenseModule mode="detail" /></SuspenseWrapper>} />
         <Route path="ergon/manpower" element={<SuspenseWrapper><ManpowerMachineryPage /></SuspenseWrapper>} />
         <Route path="ergon/ledger" element={<SuspenseWrapper><FinancialLedgerPage /></SuspenseWrapper>} />
         

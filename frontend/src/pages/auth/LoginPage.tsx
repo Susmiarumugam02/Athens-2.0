@@ -10,7 +10,7 @@ import AccountLockoutWarning from '../../components/auth/AccountLockoutWarning'
 import PasswordExpiryWarning from '../../components/auth/PasswordExpiryWarning'
 
 const loginSchema = z.object({
-  email: z.string().min(1, 'Email or username is required'),
+  email: z.string().min(1, 'Email, username or employee ID is required'),
   password: z.string().min(1, 'Required'),
 })
 
@@ -242,7 +242,7 @@ const LoginPage: React.FC = () => {
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-200 mb-1.5">Email or Username</label>
+                    <label className="block text-sm font-medium text-gray-200 mb-1.5">Email / Username / Employee ID</label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
@@ -250,7 +250,7 @@ const LoginPage: React.FC = () => {
                         type="text"
                         autoComplete="username email"
                         className={`w-full pl-10 pr-4 py-3 bg-white/5 border ${errors.email ? 'border-red-500/50' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all`}
-                        placeholder="Email or username"
+                        placeholder="Enter email, username or employee ID"
                       />
                     </div>
                     {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, message, Modal, Tag, Popconfirm } from 'antd';
 import { PlusOutlined, EyeOutlined, EditOutlined, DeleteOutlined, BugOutlined } from '@ant-design/icons';
-import { ColumnsType } from 'antd/es/table';
+import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import PageLayout from '../../../components/ui/PageLayout';
 import { getBiodiversityEvents, deleteBiodiversityEvent } from '../services/esgAPI';

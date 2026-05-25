@@ -76,6 +76,35 @@ function redirectToLoginOnce() {
   window.location.replace('/login')
 }
 
+type ApiErrorPayload = {
+  code?: unknown
+  detail?: unknown
+  error?: unknown
+  message?: unknown
+}
+
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === 'object' ? value as Record<string, unknown> : null
+
+const getAuthErrorCode = (data: ApiErrorPayload | undefined): string => {
+  const error = asRecord(data?.error)
+  const detail = asRecord(data?.detail)
+  const rawCode = data?.code || error?.code || detail?.code
+  return typeof rawCode === 'string' ? rawCode.toLowerCase() : ''
+}
+
+const getAuthErrorMessage = (data: ApiErrorPayload | undefined): string => {
+  const error = asRecord(data?.error)
+  const rawMessage = data?.detail || error?.message || data?.error || data?.message
+  return typeof rawMessage === 'string' ? rawMessage.toLowerCase() : ''
+}
+
+const isStaleAuthUserError = (data: ApiErrorPayload | undefined): boolean => {
+  const code = getAuthErrorCode(data)
+  const message = getAuthErrorMessage(data)
+  return code === 'user_not_found' || message === 'user not found'
+}
+
 // Token management
 const getToken = (): string | null => {
   const token = tokenManager.getAccessToken()
@@ -236,6 +265,26 @@ api.interceptors.response.use(
           return Promise.reject(refreshError)
         }
       }
+
+      const errorData = error.response?.data as ApiErrorPayload | undefined
+      if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/unauthorized')) {
+        toast.error(isStaleAuthUserError(errorData)
+          ? 'Your saved session is no longer valid. Please login again.'
+          : 'Session expired. Please login again.')
+        redirectToLoginOnce()
+      }
+      return Promise.reject(error)
+    }
+
+    if (error.response?.status === 401) {
+      const errorData = error.response?.data as ApiErrorPayload | undefined
+      if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/unauthorized')) {
+        toast.error(isStaleAuthUserError(errorData)
+          ? 'Your saved session is no longer valid. Please login again.'
+          : 'Session expired. Please login again.')
+        redirectToLoginOnce()
+      }
+      return Promise.reject(error)
     }
 
     // Don't show error toasts for background/silent requests
@@ -316,9 +365,10 @@ export const apiClient = {
   },
 
   // Authentication - Unified Login (compatible with email/username backend variants)
-  login: (credentials: { email?: string; username?: string; password: string; totp_code?: string }) => {
-    const identity = (credentials.email || credentials.username || '').trim()
+  login: (credentials: { credential?: string; email?: string; username?: string; password: string; totp_code?: string }) => {
+    const identity = (credentials.credential || credentials.email || credentials.username || '').trim()
     return api.post('/api/auth/login/', {
+      credential: identity,
       email: identity,
       username: identity,
       password: credentials.password,

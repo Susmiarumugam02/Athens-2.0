@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bell, ChevronDown, LogOut, UserCircle } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
@@ -11,7 +12,7 @@ const employeeId = (user: any) =>
   user?.employee_id || user?.employee_code || user?.id || 'Pending'
 
 const statusText = (user: any) =>
-  String(user?.workflow_approval_status || user?.approval_status || user?.status || 'pending')
+  String(user?.approval_status || user?.workflow_approval_status || user?.status || 'pending')
     .replace(/_/g, ' ')
 
 const statusClass = (status: string) => {
@@ -29,8 +30,22 @@ export default function UserInductionHeader({ profile }: { profile?: any }) {
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
   const [profileOpen, setProfileOpen] = useState(false)
+  const profileMenuRef = useRef<HTMLDivElement>(null)
   const activeProfile = profile || user || {}
   const status = statusText(activeProfile)
+
+  useEffect(() => {
+    if (!profileOpen) return
+
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!profileMenuRef.current?.contains(event.target as Node)) {
+        setProfileOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', closeOnOutsideClick)
+    return () => document.removeEventListener('mousedown', closeOnOutsideClick)
+  }, [profileOpen])
 
   const handleLogout = () => {
     logout()
@@ -70,7 +85,7 @@ export default function UserInductionHeader({ profile }: { profile?: any }) {
             <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-blue-600" />
           </button>
 
-          <div className="relative">
+          <div className="relative" ref={profileMenuRef}>
             <button
               type="button"
               onClick={() => setProfileOpen((open) => !open)}

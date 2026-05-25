@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, message, Modal, Tag, Popconfirm } from 'antd';
 import { PlusOutlined, EyeOutlined, EditOutlined, DeleteOutlined, TeamOutlined } from '@ant-design/icons';
-import { ColumnsType } from 'antd/es/table';
+import type { ColumnsType } from 'antd/es/table';
 import { getGrievances, updateGrievance, deleteGrievance } from '../services/esgAPI';
 import { Grievance } from '../types';
 import GrievanceForm from './GrievanceForm';

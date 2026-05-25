@@ -29,6 +29,13 @@ interface Tenant {
   is_active: boolean
 }
 
+type ApiErrorPayload = {
+  response?: {
+    status?: number
+    data?: unknown
+  }
+}
+
 const MastersPage: React.FC = () => {
   const [masters, setMasters] = useState<MasterAdmin[]>([])
   const [tenants, setTenants] = useState<Tenant[]>([])
@@ -37,6 +44,8 @@ const MastersPage: React.FC = () => {
   const [showViewModal, setShowViewModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [createSubmitting, setCreateSubmitting] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
   const [selectedMaster, setSelectedMaster] = useState<MasterAdmin | null>(null)
   const [createForm, setCreateForm] = useState({ email: '', name: '', surname: '', tenant_id: '', password: '', subscription_start_date: '', subscription_end_date: '' })
   const [editForm, setEditForm] = useState({ email: '', name: '', surname: '', tenant_id: '', subscription_start_date: '', subscription_end_date: '' })
@@ -45,6 +54,18 @@ const MastersPage: React.FC = () => {
     loadData()
   }, [])
 
+  const openCreateModal = () => {
+    setCreateError(null)
+    setCreateSubmitting(false)
+    setShowCreateModal(true)
+  }
+
+  const closeCreateModal = () => {
+    if (createSubmitting) return
+    setCreateError(null)
+    setShowCreateModal(false)
+  }
+
   const loadData = async () => {
     try {
       setLoading(true)
@@ -52,45 +73,99 @@ const MastersPage: React.FC = () => {
         apiClient.get('/api/control-plane/masters/'),
         apiClient.get('/api/control-plane/tenants/')
       ])
-      const mastersData = Array.isArray(mastersRes.data) ? mastersRes.data : []
+      const mastersData = Array.isArray(mastersRes.data) ? mastersRes.data : mastersRes.data?.results || []
+      const tenantsData = Array.isArray(tenantsRes.data) ? tenantsRes.data : tenantsRes.data?.results || []
       setMasters(mastersData)
-      setTenants(tenantsRes.data)
-    } catch (error: any) {
+      setTenants(tenantsData)
+    } catch (error: unknown) {
+      console.error('Failed to load master admin data', error)
       toast.error('Failed to load data')
       setMasters([])
+      setTenants([])
     } finally {
       setLoading(false)
     }
   }
 
-  const handleCreate = async () => {
-    if (!createForm.email || !createForm.name || !createForm.tenant_id || !createForm.password) {
-      toast.error('Please fill all required fields')
-      return
+  const getApiErrorMessage = (error: unknown, fallback: string) => {
+    const data = (error as ApiErrorPayload)?.response?.data
+    if (!data) return fallback
+    if (typeof data === 'string') return data
+    if (typeof data !== 'object') return fallback
+    const payload = data as Record<string, unknown>
+    if (typeof payload.error === 'string') return payload.error
+    if (typeof payload.message === 'string') return payload.message
+    if (typeof payload.detail === 'string') return payload.detail
+
+    for (const [field, value] of Object.entries(payload)) {
+      const values = Array.isArray(value) ? value : [value]
+      const firstMessage = values.find((item) => item !== null && item !== undefined)
+      if (firstMessage) {
+        const label = field.replaceAll('_', ' ')
+        return `${label}: ${String(firstMessage)}`
+      }
     }
-    if (!createForm.subscription_start_date || !createForm.subscription_end_date) {
-      toast.error('Subscription start and end dates are required')
-      return
-    }
-    if (createForm.subscription_end_date <= createForm.subscription_start_date) {
-      toast.error('Subscription end date must be after start date')
-      return
-    }
+
+    return fallback
+  }
+
+  const handleCreate = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    if (createSubmitting) return
+    setCreateError(null)
+
+    // Validate
+    const email = createForm.email.trim()
+    const name = createForm.name.trim()
+    const password = createForm.password
+    const tenant_id = Number(createForm.tenant_id)
+    const subscription_start_date = createForm.subscription_start_date
+    const subscription_end_date = createForm.subscription_end_date
+
+    if (!email) { setCreateError('Email is required'); return }
+    if (!name) { setCreateError('Name is required'); return }
+    if (!password || password.length < 6) { setCreateError('Password must be at least 6 characters'); return }
+    if (!tenant_id || tenant_id <= 0) { setCreateError('Please select a tenant'); return }
+    if (!subscription_start_date) { setCreateError('Subscription start date is required'); return }
+    if (!subscription_end_date) { setCreateError('Subscription end date is required'); return }
+    if (subscription_end_date <= subscription_start_date) { setCreateError('End date must be after start date'); return }
+
     try {
-      await apiClient.post('/api/control-plane/masters/', createForm)
+      setCreateSubmitting(true)
+      await apiClient.post('/api/control-plane/masters/', {
+        email, name,
+        surname: createForm.surname.trim(),
+        password, tenant_id,
+        subscription_start_date, subscription_end_date
+      })
       toast.success('Master admin created successfully')
       setShowCreateModal(false)
+      setCreateError(null)
       setCreateForm({ email: '', name: '', surname: '', tenant_id: '', password: '', subscription_start_date: '', subscription_end_date: '' })
-      loadData()
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to create master admin')
+      await loadData()
+    } catch (error: unknown) {
+      const errData = (error as ApiErrorPayload)?.response?.data as Record<string, unknown> | undefined
+      let msg = 'Failed to create master admin'
+      if (errData) {
+        const parts: string[] = []
+        for (const [field, value] of Object.entries(errData)) {
+          const vals = Array.isArray(value) ? value : [value]
+          vals.forEach(v => parts.push(`${field}: ${v}`))
+        }
+        if (parts.length) msg = parts.join(' | ')
+      }
+      setCreateError(msg)
+      toast.error(msg)
+    } finally {
+      setCreateSubmitting(false)
     }
   }
 
   const handleUpdate = async () => {
     if (!selectedMaster) return
     try {
-      const updateData: any = {
+      const updateData: Record<string, string | number> = {
         name: editForm.name,
         surname: editForm.surname
       }
@@ -112,8 +187,9 @@ const MastersPage: React.FC = () => {
       toast.success('Master admin updated')
       setShowEditModal(false)
       loadData()
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to update')
+    } catch (error: unknown) {
+      console.error('Failed to update master admin', error)
+      toast.error(getApiErrorMessage(error, 'Failed to update'))
     }
   }
 
@@ -125,8 +201,9 @@ const MastersPage: React.FC = () => {
       setShowDeleteModal(false)
       setSelectedMaster(null)
       loadData()
-    } catch (error: any) {
-      toast.error('Failed to delete')
+    } catch (error: unknown) {
+      console.error('Failed to delete master admin', error)
+      toast.error(getApiErrorMessage(error, 'Failed to delete'))
     }
   }
 
@@ -135,8 +212,9 @@ const MastersPage: React.FC = () => {
     try {
       await apiClient.post(`/api/auth/users/${userId}/reset-password/`)
       toast.success('Password reset email sent')
-    } catch (error: any) {
-      toast.error('Failed to reset password')
+    } catch (error: unknown) {
+      console.error('Failed to reset master admin password', error)
+      toast.error(getApiErrorMessage(error, 'Failed to reset password'))
     }
   }
 
@@ -145,8 +223,9 @@ const MastersPage: React.FC = () => {
       await apiClient.post(`/api/auth/users/${userId}/toggle-status/`)
       toast.success('User status updated')
       loadData()
-    } catch (error: any) {
-      toast.error('Failed to update status')
+    } catch (error: unknown) {
+      console.error('Failed to update master admin status', error)
+      toast.error(getApiErrorMessage(error, 'Failed to update status'))
     }
   }
 
@@ -186,7 +265,7 @@ const MastersPage: React.FC = () => {
             <p className="text-gray-600 dark:text-gray-400">Manage tenant administrators</p>
           </div>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
+        <Button onClick={openCreateModal}>
           <UserPlus className="w-4 h-4 mr-2" />
           Create Master Admin
         </Button>
@@ -199,7 +278,7 @@ const MastersPage: React.FC = () => {
           </div>
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No master admins found</h3>
           <p className="text-gray-600 dark:text-gray-400 mb-6">Get started by creating your first master admin.</p>
-          <Button onClick={() => setShowCreateModal(true)}>
+          <Button onClick={openCreateModal}>
             <UserPlus className="w-4 h-4 mr-2" />
             Create Master Admin
           </Button>
@@ -266,8 +345,8 @@ const MastersPage: React.FC = () => {
       )}
 
       {/* Create Modal */}
-      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Create Master Admin">
-        <div className="space-y-4">
+      <Modal isOpen={showCreateModal} onClose={closeCreateModal} title="Create Master Admin">
+        <form className="space-y-4" onSubmit={handleCreate}>
           <Input placeholder="Email *" type="email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} />
           <Input placeholder="Name *" value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} />
           <Input placeholder="Surname" value={createForm.surname} onChange={(e) => setCreateForm({ ...createForm, surname: e.target.value })} />
@@ -287,11 +366,14 @@ const MastersPage: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subscription End Date *</label>
             <input type="date" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value={createForm.subscription_end_date} onChange={(e) => setCreateForm({ ...createForm, subscription_end_date: e.target.value })} />
           </div>
+          {createError && (
+            <p className="text-sm text-red-600 dark:text-red-400">{createError}</p>
+          )}
           <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setShowCreateModal(false)}>Cancel</Button>
-            <Button onClick={handleCreate}>Create</Button>
+            <Button type="button" variant="outline" onClick={closeCreateModal} disabled={createSubmitting}>Cancel</Button>
+            <Button type="submit" loading={createSubmitting}>Create</Button>
           </div>
-        </div>
+        </form>
       </Modal>
 
       {/* View Modal */}

@@ -28,7 +28,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
         model = Employee
         fields = '__all__'
         read_only_fields = ['id', 'athens_tenant_id', 'created_at', 'updated_at', 
-                           'created_by_admin', 'created_by_admin_type', 'organization_type']
+                           'user', 'created_by_admin', 'created_by_admin_type', 'organization_type']
 
     def to_internal_value(self, data):
         # Convert empty strings to None for date fields before DRF validates them

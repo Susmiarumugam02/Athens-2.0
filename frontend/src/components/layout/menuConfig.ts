@@ -1,7 +1,7 @@
 import { 
   LayoutDashboard, Users, FileText, Settings, Bell, Shield, Lock,
   FolderOpen, Menu, Briefcase, UserCheck, ClipboardList, 
-  Calendar, AlertTriangle, BookOpen, HardHat, Eye, 
+  Calendar, AlertTriangle, BookOpen, HardHat, Eye, Banknote,
   CheckSquare, MessageSquare, Mic, Bot, Package, Zap, Clock
 } from 'lucide-react'
 
@@ -38,7 +38,8 @@ const ATHENS_MENU_ITEMS: MenuItem[] = [
   { label: 'Task Management', description: 'Create and manage tasks', href: '/ergon/tasks', icon: CheckSquare, roles: ['companyuser'], moduleRequired: 'ergon_tasks', category: 'ergon' },
   { label: 'Daily Planner', description: 'Daily task execution with SLA', href: '/ergon/planner', icon: Calendar, roles: ['companyuser'], moduleRequired: 'ergon_planner', category: 'ergon' },
   { label: 'Follow-ups', description: 'Track follow-ups', href: '/ergon/followups', icon: Bell, roles: ['companyuser'], moduleRequired: 'ergon_followups', category: 'ergon' },
-  { label: 'Advance/Expenses', description: 'Manage finances', href: '/ergon/advance', icon: FileText, roles: ['companyuser'], moduleRequired: 'ergon_advance', category: 'ergon' },
+  { label: 'Expenses', description: 'Claims and reimbursements', href: '/finance/expenses', icon: FileText, roles: ['companyuser'], moduleRequired: 'ergon_advance', category: 'ergon' },
+  { label: 'Advances', description: 'Advance requests', href: '/finance/advances', icon: Banknote, roles: ['companyuser'], moduleRequired: 'ergon_advance', category: 'ergon' },
   { label: 'Manpower/Machinery', description: 'Resource allocation', href: '/ergon/manpower', icon: Users, roles: ['companyuser'], moduleRequired: 'ergon_manpower', category: 'ergon' },
   { label: 'Financial Ledger', description: 'Financial tracking', href: '/ergon/ledger', icon: Briefcase, roles: ['companyuser'], moduleRequired: 'ergon_ledger', category: 'ergon' },
   

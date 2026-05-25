@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Statistic, Table, Button, Modal, Form, Input, Select, DatePicker, InputNumber, Tag } from 'antd';
 import { AlertOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import { ColumnsType } from 'antd/es/table';
+import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import PageLayout from '../../../components/ui/PageLayout';
 import { getEnvironmentalIncidents, createEnvironmentalIncident, updateEnvironmentalIncident, deleteEnvironmentalIncident } from '../services/esgAPI';

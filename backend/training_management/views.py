@@ -259,6 +259,84 @@ def _get_training_scoped_users(admin_user):
     return qs.none()
 
 
+def _same_employee_scope(training, user):
+    """Tenant/project guard for assigned_user_ids fallback lookups."""
+    user_project_id = getattr(user, 'project_id', None)
+    if user_project_id and getattr(training, 'project_id', None) == user_project_id:
+        return True
+
+    user_tenant_id = (
+        getattr(user, 'tenant_id', None)
+        or getattr(getattr(user, 'tenant', None), 'id', None)
+        or getattr(user, 'company_id', None)
+    )
+    training_tenant_id = (
+        getattr(training, 'tenant_id', None)
+        or getattr(training, 'company_id', None)
+    )
+    try:
+        return bool(user_tenant_id and training_tenant_id and int(user_tenant_id) == int(training_tenant_id))
+    except (TypeError, ValueError):
+        return False
+
+
+def _get_user_induction_assignments(user):
+    """
+    Return induction trainings assigned to a user and repair missing pending
+    attendance rows. Some admin flows persist assigned_user_ids first; the
+    employee page should still show the assignment immediately.
+    """
+    attendance_training_ids = set(
+        TrainingAttendance.objects.filter(user=user).values_list('training_id', flat=True)
+    )
+
+    user_tenant_id = (
+        getattr(user, 'tenant_id', None)
+        or getattr(getattr(user, 'tenant', None), 'id', None)
+        or getattr(user, 'company_id', None)
+    )
+    candidate_filter = Q(id__in=attendance_training_ids)
+    if getattr(user, 'project_id', None):
+        candidate_filter |= Q(project_id=user.project_id)
+    if user_tenant_id:
+        candidate_filter |= Q(tenant_id=user_tenant_id) | Q(company_id=user_tenant_id)
+
+    candidates = Training.objects.filter(
+        candidate_filter,
+        training_type__in=Training.INDUCTION_TYPES,
+    ).select_related('project', 'tenant', 'company', 'created_by').prefetch_related(
+        'attendances', 'qr_sessions',
+    ).distinct()
+
+    assigned_ids = set()
+    user_id_values = {user.id, str(user.id)}
+
+    with transaction.atomic():
+        for training in candidates:
+            assigned_user_ids = getattr(training, 'assigned_user_ids', None) or []
+            assigned_user_values = set()
+            for assigned_id in assigned_user_ids:
+                assigned_user_values.add(assigned_id)
+                assigned_user_values.add(str(assigned_id))
+            is_attendance_assigned = training.id in attendance_training_ids
+            is_explicitly_assigned = bool(user_id_values & assigned_user_values)
+
+            if not is_attendance_assigned and not is_explicitly_assigned:
+                continue
+            if not is_attendance_assigned and not _same_employee_scope(training, user):
+                continue
+
+            assigned_ids.add(training.id)
+            if not is_attendance_assigned:
+                TrainingAttendance.objects.get_or_create(
+                    training=training,
+                    user=user,
+                    defaults={'attendance_status': TrainingAttendance.STATUS_PENDING},
+                )
+
+    return Training.objects.filter(id__in=assigned_ids).order_by('-training_date', '-created_at')
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def project_users(request):
@@ -308,7 +386,7 @@ def my_induction_trainings(request):
     # it to 'training_only' explicitly. The training assignment is the real gate.
     if getattr(user, 'approval_status', None) != 'approved':
         return Response({'error': 'Admin approval is required before induction training access'}, status=status.HTTP_403_FORBIDDEN)
-    qs = get_training_queryset(user).filter(training_type__in=Training.INDUCTION_TYPES)
+    qs = _get_user_induction_assignments(user)
 
     serializer = UserTrainingSerializer(qs, many=True, context={'request': request})
     return Response(serializer.data)
@@ -319,11 +397,10 @@ def my_induction_trainings(request):
 def attendance_status(request):
     """User-facing attendance summary for the assigned induction flow."""
     user = request.user
+    assigned_training_ids = _get_user_induction_assignments(user).values_list('id', flat=True)
     attendances = TrainingAttendance.objects.filter(
         user=user,
-        training_id__in=get_training_queryset(user).filter(
-            training_type__in=Training.INDUCTION_TYPES,
-        ).values_list('id', flat=True),
+        training_id__in=assigned_training_ids,
     ).select_related('training').order_by('-created_at')
     active = attendances.first()
     return Response({

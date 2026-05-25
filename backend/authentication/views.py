@@ -23,7 +23,57 @@ from system.api_response import ok, fail
 
 
 class LoginThrottle(AnonRateThrottle):
-    rate = '50/min'  # Increased for development (was 5/min)
+    rate = '50/min'
+
+    def allow_request(self, request, view):
+        from django.conf import settings
+        if settings.DEBUG:
+            return True
+        return super().allow_request(request, view)
+
+
+def _normalize_login_identifier(value):
+    return str(value or '').strip()
+
+
+def _get_login_user(identifier):
+    if not identifier:
+        return None, 'empty'
+
+    if '@' in identifier:
+        user = User.objects.filter(email__iexact=identifier).first()
+        if user:
+            return user, 'email'
+        user = User.objects.filter(username__iexact=identifier).first()
+        if user:
+            return user, 'username'
+    else:
+        user = User.objects.filter(username__iexact=identifier).first()
+        if user:
+            return user, 'username'
+        user = User.objects.filter(email__iexact=identifier).first()
+        if user:
+            return user, 'email'
+
+    user = User.objects.filter(employee_id__iexact=identifier).first()
+    if user:
+        return user, 'user.employee_id'
+
+    user = User.objects.filter(user_detail__employee_id__iexact=identifier).first()
+    if user:
+        return user, 'user_detail.employee_id'
+
+    try:
+        from workforce.models import EmployeeProfile
+        employee_profile = EmployeeProfile.objects.select_related('user').filter(
+            employee_id__iexact=identifier
+        ).first()
+        if employee_profile:
+            return employee_profile.user, 'employee_profile.employee_id'
+    except Exception:
+        logger.exception('[LOGIN] Employee profile lookup failed')
+
+    return None, 'not_found'
 
 
 def serialize_auth_user(user):
@@ -78,24 +128,23 @@ def serialize_auth_user(user):
 @throttle_classes([LoginThrottle])
 def unified_login(request):
     """Unified login endpoint for all user types"""
-    email = (request.data.get('email') or request.data.get('username') or '').strip()
+    email = _normalize_login_identifier(
+        request.data.get('credential') or request.data.get('email') or request.data.get('username')
+    )
     password = request.data.get('password')
     totp_code = request.data.get('totp_code')
 
     if not email or not password:
-        return Response({'error': 'Email and password required'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Login credential and password required'}, status=status.HTTP_400_BAD_REQUEST)
 
     logger.info(f"[LOGIN] Attempt for identifier: '{email}'")
 
-    try:
-        user = User.objects.get(email=email) if '@' in email else User.objects.get(username=email)
-    except User.DoesNotExist:
-        try:
-            user = User.objects.get(username=email) if '@' in email else User.objects.get(email=email)
-        except User.DoesNotExist:
-            log_security_event(request, None, SecurityLog.EventType.LOGIN_FAILED,
-                               SecurityLog.Severity.WARNING, {'email': email, 'reason': 'user_not_found'})
-            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+    user, identifier_type = _get_login_user(email)
+    if not user:
+        log_security_event(request, None, SecurityLog.EventType.LOGIN_FAILED,
+                           SecurityLog.Severity.WARNING,
+                           {'identifier': email, 'identifier_type': identifier_type, 'reason': 'user_not_found'})
+        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
     if not user.is_active:
         log_security_event(request, user, SecurityLog.EventType.LOGIN_FAILED,

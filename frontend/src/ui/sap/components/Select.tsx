@@ -1,16 +1,49 @@
 import React from 'react';
+import { cn } from '@/lib/utils';
 
-interface SelectProps {
+interface SelectOption {
+  value: string;
+  label: string;
+  disabled?: boolean;
+}
+
+interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'onChange'> {
   value?: string;
   onValueChange?: (value: string) => void;
   onChange?: (value: string) => void;
-  options?: { value: string; label: string; disabled?: boolean }[];
+  options?: SelectOption[];
   placeholder?: string;
-  className?: string;
   children?: React.ReactNode;
 }
 
-export const Select: React.FC<SelectProps> = ({ value, onChange, onValueChange, options, placeholder, className = '', children }) => {
+const getPlaceholderFromChildren = (children: React.ReactNode): string | undefined => {
+  for (const child of React.Children.toArray(children)) {
+    if (!React.isValidElement(child)) continue;
+
+    const props = child.props as { placeholder?: unknown; children?: React.ReactNode };
+
+    if (child.type === SelectValue && typeof props.placeholder === 'string') {
+      return props.placeholder;
+    }
+
+    const nested = getPlaceholderFromChildren(props.children);
+    if (nested) return nested;
+  }
+
+  return undefined;
+};
+
+export const Select: React.FC<SelectProps> = ({
+  value,
+  onChange,
+  onValueChange,
+  options,
+  placeholder,
+  className = '',
+  children,
+  ...props
+}) => {
+  const resolvedPlaceholder = placeholder ?? getPlaceholderFromChildren(children);
   const handleChange = (val: string) => {
     onChange?.(val);
     onValueChange?.(val);
@@ -20,11 +53,16 @@ export const Select: React.FC<SelectProps> = ({ value, onChange, onValueChange, 
     <select
       value={value}
       onChange={(e) => handleChange(e.target.value)}
-      className={`block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${className}`}
+      className={cn(
+        'theme-control block w-full rounded-md px-3 py-2 shadow-sm',
+        'focus:border-ring focus:ring-ring',
+        className
+      )}
+      {...props}
     >
-      {placeholder && <option value="">{placeholder}</option>}
+      {resolvedPlaceholder && <option value="" className="bg-popover text-muted-foreground">{resolvedPlaceholder}</option>}
       {options?.map((option) => (
-        <option key={option.value} value={option.value} disabled={option.disabled}>
+        <option key={option.value} value={option.value} disabled={option.disabled} className="bg-popover text-popover-foreground">
           {option.label}{option.disabled ? ' (Not Available)' : ''}
         </option>
       )) || []}
@@ -33,7 +71,11 @@ export const Select: React.FC<SelectProps> = ({ value, onChange, onValueChange, 
   );
 };
 
-export const SelectContent: React.FC<{ children: React.ReactNode }> = ({ children }) => <>{children}</>;
-export const SelectItem: React.FC<{ value: string; children: React.ReactNode }> = ({ value, children }) => <option value={value}>{children}</option>;
-export const SelectTrigger: React.FC<{ children: React.ReactNode }> = ({ children }) => <>{children}</>;
-export const SelectValue: React.FC<{ placeholder?: string }> = ({ placeholder }) => <span>{placeholder}</span>;
+export const SelectContent: React.FC<{ children: React.ReactNode; className?: string; position?: string }> = ({ children }) => <>{children}</>;
+export const SelectItem: React.FC<React.OptionHTMLAttributes<HTMLOptionElement>> = ({ value, children, className, ...props }) => (
+  <option value={value} className={cn('bg-popover text-popover-foreground', className)} {...props}>
+    {children}
+  </option>
+);
+export const SelectTrigger: React.FC<{ children: React.ReactNode; className?: string }> = () => null;
+export const SelectValue: React.FC<{ placeholder?: string }> = () => null;

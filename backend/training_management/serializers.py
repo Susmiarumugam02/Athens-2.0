@@ -221,6 +221,10 @@ class UserTrainingSerializer(serializers.ModelSerializer):
     """Lightweight serializer for user-facing assigned training view."""
     my_attendance = serializers.SerializerMethodField()
     has_active_qr = serializers.SerializerMethodField()
+    qr_enabled = serializers.SerializerMethodField()
+    attendance_marked = serializers.SerializerMethodField()
+    display_status = serializers.SerializerMethodField()
+    instructions = serializers.CharField(source='description', read_only=True)
 
     class Meta:
         model = Training
@@ -228,20 +232,47 @@ class UserTrainingSerializer(serializers.ModelSerializer):
             'id', 'training_type', 'mode', 'title', 'trainer',
             'training_date', 'training_time', 'location', 'duration_hours',
             'description', 'status',
-            'my_attendance', 'has_active_qr',
+            'instructions', 'my_attendance', 'has_active_qr', 'qr_enabled',
+            'attendance_marked', 'display_status',
         ]
 
     def get_has_active_qr(self, obj):
-        from django.utils import timezone
-        return obj.qr_sessions.filter(is_active=True, expires_at__gt=timezone.now()).exists()
+        session = obj.qr_sessions.filter(is_active=True).order_by('-created_at').first()
+        return bool(session and session.is_valid)
 
-    def get_my_attendance(self, obj):
+    def get_qr_enabled(self, obj):
+        return self.get_has_active_qr(obj)
+
+    def get_attendance_marked(self, obj):
+        att = self._attendance_for_request_user(obj)
+        return bool(att and att.attendance_status in ('present', 'completed'))
+
+    def get_display_status(self, obj):
+        att = self._attendance_for_request_user(obj)
+        if att and att.attendance_status in ('present', 'completed'):
+            return 'completed'
+        if obj.status == Training.STATUS_CANCELLED:
+            return 'expired'
+        if obj.status == Training.STATUS_COMPLETED:
+            return 'completed'
+        return 'pending'
+
+    def _attendance_for_request_user(self, obj):
         request = self.context.get('request')
         if not request:
             return None
-        att = obj.attendances.filter(user=request.user).first()
+        return obj.attendances.filter(user=request.user).first()
+
+    def get_my_attendance(self, obj):
+        att = self._attendance_for_request_user(obj)
         if not att:
-            return None
+            return {
+                'attendance_status': 'pending',
+                'attendance_method': None,
+                'verified_by': None,
+                'completed_at': None,
+                'marked_at': None,
+            }
         return {
             'id': att.id,
             'attendance_status': att.attendance_status,

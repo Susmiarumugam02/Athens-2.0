@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, message, Modal, Tag, Popconfirm } from 'antd';
 import { PlusOutlined, EyeOutlined, EditOutlined, DeleteOutlined, FileTextOutlined } from '@ant-design/icons';
-import { ColumnsType } from 'antd/es/table';
+import type { ColumnsType } from 'antd/es/table';
 import { getESGPolicies, deleteESGPolicy } from '../services/esgAPI';
 import { ESGPolicy } from '../types';
 import ESGPolicyForm from './ESGPolicyForm';

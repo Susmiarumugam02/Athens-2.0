@@ -22,13 +22,21 @@ def _gen_password(length=12):
     return ''.join(random.choices(string.ascii_letters + string.digits + '!@#$%', k=length))
 
 
-def _is_valid_phone(value):
-    import re
+def _normalize_phone(value):
     if not value:
-        return False
+        return ''
     clean = re.sub(r'[^0-9]', '', str(value))
-    # Accept 10-digit local or 11/12-digit with country code (e.g. +91XXXXXXXXXX)
-    return bool(re.fullmatch(r'\d{10,12}', clean))
+    if clean.startswith('0091') and len(clean) == 14:
+        clean = clean[4:]
+    elif clean.startswith('91') and len(clean) == 12:
+        clean = clean[2:]
+    elif clean.startswith('0') and len(clean) == 11:
+        clean = clean[1:]
+    return clean if re.fullmatch(r'[6-9]\d{9}', clean) else ''
+
+
+def _is_valid_phone(value):
+    return bool(_normalize_phone(value))
 
 
 def _workflow_state(u):
@@ -174,9 +182,8 @@ def users_list_create(request):
     except ValidationError:
         return Response({'error': 'Enter a valid email address'}, status=400)
 
-    import re
-    mobile_clean = re.sub(r'[^0-9]', '', mobile)
-    if not _is_valid_phone(mobile_clean):
+    mobile_clean = _normalize_phone(mobile)
+    if not mobile_clean:
         return Response({'error': 'Enter a valid 10-digit mobile number'}, status=400)
 
     if not username:
@@ -578,10 +585,12 @@ def complete_profile(request):
         missing.extend([label for label, value in required_uploads.items() if not value])
         if missing:
             return Response({'error': f"Missing required fields: {', '.join(missing[:6])}"}, status=400)
-    if phone and not _is_valid_phone(phone):
+    phone_clean = _normalize_phone(phone)
+    if phone and not phone_clean:
         return Response({'error': 'Enter a valid mobile number.'}, status=400)
     emergency_contact = (d.get('emergency_contact') or '').strip()
-    if emergency_contact and not _is_valid_phone(emergency_contact):
+    emergency_contact_clean = _normalize_phone(emergency_contact)
+    if emergency_contact and not emergency_contact_clean:
         return Response({'error': 'Emergency Contact Number is invalid.'}, status=400)
     if personal_email:
         try:
@@ -614,8 +623,8 @@ def complete_profile(request):
     user.blood_group = (d.get('blood_group') or '').strip()
 
     # Section 2 — Contact
-    user.phone_number = phone
-    user.emergency_contact = (d.get('emergency_contact') or '').strip()
+    user.phone_number = phone_clean
+    user.emergency_contact = emergency_contact_clean
     user.address = (d.get('address') or '').strip()
 
     # Section 3 — Employment

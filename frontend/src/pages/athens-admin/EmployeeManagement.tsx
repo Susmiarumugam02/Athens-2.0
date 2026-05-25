@@ -6,8 +6,10 @@ import { Badge } from '../../components/ui/Badge'
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
 import { Eye, Edit, Trash2, Plus, X } from 'lucide-react'
 import employeeAPI, { type Employee, type EmployeeStats } from '../../services/employeeAPI'
+import { useAuthStore } from '../../store/authStore'
 
 const EmployeeManagement: React.FC = () => {
+  const userId = useAuthStore((state) => state.user?.id)
   const [employees, setEmployees] = useState<Employee[]>([])
   const [stats, setStats] = useState<EmployeeStats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -22,6 +24,8 @@ const EmployeeManagement: React.FC = () => {
     try {
       setLoading(true)
       setError(null)
+      setEmployees([])
+      setStats(null)
       
       const [employeesResponse, statsResponse] = await Promise.all([
         employeeAPI.getEmployees({
@@ -42,7 +46,7 @@ const EmployeeManagement: React.FC = () => {
 
   useEffect(() => {
     fetchEmployees()
-  }, [searchTerm, statusFilter])
+  }, [searchTerm, statusFilter, userId])
 
   const handleSearch = (value: string) => {
     setSearchTerm(value)

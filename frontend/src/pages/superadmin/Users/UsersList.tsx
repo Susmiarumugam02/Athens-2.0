@@ -11,6 +11,15 @@ import { ConfirmActionDialog } from '@/components/superadmin/ConfirmActionDialog
 import { toast } from '@/lib/toast';
 import { DataTableShell, TableToolbar, TableEmptyState } from '@/components/table';
 
+const getActionErrorMessage = (err: unknown) => {
+  if (!err || typeof err !== 'object') {
+    return 'Action failed';
+  }
+
+  const response = (err as { response?: { data?: { detail?: unknown } } }).response;
+  return typeof response?.data?.detail === 'string' ? response.data.detail : 'Action failed';
+};
+
 type ConfirmState = {
   open: boolean;
   title: string;
@@ -45,7 +54,7 @@ export default function UsersList() {
         page_size: 100,
       });
       setUsers(Array.isArray(response.data) ? response.data : response.data.results || []);
-    } catch (err) {
+    } catch {
       setError('Failed to load users');
       setUsers([]);
     } finally {
@@ -108,8 +117,8 @@ export default function UsersList() {
     try {
       await confirm.action();
       setConfirm(null);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.detail ?? 'Action failed');
+    } catch (err: unknown) {
+      toast.error(getActionErrorMessage(err));
     } finally {
       setConfirmLoading(false);
     }

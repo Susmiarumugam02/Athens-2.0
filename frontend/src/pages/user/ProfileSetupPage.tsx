@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { apiClient } from '../../lib/api'
+import { sanitizePhoneInput, handlePhoneKeyDown } from '../../lib/phoneUtils'
 import toast from 'react-hot-toast'
 import {
   AlertCircle, Briefcase, CheckCircle, ChevronLeft, ChevronRight,
@@ -77,7 +78,7 @@ const validInputCls = 'border-gray-300 focus:border-blue-500 focus:ring-blue-100
 const invalidInputCls = 'border-red-500 focus:border-red-500 focus:ring-red-100 dark:border-red-500'
 const inputCls = `${baseInputCls} ${validInputCls}`
 
-const phonePattern = /^\+?[0-9][0-9\s-]{8,14}$/
+const phonePattern = /^[6-9]\d{9}$/
 const aadhaarPattern = /^\d{12}$/
 const panPattern = /^[A-Z]{5}[0-9]{4}[A-Z]$/
 
@@ -99,6 +100,14 @@ const submitProfile = async (fd: FormData) => {
   }
 }
 
+const normalizeMobileNumber = (value: string) => {
+  const digits = value.replace(/\D+/g, '')
+  if (digits.startsWith('0091') && digits.length === 14) return digits.slice(4)
+  if (digits.startsWith('91') && digits.length === 12) return digits.slice(2)
+  if (digits.startsWith('0') && digits.length === 11) return digits.slice(1)
+  return digits.slice(0, 10)
+}
+
 // ── Field components defined OUTSIDE ProfileSetupPage to prevent remounting on every render ──
 
 interface FieldProps {
@@ -111,9 +120,11 @@ interface FieldProps {
   value: string
   error?: string
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void
+  onPaste?: (e: React.ClipboardEvent<HTMLInputElement>) => void
 }
 
-const Field = React.memo(({ name, label, type = 'text', options, textarea = false, required = true, value, error, onChange }: FieldProps) => {
+const Field = React.memo(({ name, label, type = 'text', options, textarea = false, required = true, value, error, onChange, onKeyDown, onPaste }: FieldProps) => {
   const inputClassName = error ? `${baseInputCls} ${invalidInputCls}` : inputCls
   return (
     <label className="block" data-field={name}>
@@ -128,7 +139,7 @@ const Field = React.memo(({ name, label, type = 'text', options, textarea = fals
       ) : textarea ? (
         <textarea value={value} onChange={onChange} rows={3} className={inputClassName} aria-invalid={Boolean(error)} />
       ) : (
-        <input type={type} value={value} onChange={onChange} className={inputClassName} aria-invalid={Boolean(error)} />
+        <input type={type} value={value} onChange={onChange} onKeyDown={onKeyDown} onPaste={onPaste} className={inputClassName} aria-invalid={Boolean(error)} />
       )}
       {error && <span className="mt-1 flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3 w-3" />{error}</span>}
     </label>
@@ -259,11 +270,14 @@ const ProfileSetupPage: React.FC = () => {
     if (form.personal_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.personal_email)) {
       next.personal_email = 'Personal Email is invalid'
     }
-    if (form.phone && !phonePattern.test(form.phone)) {
-      next.phone = 'Mobile Number is invalid'
+    const phone = normalizeMobileNumber(form.phone)
+    const emergencyContact = normalizeMobileNumber(form.emergency_contact)
+
+    if (form.phone && !phonePattern.test(phone)) {
+      next.phone = 'Enter a valid 10-digit mobile number'
     }
-    if (form.emergency_contact && !phonePattern.test(form.emergency_contact)) {
-      next.emergency_contact = 'Emergency Contact Number is invalid'
+    if (form.emergency_contact && !phonePattern.test(emergencyContact)) {
+      next.emergency_contact = 'Enter a valid 10-digit emergency contact number'
     }
     if (form.aadhaar_number && !aadhaarPattern.test(aadhaar)) {
       next.aadhaar_number = 'Aadhaar Number must be 12 digits'
@@ -276,7 +290,13 @@ const ProfileSetupPage: React.FC = () => {
   }
 
   const setValue = React.useCallback((key: string) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const value = key === 'pan_number' ? event.target.value.toUpperCase() : event.target.value
+    const phoneFields = new Set(['phone', 'alternate_phone', 'emergency_contact'])
+    const rawValue = event.target.value
+    const value = key === 'pan_number'
+      ? rawValue.toUpperCase()
+      : phoneFields.has(key)
+        ? sanitizePhoneInput(normalizeMobileNumber(rawValue), 10)
+        : rawValue
     setForm(prev => ({ ...prev, [key]: value }))
     setSubmitState('idle')
     setErrors(prev => {
@@ -322,7 +342,12 @@ const ProfileSetupPage: React.FC = () => {
     if (!draft) setSubmitState('submitting')
     try {
       const fd = new FormData()
-      Object.entries(form).forEach(([key, value]) => fd.append(key, value))
+      Object.entries(form).forEach(([key, value]) => {
+        const nextValue = ['phone', 'alternate_phone', 'emergency_contact'].includes(key)
+          ? normalizeMobileNumber(value)
+          : value
+        fd.append(key, nextValue)
+      })
       fd.append('draft', draft ? 'true' : 'false')
       fd.append('profile_completed', draft ? 'false' : 'true')
       fd.append('approval_status', draft ? 'pending' : 'waiting_admin_approval')
@@ -441,11 +466,11 @@ return (
 
               {step === 1 && (
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Field name="phone" label="Mobile Number" type="tel" value={form.phone} error={errors.phone} onChange={setValue('phone')} />
-                  <Field name="alternate_phone" label="Alternate Number" type="tel" required={false} value={form.alternate_phone} error={errors.alternate_phone} onChange={setValue('alternate_phone')} />
+                  <Field name="phone" label="Mobile Number" type="tel" value={form.phone} error={errors.phone} onChange={setValue('phone')} onKeyDown={handlePhoneKeyDown} />
+                  <Field name="alternate_phone" label="Alternate Number" type="tel" required={false} value={form.alternate_phone} error={errors.alternate_phone} onChange={setValue('alternate_phone')} onKeyDown={handlePhoneKeyDown} />
                   <Field name="personal_email" label="Personal Email" type="email" value={form.personal_email} error={errors.personal_email} onChange={setValue('personal_email')} />
                   <Field name="emergency_contact_name" label="Emergency Contact Name" value={form.emergency_contact_name} error={errors.emergency_contact_name} onChange={setValue('emergency_contact_name')} />
-                  <Field name="emergency_contact" label="Emergency Contact Number" type="tel" value={form.emergency_contact} error={errors.emergency_contact} onChange={setValue('emergency_contact')} />
+                  <Field name="emergency_contact" label="Emergency Contact Number" type="tel" value={form.emergency_contact} error={errors.emergency_contact} onChange={setValue('emergency_contact')} onKeyDown={handlePhoneKeyDown} />
                   <div className="md:col-span-2"><Field name="address" label="Address" textarea value={form.address} error={errors.address} onChange={setValue('address')} /></div>
                 </div>
               )}

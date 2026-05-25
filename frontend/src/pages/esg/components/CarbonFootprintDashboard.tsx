@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Statistic, Table, Button, Modal, Form, Input, Select, DatePicker, InputNumber } from 'antd';
 import { GlobalOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { ColumnsType } from 'antd/es/table';
+import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import PageLayout from '../../../components/ui/PageLayout';
 import { getCarbonFootprint, createCarbonFootprint, updateCarbonFootprint, deleteCarbonFootprint } from '../services/esgAPI';

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Users, Briefcase, TrendingUp, TrendingDown, Building, Award, X, Eye, Pencil, Trash2, CheckCircle, XCircle, Clock, Copy } from 'lucide-react'
+import { Plus, Search, Users, Briefcase, TrendingUp, TrendingDown, Award, X, Eye, Pencil, Trash2, CheckCircle, XCircle, Clock, Copy, AlertCircle } from 'lucide-react'
 import { apiClient } from '../../lib/api'
 import { sanitizePhoneInput, handlePhoneKeyDown, handlePhonePaste } from '../../lib/phoneUtils'
 import { profileManagementApi, type ManagedUser } from '../../services/profileManagementApi'
@@ -36,6 +36,29 @@ interface FormData {
   wage_type: string
   joining_date: string
   basic_structure: string
+}
+
+type ApiErrorPayload = {
+  code?: unknown
+  detail?: unknown
+  error?: unknown
+  message?: unknown
+  details?: unknown
+}
+
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === 'object' ? value as Record<string, unknown> : null
+
+const getErrorMessage = (data: ApiErrorPayload | undefined): string => {
+  const error = asRecord(data?.error)
+  const raw = error?.message || data?.detail || data?.error || data?.message
+  return typeof raw === 'string' ? raw : ''
+}
+
+const isStaleSessionError = (data: ApiErrorPayload | undefined): boolean => {
+  const error = asRecord(data?.error)
+  const code = String(data?.code || error?.code || '').toLowerCase()
+  return code === 'user_not_found' || getErrorMessage(data).toLowerCase() === 'user not found'
 }
 
 const EMPTY_FORM: FormData = {
@@ -77,6 +100,25 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, subtitle, icon, trend, 
     <div className="text-2xl font-bold text-foreground mb-0.5">{value}</div>
     <div className="text-xs font-medium text-foreground mb-0.5">{title}</div>
     {subtitle && <div className="text-xs text-muted-foreground">{subtitle}</div>}
+  </div>
+)
+
+const EmployeeErrorState: React.FC<{ message: string; onRetry: () => void }> = ({ message, onRetry }) => (
+  <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+    <div className="rounded-full bg-red-50 p-3 text-red-600">
+      <AlertCircle className="h-6 w-6" />
+    </div>
+    <div>
+      <h3 className="text-sm font-semibold text-foreground">Could not load employees</h3>
+      <p className="mt-1 text-sm text-muted-foreground">{message}</p>
+    </div>
+    <button
+      type="button"
+      onClick={onRetry}
+      className="px-3 py-2 text-sm font-medium text-primary hover:text-primary/80"
+    >
+      Retry
+    </button>
   </div>
 )
 
@@ -133,7 +175,12 @@ interface AddEmployeeModalProps {
   onSaved: () => void
 }
 
-interface CreatedCreds { email: string; username: string; password: string }
+interface CreatedCreds {
+  email: string
+  username: string
+  password?: string | null
+  account_created?: boolean
+}
 
 const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onSaved }) => {
   const [form, setForm] = useState<FormData>({ ...EMPTY_FORM })
@@ -154,6 +201,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onSaved })
       setSaving(false)
       return
     }
+    const loadingToast = toast.loading('Creating employee account...')
     try {
       const res = await apiClient.post('/api/workforce/employees/', {
         employee_code: form.employee_code,
@@ -172,18 +220,45 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onSaved })
       })
       const login = res.data?.login
       if (login) {
-        setCreatedCreds({ email: login.email, username: login.username, password: login.password })
+        setCreatedCreds({
+          email: login.email,
+          username: login.username,
+          password: login.password,
+          account_created: login.account_created,
+        })
       }
+      toast.success('Employee created successfully.', { id: loadingToast })
       onSaved()
-    } catch (err: any) {
-      const data = err?.response?.data
-      if (err?.response?.status === 403) {
-        setError(data?.detail || data?.error || 'You do not have permission to add employees.')
+    } catch (err: unknown) {
+      const response = asRecord(err)?.response
+      const responseRecord = asRecord(response)
+      const data = responseRecord?.data as ApiErrorPayload | undefined
+      const errorRecord = asRecord(data?.error)
+      console.error('Employee creation failed:', data || err)
+      const code = typeof data?.code === 'string'
+        ? data.code
+        : typeof errorRecord?.code === 'string' ? errorRecord.code : ''
+      const apiMessage = getErrorMessage(data)
+      const apiDetails = data?.details
+      const formattedDetails = apiDetails && typeof apiDetails === 'object'
+        ? Object.entries(apiDetails).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : String(v)}`).join(' | ')
+        : ''
+      if (responseRecord?.status === 403) {
+        setError(apiMessage || 'You do not have permission to add employees.')
+      } else if (code === 'VALIDATION_FAILED') {
+        setError(formattedDetails || apiMessage || 'Employee validation failed.')
+      } else if (code === 'EMAIL_REQUIRED' || apiMessage.toLowerCase().includes('email is required')) {
+        setError('Email is required to create the employee login account.')
+      } else if (code === 'EMAIL_EXISTS_OTHER_TENANT' || code === 'EMAIL_RESERVED' || code === 'EMAIL_ALREADY_LINKED' || apiMessage.toLowerCase().includes('email')) {
+        setError(apiMessage || 'This email cannot be used for a new employee in your organization.')
+      } else if (code === 'CODE_EXISTS' || apiMessage.toLowerCase().includes('employee code')) {
+        setError('Employee code already exists in your organization.')
       } else if (data && typeof data === 'object' && !data.detail && !data.error && !data.message) {
         setError(Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' | '))
       } else {
-        setError(data?.error || data?.detail || data?.message || 'Failed to create employee.')
+        setError(apiMessage || formattedDetails || 'Employee account could not be created. Check the details and try again.')
       }
+      toast.error('Employee account could not be created.', { id: loadingToast })
     } finally {
       setSaving(false)
     }
@@ -219,7 +294,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onSaved })
         `Name     : ${form.full_name}`,
         `Email    : ${createdCreds.email}`,
         `Username : ${createdCreds.username}`,
-        `Password : ${createdCreds.password}`,
+        `Password : ${createdCreds.password || 'Existing account linked - password unchanged'}`,
         '',
         'IMPORTANT: Change password on first login.',
         `Generated : ${new Date().toLocaleString()}`,
@@ -244,7 +319,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onSaved })
           <div className="bg-green-600 px-6 py-4 flex items-center gap-3">
             <CheckCircle className="h-6 w-6 text-white" />
             <div>
-              <h2 className="text-base font-bold text-white">User Created Successfully</h2>
+              <h2 className="text-base font-bold text-white">Employee Created Successfully</h2>
               <p className="text-xs text-green-100">{form.full_name} &bull; {form.employee_code}</p>
             </div>
           </div>
@@ -254,7 +329,9 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onSaved })
             <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg">
               <span className="text-amber-500 text-base mt-0.5">&#9888;</span>
               <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
-                Password is shown only once. Save or download it now before closing.
+                {createdCreds.password
+                  ? 'Password is shown only once. Save or download it now before closing.'
+                  : 'An existing user account was linked. The password was not changed.'}
               </p>
             </div>
 
@@ -262,7 +339,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onSaved })
             {([
               ['Email',    createdCreds.email],
               ['Username', createdCreds.username],
-              ['Password', createdCreds.password],
+              ['Password', createdCreds.password || 'Existing account linked'],
             ] as [string, string][]).map(([label, value]) => (
               <div key={label}>
                 <p className="text-xs font-medium text-muted-foreground mb-1">{label}</p>
@@ -293,10 +370,10 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onSaved })
               <button
                 type="button"
                 onClick={() => {
-                  copyField(
-                    `Email: ${createdCreds.email}\nUsername: ${createdCreds.username}\nPassword: ${createdCreds.password}`,
-                    'All credentials'
-                  )
+                  const credentialsText = createdCreds.password
+                    ? `Email: ${createdCreds.email}\nUsername: ${createdCreds.username}\nPassword: ${createdCreds.password}`
+                    : `Email: ${createdCreds.email}\nUsername: ${createdCreds.username}\nExisting account linked`
+                  copyField(credentialsText, 'All credentials')
                 }}
                 className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm hover:bg-accent transition-colors"
               >
@@ -388,7 +465,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onSaved })
             </button>
             <button type="submit" disabled={saving}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 disabled:opacity-50">
-              {saving ? 'Creating...' : 'Add Employee'}
+              {saving ? 'Creating employee account...' : 'Add Employee'}
             </button>
           </div>
         </form>
@@ -439,14 +516,15 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({ emp, onClose, onU
       const res = await apiClient.patch(`/api/workforce/employees/${emp.id}/`, form)
       const updated: Employee = res.data?.data ?? res.data
       onUpdated(updated)
-    } catch (err: any) {
-      const data = err?.response?.data
-      if (err?.response?.status === 403) {
+    } catch (err: unknown) {
+      const responseRecord = asRecord(asRecord(err)?.response)
+      const data = responseRecord?.data as ApiErrorPayload | undefined
+      if (responseRecord?.status === 403) {
         setError('You do not have permission to edit employees.')
       } else if (data && typeof data === 'object' && !data.detail && !data.error) {
         setError(Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' | '))
       } else {
-        setError(data?.detail || data?.error || 'Failed to update employee.')
+        setError(getErrorMessage(data) || 'Failed to update employee.')
       }
     } finally {
       setSaving(false)
@@ -539,6 +617,7 @@ export default function EmployeeManagementPage() {
 
   const fetchEmployees = (signal?: AbortSignal) => {
     setLoading(true)
+    setError(null)
     Promise.all([
       apiClient.get('/api/workforce/employees/', { signal }),
       profileManagementApi.listPendingApprovals().catch(() => ({ data: [] })),
@@ -554,14 +633,17 @@ export default function EmployeeManagementPage() {
         if (err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') return
         const data = err?.response?.data
         const status = err?.response?.status
-        if (status === 403) {
-          setError(data?.detail || data?.error || 'You do not have permission to access Workforce.')
+        if (err?.code === 'NO_VALID_AUTH_TOKEN' || status === 401 || isStaleSessionError(data)) {
+          setError('Your session has expired. Please login again.')
+          toast.error('Please login again to access Employee Management.')
+        } else if (status === 403) {
+          setError('You do not have permission to access Employee Management.')
         } else if (status === 400) {
-          setError(data?.error || data?.detail || 'Invalid request. Please refresh and try again.')
+          setError('Invalid employee request. Please refresh and try again.')
         } else if (!status) {
           setError('Cannot connect to server. Please ensure the backend is running.')
         } else {
-          setError(data?.detail || data?.error || 'Failed to load employees.')
+          setError('Failed to load employees. Please try again.')
         }
       })
       .finally(() => setLoading(false))
@@ -588,8 +670,10 @@ export default function EmployeeManagementPage() {
     try {
       await apiClient.delete(`/api/workforce/employees/${id}/`)
       setEmployees(prev => prev.filter(e => e.id !== id))
-    } catch (err: any) {
-      alert(err?.response?.data?.detail || err?.response?.data?.error || 'Failed to delete.')
+    } catch (err: unknown) {
+      const responseRecord = asRecord(asRecord(err)?.response)
+      const data = responseRecord?.data as ApiErrorPayload | undefined
+      alert(getErrorMessage(data) || 'Failed to delete.')
     } finally { setDeletingId(null) }
   }
 
@@ -734,7 +818,7 @@ export default function EmployeeManagementPage() {
           {loading ? (
             <div className="text-center py-12 text-muted-foreground">Loading employees...</div>
           ) : error ? (
-            <div className="text-center py-12 text-red-500">{error}</div>
+            <EmployeeErrorState message={error} onRetry={() => fetchEmployees()} />
           ) : filtered.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               {employees.length === 0 ? 'No employees yet. Click "Add Employee" to get started.' : 'No employees match your search.'}

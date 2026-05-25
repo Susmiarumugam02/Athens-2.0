@@ -29,7 +29,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return ok(data=serializer.data, request=request)
     
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        data = request.data.copy()
+        if data.get('name') and not data.get('contact_person'):
+            data['contact_person'] = data.get('name')
+        if data.get('contact_person') and not data.get('name'):
+            data['name'] = data.get('contact_person')
+        serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
@@ -73,7 +78,12 @@ class DepartmentViewSet(viewsets.ModelViewSet):
         return ok(data=serializer.data, request=request)
     
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        data = request.data.copy()
+        if data.get('due_date') and not data.get('followup_date'):
+            data['followup_date'] = data.get('due_date')
+        if data.get('followup_date') and not data.get('due_date'):
+            data['due_date'] = data.get('followup_date')
+        serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
@@ -518,7 +528,13 @@ class FollowupViewSet(viewsets.ModelViewSet):
         user = self.request.user
         tenant, _ = get_current_tenant(user)
         tenant_id = tenant.id if tenant else (getattr(user, 'company_id', None) or user.id)
-        serializer.save(athens_tenant_id=tenant_id, created_by=user)
+        followup = serializer.save(athens_tenant_id=tenant_id, created_by=user, assigned_to=serializer.validated_data.get('assigned_to') or user)
+        FollowupHistory.objects.create(
+            followup=followup,
+            action='created',
+            notes='Follow-up created',
+            created_by=user
+        )
 
     @action(detail=True, methods=['post'])
     def complete(self, request, pk=None):
@@ -526,6 +542,7 @@ class FollowupViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             followup.status = 'completed'
             followup.completed_at = timezone.now()
+            followup.completion_notes = request.data.get('completion_notes', followup.completion_notes)
             followup.save()
             FollowupHistory.objects.create(
                 followup=followup,
@@ -587,6 +604,21 @@ class FollowupViewSet(viewsets.ModelViewSet):
         ).order_by('followup_date')
         
         return ok(data=FollowupSerializer(upcoming, many=True).data, request=request)
+
+    @action(detail=False, methods=['get'])
+    def dashboard(self, request):
+        queryset = self.get_queryset()
+        today = timezone.now().date()
+        active_statuses = ['open', 'pending', 'scheduled', 'in_progress', 'rescheduled']
+        data = {
+            'total': queryset.count(),
+            'active': queryset.filter(status__in=active_statuses).count(),
+            'overdue': queryset.filter(followup_date__lt=today).exclude(status__in=['completed', 'cancelled']).count(),
+            'due_today': queryset.filter(followup_date=today).exclude(status__in=['completed', 'cancelled']).count(),
+            'completed': queryset.filter(status='completed').count(),
+            'escalated': queryset.filter(status='escalated').count(),
+        }
+        return ok(data=data, request=request)
     
     @action(detail=True, methods=['get'])
     def history(self, request, pk=None):
@@ -701,6 +733,54 @@ class MachineryViewSet(viewsets.ModelViewSet):
         tenant_id = tenant.id if tenant else (getattr(user, 'company_id', None) or user.id)
         serializer.save(athens_tenant_id=tenant_id)
 
+
+class ResourceAllocationViewSet(viewsets.ModelViewSet):
+    serializer_class = ResourceAllocationSerializer
+    permission_classes = [IsAuthenticated, ErgonServiceEnabled]
+
+    def list(self, request, *args, **kwargs):
+        return ok(data=self.get_serializer(self.filter_queryset(self.get_queryset()), many=True).data, request=request)
+
+    def retrieve(self, request, *args, **kwargs):
+        return ok(data=self.get_serializer(self.get_object()).data, request=request)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return ok(data=serializer.data, request=request, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return ok(data=serializer.data, request=request)
+
+    def get_queryset(self):
+        user = self.request.user
+        tenant, _ = get_current_tenant(user)
+        if user.user_type == 'superadmin':
+            qs = ResourceAllocation.objects.all()
+        elif tenant:
+            qs = ResourceAllocation.objects.filter(athens_tenant_id=tenant.id)
+        else:
+            qs = ResourceAllocation.objects.filter(athens_tenant_id=getattr(user, 'company_id', None) or user.id)
+        resource_type = self.request.query_params.get('resource_type', '').strip()
+        if resource_type and resource_type != 'all':
+            qs = qs.filter(resource_type=resource_type)
+        status_f = self.request.query_params.get('status', '').strip()
+        if status_f and status_f != 'all':
+            qs = qs.filter(status=status_f)
+        return qs.order_by('-created_at')
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        tenant, _ = get_current_tenant(user)
+        tenant_id = tenant.id if tenant else (getattr(user, 'company_id', None) or user.id)
+        serializer.save(athens_tenant_id=tenant_id)
+
 class AdvanceViewSet(viewsets.ModelViewSet):
     serializer_class = AdvanceSerializer
     permission_classes = [IsAuthenticated, ErgonServiceEnabled]
@@ -766,27 +846,41 @@ class AdvanceViewSet(viewsets.ModelViewSet):
         user = self.request.user
         tenant, _ = get_current_tenant(user)
         tenant_id = tenant.id if tenant else (getattr(user, 'company_id', None) or user.id)
-        serializer.save(athens_tenant_id=tenant_id, employee=user)
+        advance = serializer.save(athens_tenant_id=tenant_id, employee=user, created_by=user)
+        AdvanceApprovalLog.objects.create(
+            advance=advance,
+            action='submitted',
+            comments='Advance request submitted. Notification queued for reporting manager and finance team.',
+            performed_by=user,
+        )
 
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
         advance = self.get_object()
-        if advance.status != 'pending':
+        if advance.status not in ['pending', 'submitted', 'under_review']:
             return fail('INVALID_STATUS', f'Cannot approve a {advance.status} request.',
                         status=status.HTTP_400_BAD_REQUEST, request=request)
         if advance.employee == request.user:
             return fail('SELF_APPROVAL', 'You cannot approve your own request.',
                         status=status.HTTP_403_FORBIDDEN, request=request)
+        approved_amount = request.data.get('approved_amount')
         advance.status = 'approved'
         advance.approved_by = request.user
         advance.approved_date = timezone.localdate()
+        advance.approved_amount = approved_amount or advance.approved_amount or advance.amount
         advance.save()
+        AdvanceApprovalLog.objects.create(
+            advance=advance,
+            action='approved',
+            comments=request.data.get('comments', 'Advance approved. Notification queued for finance payment processing.'),
+            performed_by=request.user,
+        )
         return ok(data=AdvanceSerializer(advance).data, request=request)
 
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
         advance = self.get_object()
-        if advance.status != 'pending':
+        if advance.status not in ['pending', 'submitted', 'under_review', 'approved']:
             return fail('INVALID_STATUS', f'Cannot reject a {advance.status} request.',
                         status=status.HTTP_400_BAD_REQUEST, request=request)
         if advance.employee == request.user:
@@ -800,6 +894,39 @@ class AdvanceViewSet(viewsets.ModelViewSet):
         advance.approved_by = request.user
         advance.rejection_reason = reason
         advance.save()
+        AdvanceApprovalLog.objects.create(
+            advance=advance,
+            action='rejected',
+            comments=reason,
+            performed_by=request.user,
+        )
+        return ok(data=AdvanceSerializer(advance).data, request=request)
+
+    @action(detail=True, methods=['post'])
+    def mark_paid(self, request, pk=None):
+        advance = self.get_object()
+        if advance.status not in ['approved', 'partial_paid']:
+            return fail('INVALID_STATUS', f'Cannot pay a {advance.status} request.',
+                        status=status.HTTP_400_BAD_REQUEST, request=request)
+        advance.status = 'paid'
+        advance.save()
+        AdvanceApprovalLog.objects.create(
+            advance=advance,
+            action='paid',
+            comments=request.data.get('comments', 'Advance payment processed.'),
+            performed_by=request.user,
+        )
+        return ok(data=AdvanceSerializer(advance).data, request=request)
+
+    @action(detail=True, methods=['post'])
+    def escalate(self, request, pk=None):
+        advance = self.get_object()
+        AdvanceApprovalLog.objects.create(
+            advance=advance,
+            action='escalated',
+            comments=request.data.get('comments', 'Advance request escalated for admin approval.'),
+            performed_by=request.user,
+        )
         return ok(data=AdvanceSerializer(advance).data, request=request)
 
 
@@ -867,26 +994,41 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         user = self.request.user
         tenant, _ = get_current_tenant(user)
         tenant_id = tenant.id if tenant else (getattr(user, 'company_id', None) or user.id)
-        serializer.save(athens_tenant_id=tenant_id, employee=user)
+        expense = serializer.save(athens_tenant_id=tenant_id, employee=user, created_by=user)
+        ExpenseApprovalLog.objects.create(
+            expense=expense,
+            action='submitted',
+            comments='Expense submitted. Notification queued for reporting manager and finance team.',
+            performed_by=user,
+        )
 
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
         expense = self.get_object()
-        if expense.status != 'pending':
+        if expense.status not in ['pending', 'submitted', 'under_review']:
             return fail('INVALID_STATUS', f'Cannot approve a {expense.status} request.',
                         status=status.HTTP_400_BAD_REQUEST, request=request)
         if expense.employee == request.user:
             return fail('SELF_APPROVAL', 'You cannot approve your own request.',
                         status=status.HTTP_403_FORBIDDEN, request=request)
         expense.status = 'approved'
+        expense.approval_status = 'approved'
+        expense.reimbursement_status = 'pending'
         expense.approved_by = request.user
+        expense.approved_at = timezone.now()
         expense.save()
+        ExpenseApprovalLog.objects.create(
+            expense=expense,
+            action='approved',
+            comments=request.data.get('comments', 'Expense approved. Notification queued for reimbursement processing.'),
+            performed_by=request.user,
+        )
         return ok(data=ExpenseSerializer(expense).data, request=request)
 
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
         expense = self.get_object()
-        if expense.status != 'pending':
+        if expense.status not in ['pending', 'submitted', 'under_review', 'approved']:
             return fail('INVALID_STATUS', f'Cannot reject a {expense.status} request.',
                         status=status.HTTP_400_BAD_REQUEST, request=request)
         if expense.employee == request.user:
@@ -897,9 +1039,46 @@ class ExpenseViewSet(viewsets.ModelViewSet):
             return fail('REASON_REQUIRED', 'Rejection reason is required.',
                         status=status.HTTP_400_BAD_REQUEST, request=request)
         expense.status = 'rejected'
+        expense.approval_status = 'rejected'
         expense.approved_by = request.user
+        expense.approved_at = timezone.now()
         expense.rejection_reason = reason
         expense.save()
+        ExpenseApprovalLog.objects.create(
+            expense=expense,
+            action='rejected',
+            comments=reason,
+            performed_by=request.user,
+        )
+        return ok(data=ExpenseSerializer(expense).data, request=request)
+
+    @action(detail=True, methods=['post'])
+    def reimburse(self, request, pk=None):
+        expense = self.get_object()
+        if expense.status not in ['approved', 'partial_reimbursed']:
+            return fail('INVALID_STATUS', f'Cannot reimburse a {expense.status} claim.',
+                        status=status.HTTP_400_BAD_REQUEST, request=request)
+        partial = bool(request.data.get('partial'))
+        expense.status = 'partial_reimbursed' if partial else 'reimbursed'
+        expense.reimbursement_status = 'partial_reimbursed' if partial else 'reimbursed'
+        expense.save()
+        ExpenseApprovalLog.objects.create(
+            expense=expense,
+            action=expense.reimbursement_status,
+            comments=request.data.get('comments', 'Reimbursement processed. Notification queued for employee.'),
+            performed_by=request.user,
+        )
+        return ok(data=ExpenseSerializer(expense).data, request=request)
+
+    @action(detail=True, methods=['post'])
+    def escalate(self, request, pk=None):
+        expense = self.get_object()
+        ExpenseApprovalLog.objects.create(
+            expense=expense,
+            action='escalated',
+            comments=request.data.get('comments', 'Expense claim escalated for admin approval.'),
+            performed_by=request.user,
+        )
         return ok(data=ExpenseSerializer(expense).data, request=request)
 
 class LedgerEntryViewSet(viewsets.ModelViewSet):
@@ -1129,8 +1308,11 @@ class DailyPlannerViewSet(viewsets.ModelViewSet):
         
         with transaction.atomic():
             daily_task.status = 'in_progress'
+            daily_task.execution_status = 'in_progress'
             daily_task.start_time = now
+            daily_task.timer_started_at = now
             daily_task.sla_end_time = now + timedelta(hours=sla_hours)
+            daily_task.sla_time = int(sla_hours * 3600)
             daily_task.save()
             
             DailyTaskHistory.objects.create(
@@ -1160,8 +1342,11 @@ class DailyPlannerViewSet(viewsets.ModelViewSet):
         
         with transaction.atomic():
             daily_task.status = 'on_break'
+            daily_task.execution_status = 'on_break'
             daily_task.pause_start_time = now
+            daily_task.timer_paused_at = now
             daily_task.active_seconds += int(active_time)
+            daily_task.actual_time = daily_task.active_seconds
             daily_task.save()
             
             DailyTaskHistory.objects.create(
@@ -1191,10 +1376,16 @@ class DailyPlannerViewSet(viewsets.ModelViewSet):
         
         with transaction.atomic():
             daily_task.status = 'in_progress'
+            daily_task.execution_status = 'in_progress'
             daily_task.pause_duration += int(pause_time)
+            daily_task.total_paused_duration = daily_task.pause_duration
             daily_task.start_time = now
-            daily_task.sla_end_time = now + timedelta(seconds=(daily_task.sla_end_time - daily_task.pause_start_time).total_seconds())
+            daily_task.timer_started_at = now
+            if daily_task.sla_end_time and daily_task.pause_start_time:
+                remaining_seconds = max(0, (daily_task.sla_end_time - daily_task.pause_start_time).total_seconds())
+                daily_task.sla_end_time = now + timedelta(seconds=remaining_seconds)
             daily_task.pause_start_time = None
+            daily_task.timer_paused_at = None
             daily_task.save()
             
             DailyTaskHistory.objects.create(
@@ -1223,11 +1414,14 @@ class DailyPlannerViewSet(viewsets.ModelViewSet):
         if daily_task.status == 'in_progress' and daily_task.start_time:
             active_time = (now - daily_task.start_time).total_seconds()
             daily_task.active_seconds += int(active_time)
+            daily_task.actual_time = daily_task.active_seconds
         
         with transaction.atomic():
             daily_task.status = 'completed'
+            daily_task.execution_status = 'completed'
             daily_task.progress = progress
             daily_task.completion_time = now
+            daily_task.execution_notes = request.data.get('notes', daily_task.execution_notes)
             daily_task.save()
             
             # Sync with main task
@@ -1259,7 +1453,10 @@ class DailyPlannerViewSet(viewsets.ModelViewSet):
         
         with transaction.atomic():
             daily_task.status = 'postponed'
+            daily_task.execution_status = 'postponed'
             daily_task.postponed_to_date = new_date
+            daily_task.rollover_reason = reason
+            daily_task.execution_notes = request.data.get('notes', daily_task.execution_notes)
             daily_task.save()
             
             # Create new entry for target date
@@ -1272,7 +1469,13 @@ class DailyPlannerViewSet(viewsets.ModelViewSet):
                 description=daily_task.description,
                 scheduled_date=new_date,
                 priority=daily_task.priority,
-                postponed_from_date=daily_task.scheduled_date
+                postponed_from_date=daily_task.scheduled_date,
+                is_rollover=True,
+                rollover_date=new_date,
+                rollover_reason=reason,
+                original_due_date=daily_task.original_due_date or daily_task.scheduled_date,
+                sla_time=daily_task.sla_time,
+                execution_notes=daily_task.execution_notes
             )
             
             DailyTaskHistory.objects.create(
@@ -1321,10 +1524,19 @@ class DailyPlannerViewSet(viewsets.ModelViewSet):
                         scheduled_date=today,
                         priority=task.priority,
                         rollover_source_date=yesterday,
-                        rollover_timestamp=timezone.now()
+                        rollover_timestamp=timezone.now(),
+                        is_rollover=True,
+                        rollover_date=today,
+                        rollover_reason='Auto rollover',
+                        original_due_date=task.original_due_date or task.scheduled_date,
+                        sla_time=task.sla_time
                     )
                     
                     task.status = 'rolled_over'
+                    task.execution_status = 'rolled_over'
+                    task.is_rollover = True
+                    task.rollover_date = today
+                    task.rollover_reason = 'Auto rollover'
                     task.save()
                     rolled_count += 1
         

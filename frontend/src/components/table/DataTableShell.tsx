@@ -1,6 +1,6 @@
-import { ReactNode } from 'react';
-import { Card } from '@/components/ui';
-import { Badge } from '@/components/ui';
+import type { ReactNode } from 'react';
+import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
 
 interface DataTableShellProps {
   title: string;
@@ -35,7 +35,7 @@ export function DataTableShell({
             {subtitle && <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">{subtitle}</p>}
           </div>
           {count !== undefined && (
-            <Badge variant="secondary" className="ml-2">
+            <Badge variant="default" className="ml-2">
               {count}
             </Badge>
           )}

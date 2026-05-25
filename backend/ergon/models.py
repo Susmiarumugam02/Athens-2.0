@@ -140,10 +140,13 @@ class TaskHistory(models.Model):
 # Contacts
 class Contact(models.Model):
     athens_tenant_id = models.IntegerField(db_index=True)
+    name = models.CharField(max_length=255, blank=True)
     company = models.CharField(max_length=255, blank=True)
     contact_person = models.CharField(max_length=255)
     phone = models.CharField(max_length=50, blank=True)
     email = models.EmailField(blank=True)
+    designation = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=50, default='active')
     project_name = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -153,14 +156,32 @@ class Contact(models.Model):
 # Follow-ups
 class Followup(models.Model):
     FOLLOWUP_TYPE_CHOICES = [
-        ('standalone', 'Standalone'),
-        ('task', 'Task-linked')
+        ('standalone', 'Standalone Follow-up'),
+        ('task', 'Task Follow-up'),
+        ('client', 'Client Follow-up'),
+        ('vendor', 'Vendor Follow-up'),
+        ('employee', 'Employee Follow-up'),
+        ('inspection', 'Inspection Follow-up'),
+        ('incident', 'Incident Follow-up'),
+        ('capa', 'CAPA Follow-up'),
+        ('quality', 'Quality Follow-up')
     ]
     STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('scheduled', 'Scheduled'),
+        ('in_progress', 'In Progress'),
         ('open', 'Open'),
         ('completed', 'Completed'),
+        ('overdue', 'Overdue'),
+        ('escalated', 'Escalated'),
         ('cancelled', 'Cancelled'),
         ('rescheduled', 'Rescheduled')
+    ]
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical')
     ]
     
     athens_tenant_id = models.IntegerField(db_index=True)
@@ -170,7 +191,26 @@ class Followup(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     followup_date = models.DateField()
+    due_date = models.DateField(null=True, blank=True)
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='open')
+    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_followups')
+    linked_project_id = models.IntegerField(null=True, blank=True)
+    linked_department = models.CharField(max_length=255, blank=True)
+    linked_module = models.CharField(max_length=100, blank=True)
+    related_incident = models.CharField(max_length=255, blank=True)
+    related_inspection = models.CharField(max_length=255, blank=True)
+    related_quality_finding = models.CharField(max_length=255, blank=True)
+    escalation_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='escalated_followups')
+    reminder_enabled = models.BooleanField(default=True)
+    reminder_time = models.DateTimeField(null=True, blank=True)
+    reminder_frequency = models.CharField(max_length=50, blank=True)
+    escalation_delay = models.IntegerField(default=0)
+    followup_method = models.CharField(max_length=50, blank=True)
+    meeting_notes = models.TextField(blank=True)
+    comments = models.TextField(blank=True)
+    attachments = models.TextField(blank=True)
+    completion_notes = models.TextField(blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     company = models.CharField(max_length=255, blank=True)
     contact_person = models.CharField(max_length=255, blank=True)
@@ -232,6 +272,17 @@ class DailyTask(models.Model):
     source_field = models.CharField(max_length=50, blank=True)
     rollover_source_date = models.DateField(null=True, blank=True)
     rollover_timestamp = models.DateTimeField(null=True, blank=True)
+    is_rollover = models.BooleanField(default=False)
+    rollover_date = models.DateField(null=True, blank=True)
+    rollover_reason = models.CharField(max_length=100, blank=True)
+    original_due_date = models.DateField(null=True, blank=True)
+    sla_time = models.IntegerField(default=0)
+    actual_time = models.IntegerField(default=0)
+    execution_notes = models.TextField(blank=True)
+    execution_status = models.CharField(max_length=50, blank=True)
+    timer_started_at = models.DateTimeField(null=True, blank=True)
+    timer_paused_at = models.DateTimeField(null=True, blank=True)
+    total_paused_duration = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -273,9 +324,14 @@ class Manpower(models.Model):
     athens_tenant_id = models.IntegerField(db_index=True)
     name = models.CharField(max_length=255)
     role = models.CharField(max_length=100)
+    skill_type = models.CharField(max_length=100, blank=True, default='')
     contact = models.CharField(max_length=50, blank=True)
     daily_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    assigned_site = models.CharField(max_length=255, blank=True, default='')
+    shift = models.CharField(max_length=50, blank=True, default='General')
+    availability = models.CharField(max_length=50, default='available')
     status = models.CharField(max_length=50, default='available')
+    notes = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -298,8 +354,16 @@ class Machinery(models.Model):
     name = models.CharField(max_length=255)
     type = models.CharField(max_length=100)
     registration_no = models.CharField(max_length=100, blank=True)
+    quantity = models.IntegerField(default=1)
+    fuel_usage = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    working_hours = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    assigned_site = models.CharField(max_length=255, blank=True, default='')
+    operator_name = models.CharField(max_length=255, blank=True, default='')
+    condition = models.CharField(max_length=50, default='Good')
+    maintenance_status = models.CharField(max_length=50, default='active')
     daily_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     status = models.CharField(max_length=50, default='available')
+    notes = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -317,18 +381,43 @@ class MachineryAllocation(models.Model):
         db_table = 'ergon_machinery_allocation'
         unique_together = ['machinery', 'allocation_date']
 
+class ResourceAllocation(models.Model):
+    athens_tenant_id = models.IntegerField(db_index=True)
+    resource_type = models.CharField(max_length=50)
+    resource_id = models.IntegerField()
+    site_id = models.IntegerField(null=True, blank=True)
+    site_name = models.CharField(max_length=255, blank=True, default='')
+    assigned_from = models.DateField(null=True, blank=True)
+    assigned_to = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=50, default='active')
+    remarks = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'ergon_resource_allocation'
+        indexes = [models.Index(fields=['athens_tenant_id', 'resource_type', 'status'])]
+
 # Advance & Expenses
 class Advance(models.Model):
     athens_tenant_id = models.IntegerField(db_index=True)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True, blank=True)
     employee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ergon_advances')
+    advance_type = models.CharField(max_length=100, default='Project Advance')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
+    approved_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     purpose = models.TextField()
+    reason = models.TextField(blank=True, default='')
     status = models.CharField(max_length=50, default='pending')
     requested_date = models.DateField(auto_now_add=True)
     approved_date = models.DateField(null=True, blank=True)
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='ergon_approved_advances')
+    repayment_date = models.DateField(null=True, blank=True)
+    salary_recovery = models.BooleanField(default=False)
     rejection_reason = models.TextField(blank=True, default='')
+    supporting_document = models.FileField(upload_to='ergon/advances/', null=True, blank=True)
+    attachment = models.FileField(upload_to='ergon/advances/', null=True, blank=True)
+    notes = models.TextField(blank=True, default='')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='ergon_created_advances')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -339,16 +428,50 @@ class Expense(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True, blank=True)
     employee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ergon_expenses')
     category = models.CharField(max_length=100)
+    work_category = models.CharField(max_length=100, blank=True, default='')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField()
     expense_date = models.DateField()
     status = models.CharField(max_length=50, default='pending')
+    approval_status = models.CharField(max_length=50, default='submitted')
+    reimbursement_status = models.CharField(max_length=50, default='pending')
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='ergon_approved_expenses')
+    approved_at = models.DateTimeField(null=True, blank=True)
     rejection_reason = models.TextField(blank=True, default='')
+    receipt = models.FileField(upload_to='ergon/expenses/', null=True, blank=True)
+    receipt_path = models.CharField(max_length=500, blank=True, default='')
+    payment_method = models.CharField(max_length=100, blank=True, default='')
+    vendor_name = models.CharField(max_length=255, blank=True, default='')
+    bill_number = models.CharField(max_length=100, blank=True, default='')
+    gst_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    gst_included = models.BooleanField(default=False)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='ergon_created_expenses')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'ergon_expense'
+
+class ExpenseApprovalLog(models.Model):
+    expense = models.ForeignKey(Expense, on_delete=models.CASCADE, related_name='approval_logs')
+    action = models.CharField(max_length=100)
+    comments = models.TextField(blank=True, default='')
+    performed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='ergon_expense_approval_actions')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'ergon_expense_approval_log'
+        ordering = ['created_at']
+
+class AdvanceApprovalLog(models.Model):
+    advance = models.ForeignKey(Advance, on_delete=models.CASCADE, related_name='approval_logs')
+    action = models.CharField(max_length=100)
+    comments = models.TextField(blank=True, default='')
+    performed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='ergon_advance_approval_actions')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'ergon_advance_approval_log'
+        ordering = ['created_at']
 
 # Financial Ledger
 class LedgerEntry(models.Model):

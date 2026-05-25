@@ -11,6 +11,10 @@
     /* Card */
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
+
+    /* Portal surfaces: dropdowns, popovers, selects */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
     
     /* Primary */
     --primary: 221.2 83.2% 53.3%;
@@ -61,6 +65,10 @@
     /* Card */
     --card: 217.2 32.6% 17.5%;
     --card-foreground: 210 40% 98%;
+
+    /* Portal surfaces: dropdowns, popovers, selects */
+    --popover: 217.2 32.6% 17.5%;
+    --popover-foreground: 210 40% 98%;
     
     /* Primary */
     --primary: 217.2 91.2% 59.8%;
@@ -114,6 +122,11 @@
   html {
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
   }
 
   body {
@@ -131,6 +144,118 @@
   h1, h2, h3, h4, h5, h6 {
     font-weight: 600;
     letter-spacing: -0.02em;
+  }
+
+  input,
+  select,
+  textarea {
+    color: hsl(var(--foreground));
+    background-color: hsl(var(--background));
+    border-color: hsl(var(--input));
+  }
+
+  select,
+  select option,
+  select optgroup {
+    color: hsl(var(--popover-foreground));
+    background-color: hsl(var(--popover));
+  }
+
+  select option:checked,
+  select option:hover,
+  select option:focus {
+    color: hsl(var(--accent-foreground));
+    background-color: hsl(var(--accent));
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: hsl(var(--muted-foreground));
+    opacity: 1;
+  }
+
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+  }
+}
+
+@layer components {
+  .theme-control {
+    @apply border border-input bg-background text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .theme-popover {
+    @apply border border-border bg-popover text-popover-foreground shadow-lg;
+  }
+
+  .theme-menu-item {
+    @apply text-popover-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .theme-menu-item-danger {
+    @apply text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/40 dark:hover:text-red-300;
+  }
+
+  .ant-select-dropdown,
+  .ant-dropdown-menu,
+  .ant-popover-inner,
+  .ant-picker-dropdown .ant-picker-panel-container,
+  .ant-cascader-dropdown,
+  .ant-mentions-dropdown,
+  .ant-auto-complete-dropdown {
+    color: hsl(var(--popover-foreground)) !important;
+    background: hsl(var(--popover)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    box-shadow: 0 12px 32px rgb(0 0 0 / 0.18) !important;
+  }
+
+  .ant-select-item,
+  .ant-dropdown-menu-item,
+  .ant-dropdown-menu-submenu-title,
+  .ant-cascader-menu-item,
+  .ant-mentions-dropdown-menu-item,
+  .ant-auto-complete-dropdown .ant-select-item {
+    color: hsl(var(--popover-foreground)) !important;
+  }
+
+  .ant-select-item-option-active:not(.ant-select-item-option-disabled),
+  .ant-select-item-option-selected:not(.ant-select-item-option-disabled),
+  .ant-dropdown-menu-item-active,
+  .ant-dropdown-menu-item:hover,
+  .ant-cascader-menu-item-active,
+  .ant-cascader-menu-item:hover,
+  .ant-mentions-dropdown-menu-item-active,
+  .ant-auto-complete-dropdown .ant-select-item-option-active {
+    color: hsl(var(--accent-foreground)) !important;
+    background: hsl(var(--accent)) !important;
+  }
+
+  .ant-select-selector,
+  .ant-picker,
+  .ant-input,
+  .ant-input-affix-wrapper,
+  .ant-input-number,
+  .ant-input-number-input,
+  .ant-mentions,
+  .ant-modal-content {
+    color: hsl(var(--foreground)) !important;
+    background: hsl(var(--background)) !important;
+    border-color: hsl(var(--input)) !important;
+  }
+
+  .ant-select-selection-placeholder,
+  .ant-input::placeholder,
+  .ant-picker-input > input::placeholder {
+    color: hsl(var(--muted-foreground)) !important;
+  }
+
+  .ant-select-selection-item,
+  .ant-picker-input > input,
+  .ant-input-number-input {
+    color: hsl(var(--foreground)) !important;
   }
 }
 

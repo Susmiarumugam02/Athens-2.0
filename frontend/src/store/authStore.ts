@@ -35,7 +35,7 @@ interface AuthState {
   subscription: SubscriptionStatus | null
 
   // Actions
-  login: (credentials: { email?: string; username?: string; password: string; totp_code?: string }) => Promise<boolean | {requires_2fa: boolean, user_id: number}>
+  login: (credentials: { credential?: string; email?: string; username?: string; password: string; totp_code?: string }) => Promise<boolean | {requires_2fa: boolean, user_id: number}>
   logout: () => void
   initializeAuth: () => void
   clearError: () => void
@@ -76,6 +76,25 @@ const persistAuthSnapshot = (state: Partial<AuthState> & { user?: User | null })
     },
     version: 0,
   }))
+}
+
+const clearTenantScopedBrowserState = () => {
+  const keys = [
+    'user',
+    'auth_user',
+    'userData',
+    'authToken',
+    'employee_data',
+    'athens_sust_project_id',
+    'athens_sust_project_name',
+    'service_session_key',
+    'service-user-storage',
+  ]
+
+  keys.forEach((key) => {
+    localStorage.removeItem(key)
+    sessionStorage.removeItem(key)
+  })
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -156,6 +175,8 @@ export const useAuthStore = create<AuthState>()(
             set({ isLoading: false, error: 'Invalid login response - no access token' })
             return false
           }
+
+          clearTenantScopedBrowserState()
 
           // Store tokens
           setTokens(data.access, data.refresh)
@@ -279,6 +300,7 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         clearTokens()
+        clearTenantScopedBrowserState()
         sessionStorage.clear()
         localStorage.removeItem('auth-storage')
 

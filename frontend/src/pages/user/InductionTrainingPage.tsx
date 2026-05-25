@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useCallback } from 'react'
 import { apiClient } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
@@ -22,6 +23,8 @@ const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   present:   { label: 'Verified',  cls: 'bg-green-100  text-green-800  border-green-200'  },
   completed: { label: 'Completed', cls: 'bg-blue-100   text-blue-800   border-blue-200'   },
   absent:    { label: 'Rejected',  cls: 'bg-red-100    text-red-800    border-red-200'     },
+  expired:   { label: 'Expired',   cls: 'bg-gray-100    text-gray-700   border-gray-200'    },
+  approved:  { label: 'Approved',  cls: 'bg-green-100   text-green-800  border-green-200'   },
 }
 
 const METHODS = [
@@ -68,6 +71,7 @@ export default function UserInductionTrainingPage() {
   const [showSuccess, setShowSuccess] = useState(false)
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [otpValue, setOtpValue] = useState('')
 
   const hasFullAccess = hasCompletedInductionAccess(user)
@@ -98,8 +102,9 @@ export default function UserInductionTrainingPage() {
   const fetchTrainings = useCallback(async () => {
     try {
       const res = await apiClient.get('/api/training/my-induction/')
-      const data = Array.isArray(res.data) ? res.data : []
+      const data = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.results) ? res.data.results : [])
       setTrainings(data)
+      setLoadError(null)
       const hasCompleted = data.some((t: any) =>
         ['completed', 'present'].includes(t.my_attendance?.attendance_status)
       )
@@ -115,10 +120,11 @@ export default function UserInductionTrainingPage() {
         setShowSuccess(true)
       }
     } catch (e: any) {
-      // 403 = user not yet approved or already has full access — not a fatal error
-      if (e?.response?.status !== 403) {
-        console.error('[InductionTraining] fetchTrainings error:', e?.response?.data || e?.message)
-      }
+      const data = e?.response?.data
+      const message = data?.detail || data?.error || e?.message || 'Unable to load assigned induction trainings.'
+      console.error('[InductionTraining] fetchTrainings error:', data || e?.message)
+      setLoadError(message)
+      setTrainings([])
     } finally {
       setLoading(false)
     }
@@ -147,7 +153,7 @@ export default function UserInductionTrainingPage() {
     setShowQrScanner(false)
   }
 
-  const handleVerifySuccess = async (accessPayload: Record<string, any> = {}) => {
+  const handleVerifySuccess = useCallback(async (accessPayload: Record<string, any> = {}) => {
     await updateEmployeeAccess({
       ...accessPayload,
       induction_completed: true,
@@ -161,6 +167,8 @@ export default function UserInductionTrainingPage() {
       training.id === activeTraining
         ? {
             ...training,
+            attendance_marked: true,
+            display_status: 'completed',
             my_attendance: {
               ...(training.my_attendance || {}),
               attendance_status: 'completed',
@@ -174,7 +182,7 @@ export default function UserInductionTrainingPage() {
     setShowQrScanner(false)
     setShowSuccess(true)
     // SuccessOverlay.onDone fires after 1500ms and calls window.location.replace
-  }
+  }, [activeTraining, updateEmployeeAccess])
 
   const getGpsLocation = () =>
     new Promise<Record<string, number | null>>((resolve) => {
@@ -226,7 +234,7 @@ export default function UserInductionTrainingPage() {
     } finally {
       setBusy(false)
     }
-  }, [activeTraining])
+  }, [activeTraining, handleVerifySuccess])
 
   // ── OTP ───────────────────────────────────────────────────────────────────
   const submitOtp = async () => {
@@ -314,7 +322,20 @@ export default function UserInductionTrainingPage() {
           </div>
 
           {/* Training cards */}
-          {trainings.length === 0 ? (
+          {loadError ? (
+            <div className="bg-white rounded-2xl shadow-xl p-10 text-center">
+              <AlertCircle className="w-14 h-14 text-red-500 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Training could not be loaded</h2>
+              <p className="text-gray-500 text-sm">{loadError}</p>
+              <button
+                type="button"
+                onClick={fetchTrainings}
+                className="mt-5 inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                Retry
+              </button>
+            </div>
+          ) : trainings.length === 0 ? (
             <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
               <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h2 className="text-xl font-semibold text-gray-900 mb-2">No Training Assigned Yet</h2>
@@ -325,8 +346,11 @@ export default function UserInductionTrainingPage() {
               const verified = isVerified(training)
               const attStatus = training.my_attendance?.attendance_status || 'pending'
               const attMethod = training.my_attendance?.attendance_method
-              const badge = STATUS_BADGE[attStatus] || STATUS_BADGE.pending
-              const hasActiveQr = training.has_active_qr
+              const displayStatus = training.display_status || attStatus || 'pending'
+              const badge = STATUS_BADGE[displayStatus] || STATUS_BADGE[attStatus] || STATUS_BADGE.pending
+              const hasActiveQr = Boolean(training.qr_enabled ?? training.has_active_qr)
+              const attendanceMarked = Boolean(training.attendance_marked || verified)
+              const showQrAttendance = displayStatus === 'pending' && !attendanceMarked && hasActiveQr
 
               return (
                 <div key={training.id} className="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -376,7 +400,7 @@ export default function UserInductionTrainingPage() {
                     )}
 
                     {/* QR active indicator */}
-                    {!verified && hasActiveQr && (
+                    {showQrAttendance && (
                       <div className="mb-4 flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
                         <QrCode className="w-4 h-4 shrink-0" />
                         <span><strong>QR code is active.</strong> Tap "Scan QR Code" below to mark attendance instantly.</span>
@@ -396,11 +420,11 @@ export default function UserInductionTrainingPage() {
                     )}
 
                     {/* QR attendance only for employees */}
-                    {!verified && (
+                    {!attendanceMarked && (
                       <div className="relative space-y-3">
                         <button
                           onClick={() => openMethod(training.id, 'qr')}
-                          disabled={!hasActiveQr || busy}
+                          disabled={!showQrAttendance || busy}
                           className="w-full flex items-center justify-between px-5 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:bg-gray-300"
                         >
                           <span className="flex items-center gap-2">
@@ -410,9 +434,11 @@ export default function UserInductionTrainingPage() {
                           <QrCode className="w-4 h-4" />
                         </button>
 
-                        {!hasActiveQr && (
+                        {!showQrAttendance && (
                           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                            Waiting for your admin to display the training QR code.
+                            {displayStatus === 'expired'
+                              ? 'This training session is no longer active. Contact your administrator for a new session.'
+                              : 'Waiting for your admin to display the training QR code.'}
                           </div>
                         )}
                       </div>

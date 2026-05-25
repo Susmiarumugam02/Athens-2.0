@@ -143,7 +143,7 @@ export const AppDialog: React.FC<AppDialogProps> = React.memo(({
         ref={dialogRef}
         className={`
           relative w-full ${sizeClasses[size]}
-          bg-white dark:bg-gray-800
+          bg-popover text-popover-foreground border border-border
           rounded-2xl
           shadow-2xl
           animate-in zoom-in-95 duration-200

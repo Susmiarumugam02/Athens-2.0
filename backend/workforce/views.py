@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.conf import settings
 from django.utils import timezone
 from django.db import transaction
 from django.db import models
@@ -11,28 +12,76 @@ from .models import *
 from .serializers import *
 from .permissions import WorkforceServiceEnabled, IsWorkforceAdmin, _is_any_admin
 from decimal import Decimal
-import random, string
+import re, secrets, string
 
 
 def _gen_password(length=12):
     chars = string.ascii_letters + string.digits + '!@#$%'
-    return ''.join(random.choices(chars, k=length))
+    return ''.join(secrets.choice(chars) for _ in range(length))
+
+
+def _gen_username(full_name, email, employee_code):
+    prefix_source = full_name or (email.split('@')[0] if email else '') or 'employee'
+    prefix = re.sub(r'[^a-z0-9]+', '_', prefix_source.lower()).strip('_') or 'employee'
+    prefix = prefix.split('_')[0] or prefix
+    code = re.sub(r'[^a-zA-Z0-9]+', '', employee_code or '')[-6:]
+    suffix = code or f"{secrets.randbelow(900) + 100}"
+    base = f"{prefix}_{suffix}"
+    username = base[:140]
+
+    from authentication.models import User
+    counter = 1
+    while User.objects.filter(username=username).exists():
+        username = f"{base[:134]}_{counter}"
+        counter += 1
+    return username
+
+
+def _user_tenant_id(user):
+    tenant, _ = get_current_tenant(user)
+    if tenant:
+        return tenant.id
+    return getattr(user, 'company_id', None)
+
+
+def _employee_create_error(code, message, http_status=status.HTTP_400_BAD_REQUEST, details=None):
+    payload = {
+        'code': code,
+        'error': message,
+        'message': message,
+    }
+    if details is not None:
+        payload['details'] = details
+    return Response(payload, status=http_status)
 
 
 def _tenant_id(user):
     """
     Resolve a stable integer scope-ID for ANY user type — never crashes.
-    Priority: tenant FK → project FK → company_id → user.id
+    Priority: tenant FK → company_id → legacy tenant id → project tenant → user.id.
+
+    Project IDs are not tenant IDs. Falling back to project.id caused unrelated
+    tenant records to share a scope when tenant resolution failed.
     """
     tenant, _ = get_current_tenant(user)
     if tenant:
         return tenant.id
-    project = getattr(user, 'project', None)
-    if project:
-        return project.id
     company_id = getattr(user, 'company_id', None)
     if company_id:
         return company_id
+    legacy_tenant_id = getattr(user, 'athens_tenant_id', None)
+    if legacy_tenant_id:
+        try:
+            return int(legacy_tenant_id)
+        except (TypeError, ValueError):
+            pass
+    project = getattr(user, 'project', None)
+    project_tenant_id = getattr(project, 'athens_tenant_id', None) if project else None
+    if project_tenant_id:
+        try:
+            return int(project_tenant_id)
+        except (TypeError, ValueError):
+            pass
     return user.id
 
 
@@ -163,21 +212,16 @@ def _get_role_isolated_employees(user):
         return qs
 
     if admin_type in ('client', 'epc', 'contractor'):
-        # CRITICAL: Must filter by BOTH admin_type AND project to prevent cross-project leakage
-        qs = qs.filter(
-            models.Q(created_by_admin=user) |
-            models.Q(created_by_admin_type=admin_type, created_by_admin__project=project)
-        )
+        # Project admins are separate company/admin scopes inside the tenant.
+        # Sharing by admin_type + project leaks data between peer admins.
+        qs = qs.filter(created_by_admin=user)
         print(f"[ATTENDANCE ISOLATION] {admin_type.upper()} Admin user={user.id} project={project} employee_count={qs.count()}")
         return qs
 
-    # role_type='admin' with no admin_type (created by MasterAdmin): scope by company_id/project
+    # role_type='admin' with no admin_type (created by MasterAdmin): own records only.
     if getattr(user, 'role_type', None) == 'admin':
         company_id = getattr(user, 'company_id', None)
-        if project:
-            qs = qs.filter(created_by_admin__project=project)
-        elif company_id:
-            qs = qs.filter(created_by_admin__company_id=company_id)
+        qs = qs.filter(created_by_admin=user)
         print(f"[ATTENDANCE ISOLATION] Generic Admin user={user.id} company={company_id} project={project} count={qs.count()}")
         return qs
 
@@ -214,23 +258,13 @@ def _get_scoped_users_for_admin(admin_user):
         return base.filter(company_id=company_id) if company_id else base.none()
 
     if admin_type in ('client', 'epc', 'contractor'):
-        q = models.Q(created_by=admin_user)
-        if project:
-            q |= models.Q(project=project, company_type=admin_type)
-        if company_id:
-            q |= models.Q(company_id=company_id, company_type=admin_type)
-        scoped = base.filter(q)
+        scoped = base.filter(created_by=admin_user)
         print(f"[SCOPED USERS] {admin_type.upper()} Admin user={admin_user.id} scoped_user_count={scoped.count()}")
         return scoped
 
     # Generic admin (role_type='admin')
     if getattr(admin_user, 'role_type', None) == 'admin':
-        q = models.Q(created_by=admin_user)
-        if project:
-            q |= models.Q(project=project)
-        elif company_id:
-            q |= models.Q(company_id=company_id)
-        return base.filter(q)
+        return base.filter(created_by=admin_user)
 
     return base.none()
 
@@ -322,28 +356,26 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        tenant, _ = get_current_tenant(user)
-        
-        if tenant is None:
-            tenant_id = _tenant_id(user)
-        else:
-            tenant_id = tenant.id
-        
-        # Base queryset
-        qs = Employee.objects.filter(
-            athens_tenant_id=tenant_id
-        ).exclude(status='inactive').select_related('department', 'designation')
-        
+
         # CRITICAL: Role-based isolation
         user_type = getattr(user, 'user_type', '')
         admin_type = getattr(user, 'admin_type', None)
         project = getattr(user, 'project', None)
-        
+
         # SuperAdmin: sees ALL employees
         if user_type == 'superadmin':
+            qs = Employee.objects.exclude(status='inactive').select_related('department', 'designation')
             print(f"[EMPLOYEE ISOLATION] SuperAdmin user={user.id} sees ALL employees count={qs.count()}")
             return qs
-        
+
+        tenant, _ = get_current_tenant(user)
+        tenant_id = tenant.id if tenant else _tenant_id(user)
+
+        # Base tenant-scoped queryset
+        qs = Employee.objects.filter(
+            athens_tenant_id=tenant_id
+        ).exclude(status='inactive').select_related('department', 'designation')
+
         # MasterAdmin: sees ALL employees in their tenant
         if user_type == 'masteradmin':
             print(f"[EMPLOYEE ISOLATION] MasterAdmin user={user.id} tenant={tenant_id} count={qs.count()}")
@@ -351,13 +383,14 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         
         # Project Admins (Client/EPC/Contractor): ONLY see employees created by their organization AND project
         if admin_type in ('client', 'epc', 'contractor'):
-            # CRITICAL: Must filter by BOTH admin_type AND project to prevent cross-project leakage
-            qs = qs.filter(
-                models.Q(created_by_admin=user) |  # Created by this admin directly
-                models.Q(created_by_admin_type=admin_type, created_by_admin__project=project)  # Same type + same project
-            )
+            qs = qs.filter(created_by_admin=user)
             
             print(f"[EMPLOYEE ISOLATION] {admin_type.upper()} Admin user={user.id} project={project} count={qs.count()}")
+            return qs
+
+        if getattr(user, 'role_type', None) == 'admin':
+            qs = qs.filter(created_by_admin=user)
+            print(f"[EMPLOYEE ISOLATION] Generic Admin user={user.id} project={project} count={qs.count()}")
             return qs
         
         # Regular users: no access to employee list
@@ -377,9 +410,11 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         Accepts extra fields: email, password (optional).
         Returns employee data + login credentials.
         """
-        print("REQUEST DATA:", request.data)  # DEBUG LOG
-        
         from authentication.models import User, UserType, SecurityLog
+        import logging
+        import traceback
+
+        logger = logging.getLogger(__name__)
 
         admin = request.user
         tenant, _ = get_current_tenant(admin)
@@ -387,63 +422,121 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
         # Resolve tenant_id for scoping — works for all admin types
         tenant_id = tenant.id if tenant else _tenant_id(admin)
+        logger.info(
+            'Employee create requested admin_id=%s tenant_id=%s admin_type=%s payload_keys=%s',
+            getattr(admin, 'id', None),
+            tenant_id,
+            admin_type,
+            sorted(request.data.keys()),
+        )
 
         email = (request.data.get('email') or '').strip()
         if not email:
-            return fail('EMAIL_REQUIRED', 'Email is required to create login credentials.',
-                        status=status.HTTP_400_BAD_REQUEST, request=request)
+            return _employee_create_error('EMAIL_REQUIRED', 'Email is required to create login credentials.')
 
-        if User.objects.filter(email=email, company_id=tenant_id).exists():
-            return fail('EMAIL_EXISTS', 'An employee with this email already exists in your organization.',
-                        status=status.HTTP_400_BAD_REQUEST, request=request)
+        existing_user = User.objects.filter(email__iexact=email).first()
+        if existing_user:
+            existing_tenant_id = _user_tenant_id(existing_user)
+            if existing_tenant_id != tenant_id:
+                return _employee_create_error('EMAIL_EXISTS_OTHER_TENANT', 'This email is already registered outside your organization.')
+            if getattr(existing_user, 'role_type', None) != 'user':
+                return _employee_create_error('EMAIL_RESERVED', 'This email belongs to an administrator account.')
+            if Employee.objects.filter(user=existing_user).exists():
+                return _employee_create_error('EMAIL_ALREADY_LINKED', 'This user account is already linked to an employee.')
 
         emp_code = (request.data.get('employee_code') or '').replace(' ', '')
         if emp_code and Employee.objects.filter(athens_tenant_id=tenant_id, employee_code=emp_code).exists():
-            return fail('CODE_EXISTS', 'Employee code already exists in your organization.',
-                        status=status.HTTP_400_BAD_REQUEST, request=request)
+            return _employee_create_error('CODE_EXISTS', 'Employee code already exists in your organization.')
 
-        # Build unique username
-        base_username = email.split('@')[0]
-        username = f"{base_username}_{emp_code}" if emp_code else base_username
-        if User.objects.filter(username=username).exists():
-            username = f"{username}_{random.randint(100, 999)}"
-
-        plain_password = request.data.get('password') or _gen_password()
+        username = getattr(existing_user, 'username', None) or _gen_username(
+            request.data.get('full_name', ''),
+            email,
+            emp_code,
+        )
+        plain_password = None if existing_user else (request.data.get('password') or _gen_password())
 
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            logger.warning(
+                'Employee create validation failed admin_id=%s tenant_id=%s errors=%s',
+                getattr(admin, 'id', None),
+                tenant_id,
+                serializer.errors,
+            )
+            return _employee_create_error(
+                'VALIDATION_FAILED',
+                'Employee validation failed.',
+                details=serializer.errors,
+            )
 
         try:
             with transaction.atomic():
+                if existing_user:
+                    user = existing_user
+                    user.name = user.name or request.data.get('full_name', '')
+                    user.username = user.username or username
+                    user.company_type = user.company_type or getattr(admin, 'admin_type', None)
+                    user.project = user.project or getattr(admin, 'project', None)
+                    user.tenant = user.tenant or tenant
+                    user.company_id = user.company_id or tenant_id
+                    user.created_by = user.created_by or admin
+                    user.employee_id = user.employee_id or emp_code
+                    user.phone_number = user.phone_number or request.data.get('contact_number', '')
+                    user.save(update_fields=[
+                        'name', 'username', 'company_type', 'project', 'tenant',
+                        'company_id', 'created_by', 'employee_id', 'phone_number'
+                    ])
+                    account_created = False
+                else:
+                    user = User(
+                        email=email,
+                        username=username,
+                        name=request.data.get('full_name', ''),
+                        user_type=UserType.COMPANYUSER,
+                        role_type='user',
+                        company_type=getattr(admin, 'admin_type', None),
+                        admin_type=None,
+                        project=getattr(admin, 'project', None),
+                        tenant=tenant,
+                        company_id=tenant_id,
+                        athens_tenant_id=getattr(admin, 'athens_tenant_id', None),
+                        created_by=admin,
+                        employee_id=emp_code,
+                        phone_number=request.data.get('contact_number', ''),
+                        approval_status='pending',
+                        status=User.STATUS_PENDING_PROFILE,
+                        onboarding_status='pending_training',
+                        profile_status='incomplete',
+                        workflow_approval_status='pending_profile_submission',
+                        training_status='pending_induction',
+                        access_level='training_only',
+                        access_status='restricted',
+                        attendance_status='pending',
+                        module_access_enabled=False,
+                        modules_unlocked=False,
+                        is_first_login=True,
+                        is_autogenerated_password=not bool(request.data.get('password')),
+                        is_temporary_password=True,
+                        password_changed=False,
+                        must_change_password=True,
+                        is_password_reset_required=True,
+                        is_active=True,
+                    )
+                    user.set_password(plain_password)
+                    user.save()
+                    account_created = True
+
                 # 1. Create employee record with creator tracking
                 employee = serializer.save(
                     athens_tenant_id=tenant_id,
+                    user=user,
                     created_by_admin=admin,
                     created_by_admin_type=admin_type or 'unknown',
                     organization_type=admin_type or 'unknown',
                 )
-
-                # 2. Create user login account
-                user = User(
-                    email=email,
-                    username=username,
-                    name=request.data.get('full_name', ''),
-                    user_type=UserType.COMPANYUSER,
-                    role_type='user',
-                    company_type=getattr(admin, 'admin_type', None),
-                    admin_type=None,
-                    project=getattr(admin, 'project', None),
-                    tenant=tenant,  # may be None for project-scoped admins
-                    company_id=getattr(admin, 'company_id', None) or tenant_id,
-                    athens_tenant_id=getattr(admin, 'athens_tenant_id', None),
-                    created_by=admin,
-                    approval_status='pending',
-                    is_first_login=True,
-                    is_autogenerated_password=not bool(request.data.get('password')),
-                    is_active=True,
-                )
-                user.set_password(plain_password)
-                user.save()
+                if not user.employee_id:
+                    user.employee_id = employee.employee_code
+                    user.save(update_fields=['employee_id'])
 
                 SecurityLog.objects.create(
                     event_type=SecurityLog.EventType.MASTER_CREATED,
@@ -453,13 +546,17 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                         'event': 'workforce.create_employee_with_login',
                         'employee_id': employee.id,
                         'user_id': user.id,
+                        'account_created': account_created,
                     }
                 )
         except Exception as e:
-            import logging
-            import traceback
-            logger = logging.getLogger(__name__)
-            logger.error('Employee create failed: %s', e, exc_info=True)
+            logger.exception(
+                'Employee create failed admin_id=%s tenant_id=%s email=%s employee_code=%s',
+                getattr(admin, 'id', None),
+                tenant_id,
+                email,
+                emp_code,
+            )
             msg = str(e)
             if 'unique' in msg.lower() or 'duplicate' in msg.lower():
                 if 'employee_code' in msg.lower():
@@ -468,20 +565,27 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                     msg = 'An employee with this email already exists in your organization.'
                 else:
                     msg = 'An employee with this code already exists in your organization.'
-            print(f"[EMPLOYEE CREATE ERROR] {msg}\n{traceback.format_exc()}")
-            return fail('CREATE_FAILED', msg,
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR, request=request)
+            details = traceback.format_exc() if settings.DEBUG else None
+            return _employee_create_error(
+                'CREATE_FAILED',
+                msg or 'Employee account could not be created.',
+                http_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                details=details,
+            )
 
         return Response({
-            'data': serializer.data,
+            'data': self.get_serializer(employee).data,
             'login': {
                 'user_id': user.id,
                 'email': user.email,
                 'username': user.username,
                 'password': plain_password,
+                'account_created': account_created,
                 'role_type': 'user',
-                'approval_status': 'pending',
-                'is_first_login': True,
+                'approval_status': user.approval_status,
+                'onboarding_status': user.onboarding_status,
+                'training_status': user.training_status,
+                'is_first_login': user.is_first_login,
             }
         }, status=status.HTTP_201_CREATED)
 
@@ -508,25 +612,27 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         Scoped to the current tenant/project.
         """
         from authentication.models import CustomUser
-        from django.db.models import Q
         tenant, _ = get_current_tenant(request.user)
         tenant_id = tenant.id if tenant else _tenant_id(request.user)
 
         # Build queryset of User accounts in this tenant/project scope
         user_qs = CustomUser.objects.filter(is_active=True).exclude(id=request.user.id)
 
-        # Scope by project if available, otherwise by tenant/company
+        # Scope by role. Peer project admins must not see each other's users.
+        user_type = getattr(request.user, 'user_type', '')
+        admin_type = getattr(request.user, 'admin_type', None)
         user_project = getattr(request.user, 'project', None)
         company_id = getattr(request.user, 'company_id', None)
-        if user_project:
-            user_qs = user_qs.filter(project=user_project)
+        if user_type == 'superadmin':
+            pass
+        elif user_type == 'masteradmin':
+            user_qs = user_qs.filter(company_id=tenant_id)
+        elif admin_type in ('client', 'epc', 'contractor') or getattr(request.user, 'role_type', None) == 'admin':
+            user_qs = user_qs.filter(created_by=request.user)
         elif company_id:
             user_qs = user_qs.filter(company_id=company_id)
         else:
-            # Broadest fallback: users created by this admin OR sharing the same tenant
-            user_qs = user_qs.filter(
-                Q(created_by=request.user) | Q(athens_tenant_id=tenant_id)
-            )
+            user_qs = user_qs.none()
 
         # Also cross-reference with Employee records to get employee_code
         employee_codes = {}
@@ -2075,12 +2181,9 @@ def workforce_stats(request):
     admin_type = getattr(user, 'admin_type', None)
     project = getattr(user, 'project', None)
     if admin_type in ('client', 'epc', 'contractor'):
-        from django.db.models import Q as _Q
-        # CRITICAL: Must filter by BOTH admin_type AND project to prevent cross-project leakage
-        emp_qs = emp_qs.filter(
-            _Q(created_by_admin=user) |
-            _Q(created_by_admin_type=admin_type, created_by_admin__project=project)
-        )
+        emp_qs = emp_qs.filter(created_by_admin=user)
+    elif getattr(user, 'role_type', None) == 'admin':
+        emp_qs = emp_qs.filter(created_by_admin=user)
 
     total_employees = emp_qs.count()
     active_employees = emp_qs.filter(status='active').count()
